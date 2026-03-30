@@ -11,22 +11,34 @@ import type {
     TMidiEvent,
 } from 'midi-json-parser-worker';
 import { buildTempoMap, buildSongStructure, type TempoChange } from './tempoMap';
-import type { SongStructure } from './songformat';
+import { convertPianoMidi } from './pianoConverter';
+import type { SongStructure, SongKeyboardNotes } from './songformat';
 
 const app = document.getElementById('app')!;
 app.innerHTML = `
     <h2>Piano MIDI Converter</h2>
     <input type="file" id="midi-input" accept=".mid,.midi" />
     <br><br>
+    <div id="hand-disclaimer" style="display:none; color:#b45309; font-size:13px;">
+        <strong>⚠ Hand Fallback Used</strong>
+        <ul>
+            <li><strong>No "Left Hand" / "Right Hand" track names detected</strong> — rename MIDI tracks to include these for accurate results.</li>
+            <li><strong>Hand assigned by pitch</strong> — below middle C (MIDI 60) → left, above → right. May be wrong where hands cross.</li>
+        </ul>
+    </div>
     <button id="download-arrangement" disabled>Download arrangement.json</button>
+    <button id="download-keys" disabled>Download keys.json</button>
     <pre id="output" style="font-size:12px; max-height:80vh; overflow:auto;"></pre>
 `;
 
 const input = document.getElementById('midi-input') as HTMLInputElement;
 const output = document.getElementById('output') as HTMLPreElement;
 const downloadBtn = document.getElementById('download-arrangement') as HTMLButtonElement;
+const downloadKeysBtn = document.getElementById('download-keys') as HTMLButtonElement;
+const handDisclaimer = document.getElementById('hand-disclaimer') as HTMLElement;
 
 let _structure: SongStructure | null = null;
+let _keyboardNotes: SongKeyboardNotes | null = null;
 
 input.addEventListener('change', () => {
     const file = input.files?.[0];
@@ -36,13 +48,21 @@ input.addEventListener('change', () => {
         .then((midi: IMidiFile) => {
             const tempoMap = buildTempoMap(midi.tracks);
             _structure = buildSongStructure(midi.tracks, tempoMap, midi.division);
-            logMidi(file.name, midi, tempoMap);
+            const result = convertPianoMidi(midi.tracks, tempoMap, midi.division, 0);
+            _keyboardNotes = result.keyboardNotes;
+            handDisclaimer.style.display = result.usedHandFallback ? 'block' : 'none';
+            logMidi(file.name, midi, tempoMap, result.keyboardNotes.Notes.length);
             downloadBtn.disabled = false;
+            downloadKeysBtn.disabled = false;
         });
 });
 
 downloadBtn.addEventListener('click', () => {
     if (_structure) downloadJson('arrangement.json', _structure);
+});
+
+downloadKeysBtn.addEventListener('click', () => {
+    if (_keyboardNotes) downloadJson('keys.json', _keyboardNotes);
 });
 
 function downloadJson(filename: string, data: unknown): void {
@@ -60,11 +80,11 @@ function downloadJson(filename: string, data: unknown): void {
     URL.revokeObjectURL(url);
 }
 
-function logMidi(filename: string, midi: IMidiFile, tempoMap: TempoChange[]): void {
+function logMidi(filename: string, midi: IMidiFile, tempoMap: TempoChange[], noteCount: number): void {
     const lines: string[] = [];
 
     lines.push(`File: ${filename}`);
-    lines.push(`Format: ${midi.format}  |  Division: ${midi.division} ticks/quarter  |  Tracks: ${midi.tracks.length}`);
+    lines.push(`Format: ${midi.format}  |  Division: ${midi.division} ticks/quarter  |  Tracks: ${midi.tracks.length}  |  Piano notes extracted: ${noteCount}`);
     lines.push('');
 
     // Tempo map summary
