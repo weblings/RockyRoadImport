@@ -407,6 +407,37 @@ Each phase has a clear pass criterion — a working input/output you can verify 
 
 ---
 
+### Phase 7 — Finishing Touches
+
+**Goal:** Polish the UI and output for real use.
+
+**Input:** Working Phase 6 converter
+**Output:** Cleaner UI; zip contains album art alongside the three JSON files
+
+#### 7a — Remove MIDI debug output from the UI
+
+The `<pre id="output">` panel currently dumps the full MIDI event log into the page. This is useful during development but clutters the UI for end users. Remove or hide it:
+- Option A (simpler): Remove the `<pre>` element entirely; keep `console.log` for debugging via DevTools
+- Option B: Collapse it behind a "Show debug log" disclosure (`<details><summary>`) so it's accessible but not prominent
+
+#### 7b — Move "Download All (.zip)" button to front
+
+Button order should reflect priority of use. Most users want the zip. Move `Download All (.zip)` before the three individual download buttons.
+
+#### 7c — Album art support
+
+Allow the user to attach album art to the zip output. ThreeCP and OpenSongChart expect an image file (`cover.jpg` or `cover.png`) alongside `song.json` in the song folder.
+
+**Work:**
+- Add an optional `<input type="file" accept="image/*">` field to the metadata form (label: "Album Art (optional)")
+- When present, read the file as `ArrayBuffer` and include it in the zip as `cover.jpg` (or preserve the original extension)
+- The individual download buttons are unaffected — album art only goes in the zip
+- Verify the expected filename against ThreeCP's `SongIndex.ts` / `SongLibraryScreen.ts` before shipping (`PsarcConverter.WriteAlbumArtToStream()` is the C# reference)
+
+**Pass criterion:** Load a MIDI + attach a cover image → download zip → unzip → `cover.jpg` is present alongside the three JSON files → drop folder into ThreeCP and verify album art appears in the song library.
+
+---
+
 ### Phase Summary
 
 | Phase | Output files | New logic | C# source adapted |
@@ -418,6 +449,7 @@ Each phase has a clear pass criterion — a working input/output you can verify 
 | 4 | `keys.json` | Track detection, note pairing, CC64 sustain, hand split | `RockBandConverter.cs` keys section |
 | 5 | `song.json` | Meta event extraction, HTML form | `RockBandConverter.cs` `LoadSongIni()` |
 | 6 | All three + zip | Pipeline wiring, error handling, zip output | `RockBandConverter.cs` `ConvertSong()` |
+| 7 | Zip + cover art | UI polish, album art inclusion | None |
 
 ---
 

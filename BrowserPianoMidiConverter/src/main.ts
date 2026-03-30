@@ -1,4 +1,5 @@
 import { parseArrayBuffer } from 'midi-json-parser';
+import { zipSync, strToU8 } from 'fflate';
 import type {
     IMidiFile,
     IMidiSetTempoEvent,
@@ -47,6 +48,7 @@ app.innerHTML = `
     <button id="download-song" disabled>Download song.json</button>
     <button id="download-arrangement" disabled>Download arrangement.json</button>
     <button id="download-keys" disabled>Download keys.json</button>
+    <button id="download-all" disabled>Download All (.zip)</button>
     <pre id="output" style="font-size:12px; max-height:80vh; overflow:auto;"></pre>
 `;
 
@@ -63,24 +65,32 @@ const difficultyLabel  = document.getElementById('meta-difficulty-value') as HTM
 const downloadSongBtn  = document.getElementById('download-song')     as HTMLButtonElement;
 const downloadBtn      = document.getElementById('download-arrangement') as HTMLButtonElement;
 const downloadKeysBtn  = document.getElementById('download-keys')     as HTMLButtonElement;
+const downloadAllBtn   = document.getElementById('download-all')      as HTMLButtonElement;
 
 difficultyInput.addEventListener('input', () => {
     difficultyLabel.textContent = difficultyInput.value;
 });
 
+// Re-run conversion when delay changes so note times stay in sync with downloads
+delayInput.addEventListener('change', () => {
+    if (_midi) runConversion();
+});
+
+let _midi: IMidiFile | null = null;
+let _midiFilename = '';
 let _structure: SongStructure | null = null;
 let _keyboardNotes: SongKeyboardNotes | null = null;
 
 input.addEventListener('change', () => {
     const file = input.files?.[0];
     if (!file) return;
+    output.textContent = 'Parsing…';
+    setDownloadsEnabled(false);
     file.arrayBuffer()
         .then((buffer) => parseArrayBuffer(buffer))
         .then((midi: IMidiFile) => {
-            const tempoMap = buildTempoMap(midi.tracks);
-            _structure = buildSongStructure(midi.tracks, tempoMap, midi.division);
-            const result = convertPianoMidi(midi.tracks, tempoMap, midi.division, 0);
-            _keyboardNotes = result.keyboardNotes;
+            _midi = midi;
+            _midiFilename = file.name;
 
             const meta = extractMetadata(midi.tracks);
             songNameInput.value = meta.songName;
@@ -91,25 +101,53 @@ input.addEventListener('change', () => {
             difficultyLabel.textContent = '0';
             metadataForm.style.display = 'block';
 
-            handDisclaimer.style.display = result.usedHandFallback ? 'block' : 'none';
-            logMidi(file.name, midi, tempoMap, result.keyboardNotes.Notes.length);
-            downloadSongBtn.disabled = false;
-            downloadBtn.disabled = false;
-            downloadKeysBtn.disabled = false;
+            runConversion();
+        })
+        .catch((err: unknown) => {
+            output.textContent = `Error parsing MIDI file: ${err instanceof Error ? err.message : String(err)}`;
         });
 });
 
-downloadSongBtn.addEventListener('click', () => {
-    if (!_keyboardNotes) return;
+function runConversion(): void {
+    if (!_midi) return;
+    try {
+        const tempoMap = buildTempoMap(_midi.tracks);
+        _structure = buildSongStructure(_midi.tracks, tempoMap, _midi.division);
+        const delayMs = parseFloat(delayInput.value) || 0;
+        const result = convertPianoMidi(_midi.tracks, tempoMap, _midi.division, delayMs / 1000);
+        _keyboardNotes = result.keyboardNotes;
 
-    const songLengthSeconds = _keyboardNotes.Notes.reduce(
+        if (_keyboardNotes.Notes.length === 0) {
+            output.textContent = 'Warning: No piano notes found. Check that the MIDI file contains note data on a piano/keys track.';
+            handDisclaimer.style.display = 'none';
+            setDownloadsEnabled(false);
+            return;
+        }
+
+        handDisclaimer.style.display = result.usedHandFallback ? 'block' : 'none';
+        logMidi(_midiFilename, _midi, tempoMap, _keyboardNotes.Notes.length);
+        setDownloadsEnabled(true);
+    } catch (err: unknown) {
+        output.textContent = `Conversion error: ${err instanceof Error ? err.message : String(err)}`;
+        setDownloadsEnabled(false);
+    }
+}
+
+function setDownloadsEnabled(enabled: boolean): void {
+    downloadSongBtn.disabled = !enabled;
+    downloadBtn.disabled     = !enabled;
+    downloadKeysBtn.disabled = !enabled;
+    downloadAllBtn.disabled  = !enabled;
+}
+
+function buildSongInfo(): SongInfo {
+    const notes = _keyboardNotes!.Notes;
+    const songLengthSeconds = notes.reduce(
         (max, n) => Math.max(max, n.TimeOffset + n.TimeLength),
         0,
     );
-
     const difficulty = parseFloat(difficultyInput.value);
-
-    const songInfo: SongInfo = {
+    const info: SongInfo = {
         SongName: songNameInput.value.trim() || 'Unknown',
         ArtistName: artistInput.value.trim() || 'Unknown',
         SongLengthSeconds: songLengthSeconds,
@@ -119,11 +157,14 @@ downloadSongBtn.addEventListener('click', () => {
             ...(difficulty > 0 ? { SongDifficulty: difficulty } : {}),
         }],
     };
-
     const album = albumInput.value.trim();
-    if (album) songInfo.AlbumName = album;
+    if (album) info.AlbumName = album;
+    return info;
+}
 
-    downloadJson('song.json', songInfo);
+downloadSongBtn.addEventListener('click', () => {
+    if (!_keyboardNotes) return;
+    downloadJson('song.json', buildSongInfo());
 });
 
 downloadBtn.addEventListener('click', () => {
@@ -132,6 +173,31 @@ downloadBtn.addEventListener('click', () => {
 
 downloadKeysBtn.addEventListener('click', () => {
     if (_keyboardNotes) downloadJson('keys.json', _keyboardNotes);
+});
+
+downloadAllBtn.addEventListener('click', () => {
+    if (!_structure || !_keyboardNotes) return;
+
+    const replacer = (_key: string, value: unknown): unknown => {
+        if (value === null) return undefined;
+        if (Array.isArray(value) && value.length === 0) return undefined;
+        return value;
+    };
+
+    const files: Record<string, Uint8Array> = {
+        'song.json':        strToU8(JSON.stringify(buildSongInfo(),  replacer, 2)),
+        'arrangement.json': strToU8(JSON.stringify(_structure,       replacer, 2)),
+        'keys.json':        strToU8(JSON.stringify(_keyboardNotes,   replacer, 2)),
+    };
+
+    const zip = zipSync(files);
+    const blob = new Blob([new Uint8Array(zip)], { type: 'application/zip' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${songNameInput.value.trim() || 'song'}.zip`;
+    a.click();
+    URL.revokeObjectURL(url);
 });
 
 function extractMetadata(tracks: TMidiEvent[][]): { songName: string; artist: string } {
