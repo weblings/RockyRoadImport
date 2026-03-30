@@ -10,30 +10,69 @@ import type {
     IMidiProgramChangeEvent,
     TMidiEvent,
 } from 'midi-json-parser-worker';
+import { buildTempoMap, buildSongStructure, type TempoChange } from './tempoMap';
+import type { SongStructure } from './songformat';
 
 const app = document.getElementById('app')!;
 app.innerHTML = `
     <h2>Piano MIDI Converter</h2>
     <input type="file" id="midi-input" accept=".mid,.midi" />
+    <br><br>
+    <button id="download-arrangement" disabled>Download arrangement.json</button>
     <pre id="output" style="font-size:12px; max-height:80vh; overflow:auto;"></pre>
 `;
 
 const input = document.getElementById('midi-input') as HTMLInputElement;
 const output = document.getElementById('output') as HTMLPreElement;
+const downloadBtn = document.getElementById('download-arrangement') as HTMLButtonElement;
+
+let _structure: SongStructure | null = null;
 
 input.addEventListener('change', () => {
     const file = input.files?.[0];
     if (!file) return;
     file.arrayBuffer()
         .then((buffer) => parseArrayBuffer(buffer))
-        .then((midi: IMidiFile) => { logMidi(file.name, midi); });
+        .then((midi: IMidiFile) => {
+            const tempoMap = buildTempoMap(midi.tracks);
+            _structure = buildSongStructure(midi.tracks, tempoMap, midi.division);
+            logMidi(file.name, midi, tempoMap);
+            downloadBtn.disabled = false;
+        });
 });
 
-function logMidi(filename: string, midi: IMidiFile): void {
+downloadBtn.addEventListener('click', () => {
+    if (_structure) downloadJson('arrangement.json', _structure);
+});
+
+function downloadJson(filename: string, data: unknown): void {
+    const json = JSON.stringify(data, (_key, value) => {
+        if (value === null) return undefined;
+        if (Array.isArray(value) && value.length === 0) return undefined;
+        return value as unknown;
+    }, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function logMidi(filename: string, midi: IMidiFile, tempoMap: TempoChange[]): void {
     const lines: string[] = [];
 
     lines.push(`File: ${filename}`);
     lines.push(`Format: ${midi.format}  |  Division: ${midi.division} ticks/quarter  |  Tracks: ${midi.tracks.length}`);
+    lines.push('');
+
+    // Tempo map summary
+    lines.push('── Tempo map');
+    for (const entry of tempoMap) {
+        const bpm = Math.round(60_000_000 / entry.microsecondsPerQuarter);
+        lines.push(`   tick=${entry.tick}  ${entry.microsecondsPerQuarter} µs/quarter (${bpm} BPM)`);
+    }
     lines.push('');
 
     midi.tracks.forEach((track, trackIndex) => {
