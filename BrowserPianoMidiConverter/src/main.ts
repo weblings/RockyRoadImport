@@ -12,13 +12,31 @@ import type {
 } from 'midi-json-parser-worker';
 import { buildTempoMap, buildSongStructure, type TempoChange } from './tempoMap';
 import { convertPianoMidi } from './pianoConverter';
-import type { SongStructure, SongKeyboardNotes } from './songformat';
+import type { SongInfo, SongStructure, SongKeyboardNotes } from './songformat';
 
 const app = document.getElementById('app')!;
 app.innerHTML = `
     <h2>Piano MIDI Converter</h2>
     <input type="file" id="midi-input" accept=".mid,.midi" />
-    <br><br>
+
+    <div id="metadata-form" style="display:none; margin-top:16px;">
+        <h3 style="margin:0 0 8px 0;">Song Metadata</h3>
+        <table style="border-spacing:4px 6px;">
+            <tr><td>Song Name</td><td><input type="text" id="meta-song-name" size="40" /></td></tr>
+            <tr><td>Artist</td><td><input type="text" id="meta-artist" size="40" /></td></tr>
+            <tr><td>Album</td><td><input type="text" id="meta-album" size="40" /></td></tr>
+            <tr><td>MIDI Delay (ms)</td><td><input type="number" id="meta-delay" value="0" style="width:80px;" /></td></tr>
+            <tr>
+                <td>Difficulty (0–5)</td>
+                <td>
+                    <input type="range" id="meta-difficulty" min="0" max="5" step="0.5" value="0" />
+                    <span id="meta-difficulty-value">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <br>
     <div id="hand-disclaimer" style="display:none; color:#b45309; font-size:13px;">
         <strong>⚠ Hand Fallback Used</strong>
         <ul>
@@ -26,16 +44,29 @@ app.innerHTML = `
             <li><strong>Hand assigned by pitch</strong> — below middle C (MIDI 60) → left, above → right. May be wrong where hands cross.</li>
         </ul>
     </div>
+    <button id="download-song" disabled>Download song.json</button>
     <button id="download-arrangement" disabled>Download arrangement.json</button>
     <button id="download-keys" disabled>Download keys.json</button>
     <pre id="output" style="font-size:12px; max-height:80vh; overflow:auto;"></pre>
 `;
 
-const input = document.getElementById('midi-input') as HTMLInputElement;
-const output = document.getElementById('output') as HTMLPreElement;
-const downloadBtn = document.getElementById('download-arrangement') as HTMLButtonElement;
-const downloadKeysBtn = document.getElementById('download-keys') as HTMLButtonElement;
-const handDisclaimer = document.getElementById('hand-disclaimer') as HTMLElement;
+const input          = document.getElementById('midi-input')          as HTMLInputElement;
+const output         = document.getElementById('output')              as HTMLPreElement;
+const metadataForm   = document.getElementById('metadata-form')       as HTMLElement;
+const handDisclaimer = document.getElementById('hand-disclaimer')     as HTMLElement;
+const songNameInput  = document.getElementById('meta-song-name')      as HTMLInputElement;
+const artistInput    = document.getElementById('meta-artist')         as HTMLInputElement;
+const albumInput     = document.getElementById('meta-album')          as HTMLInputElement;
+const delayInput     = document.getElementById('meta-delay')          as HTMLInputElement;
+const difficultyInput  = document.getElementById('meta-difficulty')   as HTMLInputElement;
+const difficultyLabel  = document.getElementById('meta-difficulty-value') as HTMLSpanElement;
+const downloadSongBtn  = document.getElementById('download-song')     as HTMLButtonElement;
+const downloadBtn      = document.getElementById('download-arrangement') as HTMLButtonElement;
+const downloadKeysBtn  = document.getElementById('download-keys')     as HTMLButtonElement;
+
+difficultyInput.addEventListener('input', () => {
+    difficultyLabel.textContent = difficultyInput.value;
+});
 
 let _structure: SongStructure | null = null;
 let _keyboardNotes: SongKeyboardNotes | null = null;
@@ -50,11 +81,49 @@ input.addEventListener('change', () => {
             _structure = buildSongStructure(midi.tracks, tempoMap, midi.division);
             const result = convertPianoMidi(midi.tracks, tempoMap, midi.division, 0);
             _keyboardNotes = result.keyboardNotes;
+
+            const meta = extractMetadata(midi.tracks);
+            songNameInput.value = meta.songName;
+            artistInput.value   = meta.artist;
+            albumInput.value    = '';
+            delayInput.value    = '0';
+            difficultyInput.value = '0';
+            difficultyLabel.textContent = '0';
+            metadataForm.style.display = 'block';
+
             handDisclaimer.style.display = result.usedHandFallback ? 'block' : 'none';
             logMidi(file.name, midi, tempoMap, result.keyboardNotes.Notes.length);
+            downloadSongBtn.disabled = false;
             downloadBtn.disabled = false;
             downloadKeysBtn.disabled = false;
         });
+});
+
+downloadSongBtn.addEventListener('click', () => {
+    if (!_keyboardNotes) return;
+
+    const songLengthSeconds = _keyboardNotes.Notes.reduce(
+        (max, n) => Math.max(max, n.TimeOffset + n.TimeLength),
+        0,
+    );
+
+    const difficulty = parseFloat(difficultyInput.value);
+
+    const songInfo: SongInfo = {
+        SongName: songNameInput.value.trim() || 'Unknown',
+        ArtistName: artistInput.value.trim() || 'Unknown',
+        SongLengthSeconds: songLengthSeconds,
+        InstrumentParts: [{
+            InstrumentName: 'keys',
+            InstrumentType: 'Keys',
+            ...(difficulty > 0 ? { SongDifficulty: difficulty } : {}),
+        }],
+    };
+
+    const album = albumInput.value.trim();
+    if (album) songInfo.AlbumName = album;
+
+    downloadJson('song.json', songInfo);
 });
 
 downloadBtn.addEventListener('click', () => {
@@ -64,6 +133,26 @@ downloadBtn.addEventListener('click', () => {
 downloadKeysBtn.addEventListener('click', () => {
     if (_keyboardNotes) downloadJson('keys.json', _keyboardNotes);
 });
+
+function extractMetadata(tracks: TMidiEvent[][]): { songName: string; artist: string } {
+    const candidates: string[] = [];
+
+    for (const track of tracks) {
+        for (const event of track) {
+            if ('trackName' in event) {
+                const v = (event as IMidiTrackNameEvent).trackName.trim();
+                if (v) candidates.push(v);
+            } else if ('text' in event) {
+                const v = (event as IMidiTextEvent).text.trim();
+                if (v) candidates.push(v);
+            }
+            if (candidates.length >= 2) break;
+        }
+        if (candidates.length >= 2) break;
+    }
+
+    return { songName: candidates[0] ?? '', artist: candidates[1] ?? '' };
+}
 
 function downloadJson(filename: string, data: unknown): void {
     const json = JSON.stringify(data, (_key, value) => {
