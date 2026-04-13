@@ -26,6 +26,7 @@ app.innerHTML = `
             <tr><td>Song Name</td><td><input type="text" id="meta-song-name" size="40" /></td></tr>
             <tr><td>Artist</td><td><input type="text" id="meta-artist" size="40" /></td></tr>
             <tr><td>Album</td><td><input type="text" id="meta-album" size="40" /></td></tr>
+            <tr><td>Album Art (optional)</td><td><input type="file" id="meta-album-art" accept="image/*" /></td></tr>
             <tr><td>MIDI Delay (ms)</td><td><input type="number" id="meta-delay" value="0" style="width:80px;" /></td></tr>
             <tr>
                 <td>Difficulty (0–5)</td>
@@ -39,33 +40,37 @@ app.innerHTML = `
 
     <br>
     <div id="hand-disclaimer" style="display:none; color:#b45309; font-size:13px;">
-        <strong>⚠ Hand Fallback Used</strong>
+        <strong>&#9888; Hand Fallback Used</strong>
         <ul>
             <li><strong>No "Left Hand" / "Right Hand" track names detected</strong> — rename MIDI tracks to include these for accurate results.</li>
             <li><strong>Hand assigned by pitch</strong> — below middle C (MIDI 60) → left, above → right. May be wrong where hands cross.</li>
         </ul>
     </div>
+    <button id="download-all" disabled>Download All (.zip)</button>
     <button id="download-song" disabled>Download song.json</button>
     <button id="download-arrangement" disabled>Download arrangement.json</button>
     <button id="download-keys" disabled>Download keys.json</button>
-    <button id="download-all" disabled>Download All (.zip)</button>
-    <pre id="output" style="font-size:12px; max-height:80vh; overflow:auto;"></pre>
+    <details style="margin-top:12px;">
+        <summary style="cursor:pointer; font-size:13px; color:#555;">Show debug log</summary>
+        <pre id="output" style="font-size:12px; max-height:60vh; overflow:auto;"></pre>
+    </details>
 `;
 
-const input          = document.getElementById('midi-input')          as HTMLInputElement;
-const output         = document.getElementById('output')              as HTMLPreElement;
-const metadataForm   = document.getElementById('metadata-form')       as HTMLElement;
-const handDisclaimer = document.getElementById('hand-disclaimer')     as HTMLElement;
-const songNameInput  = document.getElementById('meta-song-name')      as HTMLInputElement;
-const artistInput    = document.getElementById('meta-artist')         as HTMLInputElement;
-const albumInput     = document.getElementById('meta-album')          as HTMLInputElement;
-const delayInput     = document.getElementById('meta-delay')          as HTMLInputElement;
-const difficultyInput  = document.getElementById('meta-difficulty')   as HTMLInputElement;
-const difficultyLabel  = document.getElementById('meta-difficulty-value') as HTMLSpanElement;
-const downloadSongBtn  = document.getElementById('download-song')     as HTMLButtonElement;
-const downloadBtn      = document.getElementById('download-arrangement') as HTMLButtonElement;
-const downloadKeysBtn  = document.getElementById('download-keys')     as HTMLButtonElement;
-const downloadAllBtn   = document.getElementById('download-all')      as HTMLButtonElement;
+const input           = document.getElementById('midi-input')          as HTMLInputElement;
+const output          = document.getElementById('output')              as HTMLPreElement;
+const metadataForm    = document.getElementById('metadata-form')       as HTMLElement;
+const handDisclaimer  = document.getElementById('hand-disclaimer')     as HTMLElement;
+const songNameInput   = document.getElementById('meta-song-name')      as HTMLInputElement;
+const artistInput     = document.getElementById('meta-artist')         as HTMLInputElement;
+const albumInput      = document.getElementById('meta-album')          as HTMLInputElement;
+const albumArtInput   = document.getElementById('meta-album-art')      as HTMLInputElement;
+const delayInput      = document.getElementById('meta-delay')          as HTMLInputElement;
+const difficultyInput = document.getElementById('meta-difficulty')     as HTMLInputElement;
+const difficultyLabel = document.getElementById('meta-difficulty-value') as HTMLSpanElement;
+const downloadAllBtn  = document.getElementById('download-all')        as HTMLButtonElement;
+const downloadSongBtn = document.getElementById('download-song')       as HTMLButtonElement;
+const downloadBtn     = document.getElementById('download-arrangement') as HTMLButtonElement;
+const downloadKeysBtn = document.getElementById('download-keys')       as HTMLButtonElement;
 
 difficultyInput.addEventListener('input', () => {
     difficultyLabel.textContent = difficultyInput.value;
@@ -134,10 +139,10 @@ function runConversion(): void {
 }
 
 function setDownloadsEnabled(enabled: boolean): void {
+    downloadAllBtn.disabled  = !enabled;
     downloadSongBtn.disabled = !enabled;
     downloadBtn.disabled     = !enabled;
     downloadKeysBtn.disabled = !enabled;
-    downloadAllBtn.disabled  = !enabled;
 }
 
 function buildSongInfo(): SongInfo {
@@ -190,6 +195,23 @@ downloadAllBtn.addEventListener('click', () => {
         'keys.json':        strToU8(JSON.stringify(_keyboardNotes,   replacer, 2)),
     };
 
+    const artFile = albumArtInput.files?.[0];
+    if (artFile) {
+        artFile.arrayBuffer()
+            .then((buf) => {
+                files['albumart.png'] = new Uint8Array(buf);
+                triggerZipDownload(files);
+            })
+            .catch(() => {
+                // Art failed to read — proceed without it
+                triggerZipDownload(files);
+            });
+    } else {
+        triggerZipDownload(files);
+    }
+});
+
+function triggerZipDownload(files: Record<string, Uint8Array>): void {
     const zip = zipSync(files);
     const blob = new Blob([new Uint8Array(zip)], { type: 'application/zip' });
     const url = URL.createObjectURL(blob);
@@ -198,7 +220,7 @@ downloadAllBtn.addEventListener('click', () => {
     a.download = `${songNameInput.value.trim() || 'song'}.zip`;
     a.click();
     URL.revokeObjectURL(url);
-});
+}
 
 function extractMetadata(tracks: TMidiEvent[][]): { songName: string; artist: string } {
     const candidates: string[] = [];
