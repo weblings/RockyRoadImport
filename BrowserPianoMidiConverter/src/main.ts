@@ -13,7 +13,7 @@ import type {
 } from 'midi-json-parser-worker';
 import { buildTempoMap, buildSongStructure, type TempoChange } from './tempoMap';
 import { convertPianoMidi } from './pianoConverter';
-import type { SongInfo, SongStructure, SongKeyboardNotes, PsarcArrangementInfo, PsarcConvertResult } from './songformat';
+import type { SongInfo, SongStructure, SongKeyboardNotes, PsarcSongResult } from './songformat';
 
 const app = document.getElementById('app')!;
 app.innerHTML = `
@@ -61,11 +61,6 @@ app.innerHTML = `
     <input type="file" id="psarc-input" accept=".psarc" />
     <div id="psarc-status" style="font-size:13px; color:#555; margin-top:4px;"></div>
 
-    <div id="psarc-arrangement-picker" style="display:none; margin-top:8px;">
-        <label for="psarc-arrangement-select">Arrangement:</label>
-        <select id="psarc-arrangement-select"></select>
-    </div>
-
     <div id="psarc-metadata-form" style="display:none; margin-top:16px;">
         <h3 style="margin:0 0 8px 0;">Song Metadata</h3>
         <table style="border-spacing:4px 6px;">
@@ -97,8 +92,6 @@ const downloadKeysBtn = document.getElementById('download-keys')       as HTMLBu
 
 const psarcInput            = document.getElementById('psarc-input')             as HTMLInputElement;
 const psarcStatus           = document.getElementById('psarc-status')            as HTMLElement;
-const psarcArrangementPicker = document.getElementById('psarc-arrangement-picker') as HTMLElement;
-const psarcArrangementSelect = document.getElementById('psarc-arrangement-select') as HTMLSelectElement;
 const psarcMetadataForm     = document.getElementById('psarc-metadata-form')     as HTMLElement;
 const psarcSongNameInput    = document.getElementById('psarc-song-name')         as HTMLInputElement;
 const psarcArtistInput      = document.getElementById('psarc-artist')            as HTMLInputElement;
@@ -250,8 +243,7 @@ downloadAllBtn.addEventListener('click', () => {
 // helpers the MIDI path already uses. Loaded lazily so MIDI-only users never pay for it.
 
 let _psarcExports: any = null;
-let _psarcBytes: Uint8Array | null = null;
-let _psarcResult: PsarcConvertResult | null = null;
+let _psarcResult: PsarcSongResult | null = null;
 
 declare global {
     interface Window {
@@ -300,83 +292,72 @@ psarcInput.addEventListener('change', () => {
     if (!file) return;
 
     psarcStatus.textContent = 'Parsing…';
-    psarcArrangementPicker.style.display = 'none';
     psarcMetadataForm.style.display = 'none';
     psarcDownloadAllBtn.disabled = true;
     _psarcResult = null;
 
     file.arrayBuffer()
         .then(async (buffer) => {
-            _psarcBytes = new Uint8Array(buffer);
+            const psarcBytes = new Uint8Array(buffer);
             const exports = await loadPsarcWasm();
 
-            const arrangementsJson = exports.PsarcInterop.ListArrangements(_psarcBytes);
-            const arrangements: PsarcArrangementInfo[] = JSON.parse(arrangementsJson);
+            const resultJson = exports.PsarcInterop.ConvertAllPsarc(psarcBytes);
+            const songs: PsarcSongResult[] = JSON.parse(resultJson);
 
-            if (arrangements.length === 0) {
+            if (songs.length === 0 || songs[0].Parts.length === 0) {
                 psarcStatus.textContent = 'No arrangements found in this .psarc file.';
                 return;
             }
 
-            psarcArrangementSelect.innerHTML = arrangements
-                .map((a) => `<option value="${a.Name}">${a.Name} (${a.InstrumentType})</option>`)
-                .join('');
+            // A .psarc almost always holds exactly one song; if it holds more (a
+            // compilation archive), only the first is imported.
+            _psarcResult = songs[0];
 
-            // Default to the first non-vocals arrangement
-            const defaultArrangement = arrangements.find((a) => a.InstrumentType !== 'Vocals') ?? arrangements[0];
-            psarcArrangementSelect.value = defaultArrangement.Name;
+            psarcSongNameInput.value = _psarcResult.SongData?.SongName ?? '';
+            psarcArtistInput.value = _psarcResult.SongData?.ArtistName ?? '';
+            psarcAlbumInput.value = _psarcResult.SongData?.AlbumName ?? '';
+            psarcMetadataForm.style.display = 'block';
 
-            psarcArrangementPicker.style.display = 'block';
-            psarcStatus.textContent = `Found ${arrangements.length} arrangement(s).`;
+            const succeeded = _psarcResult.Parts.filter((p) => p.Part != null);
+            const failed = _psarcResult.Parts.filter((p) => p.Part == null);
 
-            convertSelectedPsarcArrangement();
+            if (succeeded.length === 0) {
+                psarcStatus.textContent = `All ${failed.length} arrangement(s) failed to convert.`;
+                return;
+            }
+
+            let status = `Converted ${succeeded.length}/${_psarcResult.Parts.length} part(s): ${succeeded.map((p) => p.Name).join(', ')}.`;
+            if (songs.length > 1) status += ` (${songs.length - 1} additional song(s) in this file were ignored.)`;
+            if (failed.length > 0) status += ` Failed: ${failed.map((p) => `${p.Name} (${p.Error})`).join('; ')}`;
+            psarcStatus.textContent = status;
+
+            psarcDownloadAllBtn.disabled = false;
         })
         .catch((err: unknown) => {
             psarcStatus.textContent = `Error parsing .psarc file: ${err instanceof Error ? err.message : String(err)}`;
         });
 });
 
-psarcArrangementSelect.addEventListener('change', () => {
-    convertSelectedPsarcArrangement();
-});
-
-function convertSelectedPsarcArrangement(): void {
-    if (!_psarcBytes || !_psarcExports) return;
-
-    try {
-        const resultJson = _psarcExports.PsarcInterop.ConvertPsarc(_psarcBytes, psarcArrangementSelect.value);
-        _psarcResult = JSON.parse(resultJson);
-
-        psarcSongNameInput.value = _psarcResult!.SongData?.SongName ?? '';
-        psarcArtistInput.value = _psarcResult!.SongData?.ArtistName ?? '';
-        psarcAlbumInput.value = _psarcResult!.SongData?.AlbumName ?? '';
-        psarcMetadataForm.style.display = 'block';
-
-        psarcDownloadAllBtn.disabled = false;
-        psarcStatus.textContent = `Converted "${psarcArrangementSelect.value}".`;
-    } catch (err: unknown) {
-        psarcStatus.textContent = `Conversion error: ${err instanceof Error ? err.message : String(err)}`;
-        psarcDownloadAllBtn.disabled = true;
-    }
-}
-
 psarcDownloadAllBtn.addEventListener('click', () => {
     if (!_psarcResult) return;
 
-    const partName = _psarcResult.Part.InstrumentName;
+    const succeeded = _psarcResult.Parts.filter((p) => p.Part != null);
+    if (succeeded.length === 0) return;
 
     const songInfo = {
         ..._psarcResult.SongData,
         SongName: psarcSongNameInput.value.trim() || _psarcResult.SongData.SongName,
         ArtistName: psarcArtistInput.value.trim() || _psarcResult.SongData.ArtistName,
         AlbumName: psarcAlbumInput.value.trim() || undefined,
-        InstrumentParts: [_psarcResult.Part],
     };
 
     const files: Record<string, Uint8Array> = {
         'song.json': strToU8(JSON.stringify(songInfo, null, 2)),
-        [`${partName}.json`]: strToU8(JSON.stringify(_psarcResult.Notes ?? _psarcResult.Vocals, null, 2)),
     };
+
+    for (const part of succeeded) {
+        files[`${part.Name}.json`] = strToU8(JSON.stringify(part.Notes ?? part.Vocals, null, 2));
+    }
 
     triggerZipDownload(files);
 });

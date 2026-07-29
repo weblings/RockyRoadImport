@@ -12,86 +12,75 @@ Console.WriteLine("PsarcChartCore.Wasm ready");
 public partial class PsarcInterop
 {
     /// <summary>
-    /// Lists the arrangements found in a .psarc file's bytes, for populating a picker in the browser UI.
+    /// Converts every arrangement in a .psarc file's bytes into OpenSongChart JSON, reusing
+    /// PsarcChartCore.PsarcConverter so the output matches the desktop ChartConverter tool
+    /// exactly. Mirrors PsarcExporter.ConvertPsarc's grouping: arrangements belonging to the
+    /// same song entry share one SongData (parts merged in via AddOrReplacePart, same as the
+    /// desktop tool), while each part's note/vocal data comes back keyed by arrangement name.
+    /// A single arrangement failing (e.g. missing SNG data) doesn't abort the rest.
     /// </summary>
     [JSExport]
-    internal static string ListArrangements(byte[] psarcBytes)
+    internal static string ConvertAllPsarc(byte[] psarcBytes)
     {
         using MemoryStream stream = new(psarcBytes);
         PsarcDecoder decoder = new(stream);
 
-        List<ArrangementInfo> result = new();
+        List<PsarcSongResult> songs = new();
 
         foreach (PsarcSongEntry songEntry in decoder.AllSongs)
         {
-            foreach (var kvp in songEntry.Arrangements)
+            SongData songData = PsarcConverter.GetSongData(songEntry);
+            List<PsarcPartResult> parts = new();
+
+            foreach (string arrangementName in songEntry.Arrangements.Keys)
             {
-                result.Add(new ArrangementInfo
+                PsarcPartResult partResult = new() { Name = arrangementName };
+
+                try
                 {
-                    Name = kvp.Key,
-                    InstrumentType = PsarcConverter.GetInstrumentType(kvp.Value).ToString()
-                });
+                    var result = PsarcConverter.GetInstrumentPart(decoder, songEntry, arrangementName);
+
+                    if (result == null)
+                    {
+                        partResult.Error = "Could not read SNG data for this arrangement";
+                    }
+                    else
+                    {
+                        songData.AddOrReplacePart(result.Value.Part);
+                        partResult.Part = result.Value.Part;
+                        partResult.Notes = result.Value.Notes;
+                        partResult.Vocals = result.Value.Vocals;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    partResult.Error = ex.Message;
+                }
+
+                parts.Add(partResult);
             }
+
+            songs.Add(new PsarcSongResult { SongData = songData, Parts = parts });
         }
 
-        return JsonSerializer.Serialize(result);
-    }
-
-    /// <summary>
-    /// Converts one arrangement from a .psarc file's bytes into OpenSongChart JSON
-    /// (SongInstrumentPart + SongInstrumentNotes), reusing PsarcChartCore.PsarcConverter
-    /// so the output matches the desktop ChartConverter tool exactly.
-    /// </summary>
-    [JSExport]
-    internal static string ConvertPsarc(byte[] psarcBytes, string arrangementName)
-    {
-        using MemoryStream stream = new(psarcBytes);
-        PsarcDecoder decoder = new(stream);
-
-        PsarcSongEntry songEntry = null;
-
-        foreach (PsarcSongEntry entry in decoder.AllSongs)
-        {
-            if (entry.Arrangements.ContainsKey(arrangementName))
-            {
-                songEntry = entry;
-                break;
-            }
-        }
-
-        if (songEntry == null)
-            throw new ArgumentException($"Arrangement '{arrangementName}' not found in this .psarc file");
-
-        var result = PsarcConverter.GetInstrumentPart(decoder, songEntry, arrangementName);
-
-        if (result == null)
-            throw new InvalidOperationException($"Could not read SNG data for arrangement '{arrangementName}'");
-
-        var output = new PsarcConvertResult
-        {
-            SongData = PsarcConverter.GetSongData(songEntry),
-            Part = result.Value.Part,
-            Notes = result.Value.Notes,
-            Vocals = result.Value.Vocals
-        };
-
-        return JsonSerializer.Serialize(output, SerializationUtil.CondensedSerializerOptions);
-    }
-
-    private struct ArrangementInfo
-    {
-        public string Name { get; set; }
-        public string InstrumentType { get; set; }
+        return JsonSerializer.Serialize(songs, SerializationUtil.CondensedSerializerOptions);
     }
 
     // Anonymous types can lose their reflection metadata under the wasm build's IL
     // trimming/linking, which made System.Text.Json silently serialize to "{}" instead
-    // of throwing. A named class is what the linker reliably preserves.
-    private class PsarcConvertResult
+    // of throwing. Named classes are what the linker reliably preserves.
+    private class PsarcSongResult
     {
         public SongData SongData { get; set; }
+        public List<PsarcPartResult> Parts { get; set; } = new();
+    }
+
+    private class PsarcPartResult
+    {
+        public string Name { get; set; }
         public SongInstrumentPart Part { get; set; }
         public SongInstrumentNotes Notes { get; set; }
         public List<SongVocal> Vocals { get; set; }
+        public string Error { get; set; }
     }
 }

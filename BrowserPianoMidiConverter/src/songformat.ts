@@ -120,16 +120,19 @@ export interface SongData {
     InstrumentParts?: SongInstrumentPart[];
 }
 
-// Mirrors the PsarcInterop.ConvertPsarc JSON output shape (SongData/Part/Notes/Vocals).
-export interface PsarcConvertResult {
-    SongData: SongData;
-    Part: SongInstrumentPart;
+// Mirrors the PsarcInterop.ConvertAllPsarc JSON output shape: one entry per song entry
+// found in the .psarc (almost always exactly one for a single-song file), each carrying
+// every arrangement it contains. A part with no Part/Notes/Vocals and a set Error failed
+// to convert but didn't abort the rest.
+export interface PsarcPartResult {
+    Name: string;
+    Part?: SongInstrumentPart;
     Notes?: SongInstrumentNotes;
     Vocals?: SongVocal[];
+    Error?: string;
 }
 
-// Mirrors the PsarcInterop.ListArrangements JSON output shape.
-export interface PsarcArrangementInfo {
-    Name: string;
-    InstrumentType: string;
+export interface PsarcSongResult {
+    SongData: SongData;
+    Parts: PsarcPartResult[];
 }
