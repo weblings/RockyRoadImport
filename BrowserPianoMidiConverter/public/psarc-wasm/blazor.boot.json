@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "PsarcChartCore.Wasm",
   "resources": {
-    "hash": "sha256-Tx/v8g2Z0ETB+DZi+oNH0GdE1EsuZnXrazT8I8Y1ebQ=",
+    "hash": "sha256-G5FXbdQTOBI8LpWdYNYBUA3LIVjSnmv79z6jAHlcq2Y=",
     "jsModuleNative": {
       "dotnet.native.8.0.29.1zmzoioxp0.js": "sha256-JTswf4CBcNmmrTGm6DppxYNII8GVEmbA3iXD3bU1fcA="
     },
@@ -192,18 +192,18 @@
       "mscorlib.wasm": "sha256-xeIDrsSwymknFihcL/StdwpaVK+g6J8aGdX6I/w8nks=",
       "netstandard.wasm": "sha256-2YXcctv/4R+ape8ngskTBda7MoSFPsNz3L5yF1BhhYs=",
       "System.Private.CoreLib.wasm": "sha256-LctFzHt8SfvxyxBhDh4AeH6+opncXt0QQ0mP1GxgLW8=",
-      "BnkExtractor.wasm": "sha256-KffITy0YTwram+bUholY1HKe0kf9wsWM4ipx6ej7o0o=",
-      "PsarcChartCore.wasm": "sha256-asr5FUAhEnim6PTE0A+UfVdjoGJdnTp3hYShZJunyHI=",
-      "PsarcUtil.wasm": "sha256-fXoqs8Prig8pEYBOSKsDhGIKrIRfj1hzhq2hZNMd1YE=",
-      "Rocksmith2014PsarcLib.wasm": "sha256-dq6Up8xCQZycd4Zmu0/GqVR4jXYVLrrzqHJXcfzBi5E=",
-      "PsarcChartCore.Wasm.wasm": "sha256-+JwmkzcWHAJBt5wEscfdyA9sCC0t8sUdMRs9PelIJ6s="
+      "BnkExtractor.wasm": "sha256-Rn8UKrHfayh6KBQIPS4mPRXqjCSkk9uxKqhJVQNwdlE=",
+      "PsarcChartCore.wasm": "sha256-DEIAP3QMWNrR1iaejk6cCImR07eVj5OQKEExu3oIGHk=",
+      "PsarcUtil.wasm": "sha256-19Asfoh66I0VsS3Yi/3xpEt061cpuV5Zmw2Y8mWFyvc=",
+      "Rocksmith2014PsarcLib.wasm": "sha256-NCdlutu2my2Itunpzm3IOu9mBoKLfixgKe1AnuVm8fQ=",
+      "PsarcChartCore.Wasm.wasm": "sha256-21m5MUzwNp5vRDIphMZ958iZWe3aUZjh5LPTyPeI4yI="
     },
     "pdb": {
-      "PsarcChartCore.pdb": "sha256-6A3I1N9CjAZGvjgUum2zWNLWkEKJeEHOUAenIWKUhRM=",
-      "PsarcUtil.pdb": "sha256-o/K3TLyFCmLtppbRDpwAWtrR3x2Nr/D9vyTl0Zhdhl0=",
-      "BnkExtractor.pdb": "sha256-/bgT5rXSXVbnH9+XwNWiApe3HyDakwJpVSHqImD3YFs=",
-      "Rocksmith2014PsarcLib.pdb": "sha256-a9lrPfuo3ZmGdSlYO3ZMiOxiiIz2veZQxM8k2d6pIxk=",
-      "PsarcChartCore.Wasm.pdb": "sha256-wE4zH3/rxBT1ubOQT/NSUk7z45YYoRGlNnv99ymX6JI="
+      "PsarcChartCore.pdb": "sha256-Tzl/i3mTz08i+J+L3moZSc3bQ3H0mM/qztS/vePyMj4=",
+      "PsarcUtil.pdb": "sha256-MGCHVMKSa1Wr/QSHsDYqd5XfZzhw6kb5KeMquB8v4DE=",
+      "BnkExtractor.pdb": "sha256-VUlqY8XaoEimOD6jACSCorVFklkoZ4iAiv4FHbtn0iE=",
+      "Rocksmith2014PsarcLib.pdb": "sha256-vw6HoqMdMRFjlIXLEKsF5zGar7EdT4rZ5vjqEF6cBpk=",
+      "PsarcChartCore.Wasm.pdb": "sha256-JmjBpoH24x56qVOK0emOLS/4bz3DWiwJqwpuE2YL13Q="
     }
   },
   "cacheBootResources": true,

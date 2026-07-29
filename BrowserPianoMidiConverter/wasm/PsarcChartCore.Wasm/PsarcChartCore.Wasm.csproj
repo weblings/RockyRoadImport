@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\MusicThing\ChartConverter\PsarcChartCore\PsarcChartCore.csproj" />
-    <ProjectReference Include="..\..\..\..\MusicThing\ChartConverter\Dependencies\PsarcUtil\PsarcUtil\PsarcUtil.csproj" />
+    <ProjectReference Include="..\..\..\PsarcChartCore\PsarcChartCore.csproj" />
+    <ProjectReference Include="..\..\..\Dependencies\PsarcUtil\PsarcUtil\PsarcUtil.csproj" />
   </ItemGroup>
 </Project>

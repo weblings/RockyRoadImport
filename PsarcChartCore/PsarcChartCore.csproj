@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<Nullable>disable</Nullable>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\Dependencies\PsarcUtil\PsarcUtil\PsarcUtil.csproj" />
+	</ItemGroup>
+
+	<Import Project="..\Dependencies\OpenSongChart\SongFormat\SongFormat.projitems" Label="Shared" />
+
+</Project>
