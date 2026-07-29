@@ -28,6 +28,8 @@ export interface SongInstrumentPart {
     InstrumentName: string;
     InstrumentType: string;
     SongDifficulty?: number;
+    Tuning?: StringTuning;
+    CapoFret?: number;
 }
 
 export interface SongInfo {
@@ -51,4 +53,83 @@ export interface SongKeyboardNote extends ISongEvent {
 export interface SongKeyboardNotes {
     Sections: SongSection[];
     Notes: SongKeyboardNote[];
+}
+
+// --- Guitar/psarc types below, mirroring the C# SongFormat.cs classes of the same
+// name (SongInstrumentNotes, SongNote, SongChord, SongDifficultyLevel). These are pure
+// types for the JSON the psarc-import wasm module returns - no conversion logic lives
+// on the TS side, that's all in the reused C#.
+
+export interface SongChord {
+    Name: string;
+    Fingers: number[];
+    Frets: number[];
+}
+
+export interface CentsOffset {
+    TimeOffset: number;
+    Cents: number;
+}
+
+export interface SongNote extends ISongEvent {
+    TimeOffset: number;
+    TimeLength: number;
+    Fret: number;
+    String: number;
+    Techniques?: string;      // comma-joined ESongNoteTechnique flag names, e.g. "FretHandMute, Chord"
+    HandFret?: number;
+    SlideFret?: number;
+    ChordID?: number;
+    FingerID?: number;
+    CentsOffsets?: CentsOffset[];
+    EndTime: number;
+}
+
+export interface SongDifficultyLevel {
+    Difficulty: number;
+    StartTime: number;
+    EndTime: number;
+    Notes: SongNote[];
+}
+
+export interface SongInstrumentNotes {
+    Sections: SongSection[];
+    Chords: SongChord[];
+    Notes: SongNote[];
+    AlternateLevels?: SongDifficultyLevel[];
+}
+
+export interface StringTuning {
+    StringSemitoneOffsets: number[];
+}
+
+export interface SongVocal {
+    Vocal: string;
+    TimeOffset: number;
+}
+
+// The full SongInfo/InstrumentParts shape used by song.json - separate from the
+// lighter-weight SongInfo above (which the MIDI path builds directly in main.ts).
+export interface SongData {
+    SongName: string;
+    SongYear?: number;
+    SongLengthSeconds: number;
+    ArtistName: string;
+    AlbumName?: string;
+    A440CentsOffset?: number;
+    InstrumentParts?: SongInstrumentPart[];
+}
+
+// Mirrors the PsarcInterop.ConvertPsarc JSON output shape (SongData/Part/Notes/Vocals).
+export interface PsarcConvertResult {
+    SongData: SongData;
+    Part: SongInstrumentPart;
+    Notes?: SongInstrumentNotes;
+    Vocals?: SongVocal[];
+}
+
+// Mirrors the PsarcInterop.ListArrangements JSON output shape.
+export interface PsarcArrangementInfo {
+    Name: string;
+    InstrumentType: string;
 }

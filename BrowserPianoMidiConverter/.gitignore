@@ -1,0 +1,9 @@
+node_modules/
+dist/
+
+# .NET build artifacts for the wasm interop project - only the C# source and
+# the copied output in public/psarc-wasm/ are tracked. Regenerate via
+# `npm run build:wasm` whenever PsarcChartCore/PsarcUtil/Rocksmith2014PsarcLib change.
+wasm/PsarcChartCore.Wasm/bin/
+wasm/PsarcChartCore.Wasm/obj/
+wasm/publish-output/

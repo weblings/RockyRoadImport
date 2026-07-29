@@ -13,7 +13,7 @@ import type {
 } from 'midi-json-parser-worker';
 import { buildTempoMap, buildSongStructure, type TempoChange } from './tempoMap';
 import { convertPianoMidi } from './pianoConverter';
-import type { SongInfo, SongStructure, SongKeyboardNotes } from './songformat';
+import type { SongInfo, SongStructure, SongKeyboardNotes, PsarcArrangementInfo, PsarcConvertResult } from './songformat';
 
 const app = document.getElementById('app')!;
 app.innerHTML = `
@@ -54,6 +54,29 @@ app.innerHTML = `
         <summary style="cursor:pointer; font-size:13px; color:#555;">Show debug log</summary>
         <pre id="output" style="font-size:12px; max-height:60vh; overflow:auto;"></pre>
     </details>
+
+    <hr style="margin:24px 0;">
+
+    <h2>Rocksmith .psarc Importer</h2>
+    <input type="file" id="psarc-input" accept=".psarc" />
+    <div id="psarc-status" style="font-size:13px; color:#555; margin-top:4px;"></div>
+
+    <div id="psarc-arrangement-picker" style="display:none; margin-top:8px;">
+        <label for="psarc-arrangement-select">Arrangement:</label>
+        <select id="psarc-arrangement-select"></select>
+    </div>
+
+    <div id="psarc-metadata-form" style="display:none; margin-top:16px;">
+        <h3 style="margin:0 0 8px 0;">Song Metadata</h3>
+        <table style="border-spacing:4px 6px;">
+            <tr><td>Song Name</td><td><input type="text" id="psarc-song-name" size="40" /></td></tr>
+            <tr><td>Artist</td><td><input type="text" id="psarc-artist" size="40" /></td></tr>
+            <tr><td>Album</td><td><input type="text" id="psarc-album" size="40" /></td></tr>
+        </table>
+    </div>
+
+    <br>
+    <button id="psarc-download-all" disabled>Download All (.zip)</button>
 `;
 
 const input           = document.getElementById('midi-input')          as HTMLInputElement;
@@ -71,6 +94,16 @@ const downloadAllBtn  = document.getElementById('download-all')        as HTMLBu
 const downloadSongBtn = document.getElementById('download-song')       as HTMLButtonElement;
 const downloadBtn     = document.getElementById('download-arrangement') as HTMLButtonElement;
 const downloadKeysBtn = document.getElementById('download-keys')       as HTMLButtonElement;
+
+const psarcInput            = document.getElementById('psarc-input')             as HTMLInputElement;
+const psarcStatus           = document.getElementById('psarc-status')            as HTMLElement;
+const psarcArrangementPicker = document.getElementById('psarc-arrangement-picker') as HTMLElement;
+const psarcArrangementSelect = document.getElementById('psarc-arrangement-select') as HTMLSelectElement;
+const psarcMetadataForm     = document.getElementById('psarc-metadata-form')     as HTMLElement;
+const psarcSongNameInput    = document.getElementById('psarc-song-name')         as HTMLInputElement;
+const psarcArtistInput      = document.getElementById('psarc-artist')            as HTMLInputElement;
+const psarcAlbumInput       = document.getElementById('psarc-album')             as HTMLInputElement;
+const psarcDownloadAllBtn   = document.getElementById('psarc-download-all')      as HTMLButtonElement;
 
 difficultyInput.addEventListener('input', () => {
     difficultyLabel.textContent = difficultyInput.value;
@@ -209,6 +242,143 @@ downloadAllBtn.addEventListener('click', () => {
     } else {
         triggerZipDownload(files);
     }
+});
+
+// --- .psarc (Rocksmith) import ---
+// Conversion logic lives entirely in the reused C# (PsarcChartCore, compiled to wasm) -
+// this just drives the wasm module and reuses the same downloadJson/triggerZipDownload
+// helpers the MIDI path already uses. Loaded lazily so MIDI-only users never pay for it.
+
+let _psarcExports: any = null;
+let _psarcBytes: Uint8Array | null = null;
+let _psarcResult: PsarcConvertResult | null = null;
+
+declare global {
+    interface Window {
+        __psarcDotnet?: any;
+    }
+}
+
+// Vite's dev server routes every import() inside Vite-transformed source through its own
+// module pipeline, which refuses to serve .js files living under public/ that way (by
+// design - its own error message says so). The documented workaround is to load it via a
+// real <script type="module"> tag instead: that's a separate module graph root the
+// browser resolves natively over plain HTTP, bypassing Vite's dev-time transform entirely.
+function loadDotnetViaScriptTag(): Promise<any> {
+    return new Promise((resolve, reject) => {
+        if (window.__psarcDotnet) {
+            resolve(window.__psarcDotnet);
+            return;
+        }
+
+        const script = document.createElement('script');
+        script.type = 'module';
+        script.textContent = `
+            import { dotnet } from '/psarc-wasm/dotnet.js';
+            window.__psarcDotnet = dotnet;
+            window.dispatchEvent(new Event('psarc-dotnet-ready'));
+        `;
+        window.addEventListener('psarc-dotnet-ready', () => resolve(window.__psarcDotnet), { once: true });
+        script.onerror = () => reject(new Error('Failed to load /psarc-wasm/dotnet.js'));
+        document.head.appendChild(script);
+    });
+}
+
+async function loadPsarcWasm(): Promise<any> {
+    if (_psarcExports) return _psarcExports;
+
+    psarcStatus.textContent = 'Loading wasm module (first use only)…';
+    const dotnet = await loadDotnetViaScriptTag();
+    const { getAssemblyExports, getConfig } = await dotnet.create();
+    const config = getConfig();
+    _psarcExports = await getAssemblyExports(config.mainAssemblyName);
+    return _psarcExports;
+}
+
+psarcInput.addEventListener('change', () => {
+    const file = psarcInput.files?.[0];
+    if (!file) return;
+
+    psarcStatus.textContent = 'Parsing…';
+    psarcArrangementPicker.style.display = 'none';
+    psarcMetadataForm.style.display = 'none';
+    psarcDownloadAllBtn.disabled = true;
+    _psarcResult = null;
+
+    file.arrayBuffer()
+        .then(async (buffer) => {
+            _psarcBytes = new Uint8Array(buffer);
+            const exports = await loadPsarcWasm();
+
+            const arrangementsJson = exports.PsarcInterop.ListArrangements(_psarcBytes);
+            const arrangements: PsarcArrangementInfo[] = JSON.parse(arrangementsJson);
+
+            if (arrangements.length === 0) {
+                psarcStatus.textContent = 'No arrangements found in this .psarc file.';
+                return;
+            }
+
+            psarcArrangementSelect.innerHTML = arrangements
+                .map((a) => `<option value="${a.Name}">${a.Name} (${a.InstrumentType})</option>`)
+                .join('');
+
+            // Default to the first non-vocals arrangement
+            const defaultArrangement = arrangements.find((a) => a.InstrumentType !== 'Vocals') ?? arrangements[0];
+            psarcArrangementSelect.value = defaultArrangement.Name;
+
+            psarcArrangementPicker.style.display = 'block';
+            psarcStatus.textContent = `Found ${arrangements.length} arrangement(s).`;
+
+            convertSelectedPsarcArrangement();
+        })
+        .catch((err: unknown) => {
+            psarcStatus.textContent = `Error parsing .psarc file: ${err instanceof Error ? err.message : String(err)}`;
+        });
+});
+
+psarcArrangementSelect.addEventListener('change', () => {
+    convertSelectedPsarcArrangement();
+});
+
+function convertSelectedPsarcArrangement(): void {
+    if (!_psarcBytes || !_psarcExports) return;
+
+    try {
+        const resultJson = _psarcExports.PsarcInterop.ConvertPsarc(_psarcBytes, psarcArrangementSelect.value);
+        _psarcResult = JSON.parse(resultJson);
+
+        psarcSongNameInput.value = _psarcResult!.SongData?.SongName ?? '';
+        psarcArtistInput.value = _psarcResult!.SongData?.ArtistName ?? '';
+        psarcAlbumInput.value = _psarcResult!.SongData?.AlbumName ?? '';
+        psarcMetadataForm.style.display = 'block';
+
+        psarcDownloadAllBtn.disabled = false;
+        psarcStatus.textContent = `Converted "${psarcArrangementSelect.value}".`;
+    } catch (err: unknown) {
+        psarcStatus.textContent = `Conversion error: ${err instanceof Error ? err.message : String(err)}`;
+        psarcDownloadAllBtn.disabled = true;
+    }
+}
+
+psarcDownloadAllBtn.addEventListener('click', () => {
+    if (!_psarcResult) return;
+
+    const partName = _psarcResult.Part.InstrumentName;
+
+    const songInfo = {
+        ..._psarcResult.SongData,
+        SongName: psarcSongNameInput.value.trim() || _psarcResult.SongData.SongName,
+        ArtistName: psarcArtistInput.value.trim() || _psarcResult.SongData.ArtistName,
+        AlbumName: psarcAlbumInput.value.trim() || undefined,
+        InstrumentParts: [_psarcResult.Part],
+    };
+
+    const files: Record<string, Uint8Array> = {
+        'song.json': strToU8(JSON.stringify(songInfo, null, 2)),
+        [`${partName}.json`]: strToU8(JSON.stringify(_psarcResult.Notes ?? _psarcResult.Vocals, null, 2)),
+    };
+
+    triggerZipDownload(files);
 });
 
 function triggerZipDownload(files: Record<string, Uint8Array>): void {

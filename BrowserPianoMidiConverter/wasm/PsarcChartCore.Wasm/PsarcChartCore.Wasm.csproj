@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.WebAssembly">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>disable</Nullable>
+    <!-- Output types are only touched reflectively via System.Text.Json here, so trimming
+         risks silently stripping their properties instead of just disabling reflection. -->
+    <PublishTrimmed>false</PublishTrimmed>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\MusicThing\ChartConverter\PsarcChartCore\PsarcChartCore.csproj" />
+    <ProjectReference Include="..\..\..\..\MusicThing\ChartConverter\Dependencies\PsarcUtil\PsarcUtil\PsarcUtil.csproj" />
+  </ItemGroup>
+</Project>
