@@ -49,6 +49,16 @@ if (artBytes.length === 0) {
     console.log('Wrote albumart-test.bmp - open it to visually confirm colors (checks for R/B channel swap)');
 }
 
+console.log('\n--- GetOggAudio ---');
+const oggBytes = exports.PsarcInterop.GetOggAudio(bytes, songs[0].SongKey);
+if (oggBytes.length === 0) {
+    console.log('No audio found (or extraction failed - check stdout above for errors).');
+} else {
+    console.log(`Ogg audio: ${oggBytes.length} bytes`);
+    writeFileSync('song-test.ogg', oggBytes);
+    console.log('Wrote song-test.ogg - play it to confirm it decodes correctly.');
+}
+
 // Minimal uncompressed 24bpp BMP writer, just so the decoded pixels can be opened in any
 // image viewer for a manual sanity check - no compression/format logic to get wrong here.
 function rgbaToBmp(width, height, rgba) {

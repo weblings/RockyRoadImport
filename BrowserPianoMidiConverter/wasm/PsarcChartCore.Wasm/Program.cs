@@ -95,6 +95,31 @@ public partial class PsarcInterop
         return result;
     }
 
+    /// <summary>
+    /// Converts a song's Wwise-packaged audio (.wem) to standard .ogg bytes, reusing
+    /// BnkExtractor's Ww2ogg packet/codebook reconstruction as-is (pure managed, no changes
+    /// needed) via PsarcUtil.GetOggBytes - which skips RevorbSharp's native ogg.dll/vorbis.dll
+    /// granule-fixup pass (unavailable under browser-wasm) since Wwise_RIFF_Vorbis.GenerateOgg
+    /// now computes accurate granule positions itself. Returns an empty array on failure (e.g.
+    /// no audio for this song) rather than throwing, so it doesn't block chart data/album art.
+    /// </summary>
+    [JSExport]
+    internal static byte[] GetOggAudio(byte[] psarcBytes, string songKey)
+    {
+        try
+        {
+            using MemoryStream stream = new(psarcBytes);
+            PsarcDecoder decoder = new(stream);
+
+            return decoder.GetOggBytes(songKey);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Failed to extract audio: " + ex);
+            return Array.Empty<byte>();
+        }
+    }
+
     // Anonymous types can lose their reflection metadata under the wasm build's IL
     // trimming/linking, which made System.Text.Json silently serialize to "{}" instead
     // of throwing. Named classes are what the linker reliably preserves.

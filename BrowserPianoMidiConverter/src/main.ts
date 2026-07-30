@@ -245,6 +245,7 @@ downloadAllBtn.addEventListener('click', () => {
 let _psarcExports: any = null;
 let _psarcResult: PsarcSongResult | null = null;
 let _psarcAlbumArt: Uint8Array | null = null;
+let _psarcOggAudio: Uint8Array | null = null;
 
 declare global {
     interface Window {
@@ -319,6 +320,7 @@ psarcInput.addEventListener('change', () => {
     psarcDownloadAllBtn.disabled = true;
     _psarcResult = null;
     _psarcAlbumArt = null;
+    _psarcOggAudio = null;
 
     file.arrayBuffer()
         .then(async (buffer) => {
@@ -364,6 +366,11 @@ psarcInput.addEventListener('change', () => {
                 .catch((err: unknown) => {
                     console.warn('Album art extraction failed:', err);
                 });
+
+            // GetOggAudio already returns the final .ogg bytes - no client-side encoding
+            // needed, unlike album art. Also non-fatal.
+            const oggBytes: Uint8Array = exports.PsarcInterop.GetOggAudio(psarcBytes, _psarcResult.SongKey);
+            _psarcOggAudio = oggBytes.length > 0 ? oggBytes : null;
         })
         .catch((err: unknown) => {
             psarcStatus.textContent = `Error parsing .psarc file: ${err instanceof Error ? err.message : String(err)}`;
@@ -393,6 +400,10 @@ psarcDownloadAllBtn.addEventListener('click', () => {
 
     if (_psarcAlbumArt) {
         files['albumart.png'] = _psarcAlbumArt;
+    }
+
+    if (_psarcOggAudio) {
+        files['song.ogg'] = _psarcOggAudio;
     }
 
     triggerZipDownload(files);
