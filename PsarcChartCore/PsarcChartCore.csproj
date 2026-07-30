@@ -9,6 +9,12 @@
 	  <ProjectReference Include="..\Dependencies\PsarcUtil\PsarcUtil\PsarcUtil.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <!-- Reached transitively via PsarcUtil -> Rocksmith2014PsarcLib already, but referenced
+	       explicitly here since AlbumArtConverter.cs calls Pfim APIs directly. -->
+	  <PackageReference Include="Pfim" Version="0.11.2" />
+	</ItemGroup>
+
 	<Import Project="..\Dependencies\OpenSongChart\SongFormat\SongFormat.projitems" Label="Shared" />
 
 </Project>

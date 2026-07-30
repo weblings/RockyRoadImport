@@ -244,6 +244,7 @@ downloadAllBtn.addEventListener('click', () => {
 
 let _psarcExports: any = null;
 let _psarcResult: PsarcSongResult | null = null;
+let _psarcAlbumArt: Uint8Array | null = null;
 
 declare global {
     interface Window {
@@ -287,6 +288,28 @@ async function loadPsarcWasm(): Promise<any> {
     return _psarcExports;
 }
 
+// GetAlbumArt hands back raw decoded pixels ([width][height][RGBA8...]) rather than a PNG -
+// DDS decoding stays in C# (reuses Pfim's block decompression, already proven against the
+// desktop tool), but PNG encoding happens here via OffscreenCanvas so the wasm build doesn't
+// need System.Drawing, which has no browser-wasm support.
+async function fetchAlbumArtPng(exports: any, psarcBytes: Uint8Array, songKey: string): Promise<Uint8Array | null> {
+    const raw: Uint8Array = exports.PsarcInterop.GetAlbumArt(psarcBytes, songKey, 256);
+    if (!raw || raw.length === 0) return null;
+
+    const view = new DataView(raw.buffer, raw.byteOffset, raw.byteLength);
+    const width = view.getInt32(0, true);
+    const height = view.getInt32(4, true);
+    const rgba = new Uint8ClampedArray(raw.buffer as ArrayBuffer, raw.byteOffset + 8, width * height * 4);
+
+    const canvas = new OffscreenCanvas(width, height);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.putImageData(new ImageData(rgba, width, height), 0, 0);
+
+    const blob = await canvas.convertToBlob({ type: 'image/png' });
+    return new Uint8Array(await blob.arrayBuffer());
+}
+
 psarcInput.addEventListener('change', () => {
     const file = psarcInput.files?.[0];
     if (!file) return;
@@ -295,6 +318,7 @@ psarcInput.addEventListener('change', () => {
     psarcMetadataForm.style.display = 'none';
     psarcDownloadAllBtn.disabled = true;
     _psarcResult = null;
+    _psarcAlbumArt = null;
 
     file.arrayBuffer()
         .then(async (buffer) => {
@@ -332,6 +356,14 @@ psarcInput.addEventListener('change', () => {
             psarcStatus.textContent = status;
 
             psarcDownloadAllBtn.disabled = false;
+
+            // Non-fatal, same as the desktop tool's try/catch-and-skip around album art -
+            // doesn't block chart data if it fails or the song has none.
+            fetchAlbumArtPng(exports, psarcBytes, _psarcResult.SongKey)
+                .then((png) => { _psarcAlbumArt = png; })
+                .catch((err: unknown) => {
+                    console.warn('Album art extraction failed:', err);
+                });
         })
         .catch((err: unknown) => {
             psarcStatus.textContent = `Error parsing .psarc file: ${err instanceof Error ? err.message : String(err)}`;
@@ -357,6 +389,10 @@ psarcDownloadAllBtn.addEventListener('click', () => {
 
     for (const part of succeeded) {
         files[`${part.Name}.json`] = strToU8(JSON.stringify(part.Notes ?? part.Vocals, null, 2));
+    }
+
+    if (_psarcAlbumArt) {
+        files['albumart.png'] = _psarcAlbumArt;
     }
 
     triggerZipDownload(files);

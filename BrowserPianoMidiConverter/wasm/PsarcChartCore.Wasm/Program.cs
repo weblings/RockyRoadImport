@@ -60,10 +60,39 @@ public partial class PsarcInterop
                 parts.Add(partResult);
             }
 
-            songs.Add(new PsarcSongResult { SongData = songData, Parts = parts });
+            songs.Add(new PsarcSongResult { SongData = songData, SongKey = songEntry.SongKey, Parts = parts });
         }
 
         return JsonSerializer.Serialize(songs, SerializationUtil.CondensedSerializerOptions);
+    }
+
+    /// <summary>
+    /// Decodes a song's album art to a raw RGBA8 pixel buffer, prefixed with width/height so
+    /// the caller doesn't need a second call: [width:int32 LE][height:int32 LE][RGBA8 pixels].
+    /// Returns an empty array if no album art exists at this size. Decoding stays in C# (reusing
+    /// Pfim's DDS block-decompression via PsarcUtil.GetAlbumArtBytes + AlbumArtConverter) since
+    /// that part is genuinely risky to hand-port; PNG encoding happens on the JS side via
+    /// OffscreenCanvas instead of pulling in System.Drawing, which has no browser-wasm support.
+    /// </summary>
+    [JSExport]
+    internal static byte[] GetAlbumArt(byte[] psarcBytes, string songKey, int size)
+    {
+        using MemoryStream stream = new(psarcBytes);
+        PsarcDecoder decoder = new(stream);
+
+        byte[] ddsBytes = decoder.GetAlbumArtBytes(songKey, size);
+
+        var decoded = AlbumArtConverter.GetAlbumArtRgba(ddsBytes);
+
+        if (decoded == null)
+            return Array.Empty<byte>();
+
+        byte[] result = new byte[8 + decoded.Value.Pixels.Length];
+        BitConverter.GetBytes(decoded.Value.Width).CopyTo(result, 0);
+        BitConverter.GetBytes(decoded.Value.Height).CopyTo(result, 4);
+        decoded.Value.Pixels.CopyTo(result, 8);
+
+        return result;
     }
 
     // Anonymous types can lose their reflection metadata under the wasm build's IL
@@ -72,6 +101,7 @@ public partial class PsarcInterop
     private class PsarcSongResult
     {
         public SongData SongData { get; set; }
+        public string SongKey { get; set; }
         public List<PsarcPartResult> Parts { get; set; } = new();
     }
 

@@ -134,5 +134,6 @@ export interface PsarcPartResult {
 
 export interface PsarcSongResult {
     SongData: SongData;
+    SongKey: string;
     Parts: PsarcPartResult[];
 }
