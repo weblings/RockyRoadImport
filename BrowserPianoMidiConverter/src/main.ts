@@ -221,19 +221,21 @@ downloadAllBtn.addEventListener('click', () => {
         'keys.json':        strToU8(JSON.stringify(_keyboardNotes,   replacer, 2)),
     };
 
+    const zipName = zipFilenameFor(songNameInput.value);
+
     const artFile = albumArtInput.files?.[0];
     if (artFile) {
         artFile.arrayBuffer()
             .then((buf) => {
                 files['albumart.png'] = new Uint8Array(buf);
-                triggerZipDownload(files);
+                triggerZipDownload(files, zipName);
             })
             .catch(() => {
                 // Art failed to read — proceed without it
-                triggerZipDownload(files);
+                triggerZipDownload(files, zipName);
             });
     } else {
-        triggerZipDownload(files);
+        triggerZipDownload(files, zipName);
     }
 });
 
@@ -406,16 +408,23 @@ psarcDownloadAllBtn.addEventListener('click', () => {
         files['song.ogg'] = _psarcOggAudio;
     }
 
-    triggerZipDownload(files);
+    triggerZipDownload(files, zipFilenameFor(psarcSongNameInput.value));
 });
 
-function triggerZipDownload(files: Record<string, Uint8Array>): void {
+// strip whitespace and filesystem-unsafe
+// characters from the song name; falls back to "song.zip" when there's no name to use.
+function zipFilenameFor(songName: string): string {
+    const safeName = songName.trim().replace(/\s+/g, '').replace(/[<>:"/\\|?*]/g, '');
+    return `${safeName || 'song'}.zip`;
+}
+
+function triggerZipDownload(files: Record<string, Uint8Array>, zipName: string): void {
     const zip = zipSync(files);
     const blob = new Blob([new Uint8Array(zip)], { type: 'application/zip' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${songNameInput.value.trim() || 'song'}.zip`;
+    a.download = zipName;
     a.click();
     URL.revokeObjectURL(url);
 }
