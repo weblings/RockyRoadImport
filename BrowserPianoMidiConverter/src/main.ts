@@ -400,6 +400,10 @@ psarcDownloadAllBtn.addEventListener('click', () => {
         files[`${part.Name}.json`] = strToU8(JSON.stringify(part.Notes ?? part.Vocals, null, 2));
     }
 
+    if (_psarcResult.Structure) {
+        files['arrangement.json'] = strToU8(JSON.stringify(_psarcResult.Structure, null, 2));
+    }
+
     if (_psarcAlbumArt) {
         files['albumart.png'] = _psarcAlbumArt;
     }

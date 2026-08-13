@@ -32,6 +32,10 @@ public partial class PsarcInterop
             SongData songData = PsarcConverter.GetSongData(songEntry);
             List<PsarcPartResult> parts = new();
 
+            // Mirrors PsarcExporter.ConvertPsarc: one canonical structure per song,
+            // keeping whichever arrangement's beat data is most complete.
+            SongStructure songStructure = new();
+
             foreach (string arrangementName in songEntry.Arrangements.Keys)
             {
                 PsarcPartResult partResult = new() { Name = arrangementName };
@@ -50,6 +54,10 @@ public partial class PsarcInterop
                         partResult.Part = result.Value.Part;
                         partResult.Notes = result.Value.Notes;
                         partResult.Vocals = result.Value.Vocals;
+                        partResult.Structure = result.Value.SongStructure;
+
+                        if (result.Value.SongStructure.Beats.Count > songStructure.Beats.Count)
+                            songStructure = result.Value.SongStructure;
                     }
                 }
                 catch (Exception ex)
@@ -60,7 +68,7 @@ public partial class PsarcInterop
                 parts.Add(partResult);
             }
 
-            songs.Add(new PsarcSongResult { SongData = songData, SongKey = songEntry.SongKey, Parts = parts });
+            songs.Add(new PsarcSongResult { SongData = songData, SongKey = songEntry.SongKey, Parts = parts, Structure = songStructure });
         }
 
         return JsonSerializer.Serialize(songs, SerializationUtil.CondensedSerializerOptions);
@@ -128,6 +136,7 @@ public partial class PsarcInterop
         public SongData SongData { get; set; }
         public string SongKey { get; set; }
         public List<PsarcPartResult> Parts { get; set; } = new();
+        public SongStructure Structure { get; set; }
     }
 
     private class PsarcPartResult
@@ -136,6 +145,7 @@ public partial class PsarcInterop
         public SongInstrumentPart Part { get; set; }
         public SongInstrumentNotes Notes { get; set; }
         public List<SongVocal> Vocals { get; set; }
+        public SongStructure Structure { get; set; }
         public string Error { get; set; }
     }
 }

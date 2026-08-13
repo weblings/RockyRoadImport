@@ -129,6 +129,7 @@ export interface PsarcPartResult {
     Part?: SongInstrumentPart;
     Notes?: SongInstrumentNotes;
     Vocals?: SongVocal[];
+    Structure?: SongStructure;
     Error?: string;
 }
 
@@ -136,4 +137,5 @@ export interface PsarcSongResult {
     SongData: SongData;
     SongKey: string;
     Parts: PsarcPartResult[];
+    Structure: SongStructure;
 }
