@@ -159,6 +159,7 @@ namespace ChartConverter
                 }
 
                 part.CapoFret = (int)arrangement.Attributes.CapoFret;
+                part.AvailableDifficulties = songAsset.Arrangements.Select(a => (float)a.Difficulty).Distinct().OrderBy(d => d).ToList();
 
                 notes = new SongInstrumentNotes();
 

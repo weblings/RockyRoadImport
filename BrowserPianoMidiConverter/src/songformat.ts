@@ -30,6 +30,7 @@ export interface SongInstrumentPart {
     SongDifficulty?: number;
     Tuning?: StringTuning;
     CapoFret?: number;
+    AvailableDifficulties?: number[];
 }
 
 export interface SongInfo {

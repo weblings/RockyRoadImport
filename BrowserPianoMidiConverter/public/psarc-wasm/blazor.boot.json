@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "PsarcChartCore.Wasm",
   "resources": {
-    "hash": "sha256-ZDlLlu5Hf1XHp9EBaYgoVWY4KebSNqUV/L+HorSlJlQ=",
+    "hash": "sha256-OL89o8uBuI+A+rphftYhF5jzVo++t5mydwNjvt7hmTQ=",
     "jsModuleNative": {
       "dotnet.native.8.0.29.1zmzoioxp0.js": "sha256-JTswf4CBcNmmrTGm6DppxYNII8GVEmbA3iXD3bU1fcA="
     },
@@ -193,17 +193,17 @@
       "netstandard.wasm": "sha256-2YXcctv/4R+ape8ngskTBda7MoSFPsNz3L5yF1BhhYs=",
       "System.Private.CoreLib.wasm": "sha256-LctFzHt8SfvxyxBhDh4AeH6+opncXt0QQ0mP1GxgLW8=",
       "BnkExtractor.wasm": "sha256-KjraX2DCYXtXKA8XcGKYfgw1C/BaxOAKM8ZDCmFWVoE=",
-      "PsarcChartCore.wasm": "sha256-0Q62lDCajXoB7HdfmCLdH8Pv1KVBqq0Kssbq1HlW2Pk=",
+      "PsarcChartCore.wasm": "sha256-Mbze+/pvK4gGKDz2L7iiGhClREukGcXqmcoSG4//6IQ=",
       "PsarcUtil.wasm": "sha256-yXBOHNGFQum3R1k2Kq1aE8GQSx5GIH5t5XZCxjBo4zk=",
       "Rocksmith2014PsarcLib.wasm": "sha256-NCdlutu2my2Itunpzm3IOu9mBoKLfixgKe1AnuVm8fQ=",
-      "PsarcChartCore.Wasm.wasm": "sha256-M+Bpbp6N260phtkSFRCrDL5FunDr3FtOKvptahnUmyw="
+      "PsarcChartCore.Wasm.wasm": "sha256-EEXBqqgOJvBYQCDEEt4pDrN3CnMDmJWPq3LImjQvtiQ="
     },
     "pdb": {
-      "PsarcChartCore.pdb": "sha256-QoMqwdSik6mDKAhrw5U61X4shhootljJFxZWLc1afbE=",
+      "PsarcChartCore.pdb": "sha256-53w1d9+K85GMw5EdkH8QtAAJH5HTrLyzcMB5j8b2t+k=",
       "PsarcUtil.pdb": "sha256-mDn2x5XPz/Rml5Jhggj+uqOMYv3ORMl1hsE4EGpzB18=",
       "BnkExtractor.pdb": "sha256-mEHpFSV8LAZkvW4ydEbANBAe36HD96fFvogkDJ8mSSw=",
       "Rocksmith2014PsarcLib.pdb": "sha256-vw6HoqMdMRFjlIXLEKsF5zGar7EdT4rZ5vjqEF6cBpk=",
-      "PsarcChartCore.Wasm.pdb": "sha256-Ktc0zv165tafvWFiA/5OMJXwVjc0k7cOMmV5ylUoIoc="
+      "PsarcChartCore.Wasm.pdb": "sha256-047I+QxLxA3Cr8xbKODjcngCIbBy/qLHJ4gqxtM3zfM="
     }
   },
   "cacheBootResources": true,
