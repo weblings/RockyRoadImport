@@ -33,7 +33,6 @@ app.innerHTML = `
                 <tr><td>Artist</td><td><input type="text" id="meta-artist" size="40" /></td></tr>
                 <tr><td>Album</td><td><input type="text" id="meta-album" size="40" /></td></tr>
                 <tr><td>Album Art (optional)</td><td><input type="file" id="meta-album-art" accept="image/*" /></td></tr>
-                <tr><td>MIDI Delay (ms)</td><td><input type="number" id="meta-delay" value="0" style="width:80px;" /></td></tr>
                 <tr>
                     <td>Difficulty (0–5)</td>
                     <td>
@@ -105,7 +104,6 @@ const songNameInput   = document.getElementById('meta-song-name')      as HTMLIn
 const artistInput     = document.getElementById('meta-artist')         as HTMLInputElement;
 const albumInput      = document.getElementById('meta-album')          as HTMLInputElement;
 const albumArtInput   = document.getElementById('meta-album-art')      as HTMLInputElement;
-const delayInput      = document.getElementById('meta-delay')          as HTMLInputElement;
 const difficultyInput = document.getElementById('meta-difficulty')     as HTMLInputElement;
 const difficultyLabel = document.getElementById('meta-difficulty-value') as HTMLSpanElement;
 const downloadAllBtn  = document.getElementById('download-all')        as HTMLButtonElement;
@@ -120,11 +118,6 @@ const psarcDownloadAllBtn   = document.getElementById('psarc-download-all')     
 
 difficultyInput.addEventListener('input', () => {
     difficultyLabel.textContent = difficultyInput.value;
-});
-
-// Re-run conversion when delay changes so note times stay in sync with downloads
-delayInput.addEventListener('change', () => {
-    if (_midi) runConversion();
 });
 
 let _midi: IMidiFile | null = null;
@@ -147,7 +140,6 @@ input.addEventListener('change', () => {
             songNameInput.value = meta.songName;
             artistInput.value   = meta.artist;
             albumInput.value    = '';
-            delayInput.value    = '0';
             difficultyInput.value = '0';
             difficultyLabel.textContent = '0';
             metadataForm.style.display = 'block';
@@ -164,8 +156,7 @@ function runConversion(): void {
     try {
         const tempoMap = buildTempoMap(_midi.tracks);
         _structure = buildSongStructure(_midi.tracks, tempoMap, _midi.division);
-        const delayMs = parseFloat(delayInput.value) || 0;
-        const result = convertPianoMidi(_midi.tracks, tempoMap, _midi.division, delayMs / 1000);
+        const result = convertPianoMidi(_midi.tracks, tempoMap, _midi.division, 0);
         _keyboardNotes = result.keyboardNotes;
 
         if (_keyboardNotes.Notes.length === 0) {
