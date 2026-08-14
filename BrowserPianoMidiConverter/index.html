@@ -10,6 +10,15 @@
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
 
+      /* Always reserve the vertical scrollbar's width, whether or not the current tab's
+         content actually overflows — otherwise #app's margin:auto centering shifts left by
+         half the scrollbar's width whenever a scrollbar appears, and shifts inconsistently
+         between tabs with different content heights. */
+      html {
+        scrollbar-gutter: stable;
+        overflow-y: scroll;
+      }
+
       body {
         background: #0a0a0a;
         color: #ffffff;
