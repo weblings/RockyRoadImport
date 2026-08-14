@@ -45,19 +45,16 @@ app.innerHTML = `
         </div>
 
         <br>
-        <div id="hand-disclaimer" style="display:none; color:#b45309; font-size:13px;">
+        <div id="hand-disclaimer" style="display:none;">
             <strong>&#9888; Hand Fallback Used</strong>
             <ul>
                 <li><strong>No "Left Hand" / "Right Hand" track names detected</strong> — rename MIDI tracks to include these for accurate results.</li>
                 <li><strong>Hand assigned by pitch</strong> — below middle C (MIDI 60) → left, above → right. May be wrong where hands cross.</li>
             </ul>
         </div>
-        <button id="download-all" disabled>Download All (.zip)</button>
-        <button id="download-song" disabled>Download song.json</button>
-        <button id="download-arrangement" disabled>Download arrangement.json</button>
-        <button id="download-keys" disabled>Download keys.json</button>
+        <button id="download-all" class="btn-primary" disabled>Download</button>
         <details style="margin-top:12px;">
-            <summary style="cursor:pointer; font-size:13px; color:#555;">Show debug log</summary>
+            <summary style="cursor:pointer; font-size:13px; color:#888;">Show debug log</summary>
             <pre id="output" style="font-size:12px; max-height:60vh; overflow:auto;"></pre>
         </details>
     </div>
@@ -65,7 +62,7 @@ app.innerHTML = `
     <div id="tab-psarc" class="tab-panel" style="display:none;">
         <h2>Rocksmith .psarc Importer</h2>
         <input type="file" id="psarc-input" accept=".psarc" />
-        <div id="psarc-status" style="font-size:13px; color:#555; margin-top:4px;"></div>
+        <div id="psarc-status" style="margin-top:4px;"></div>
 
         <div id="psarc-metadata-form" style="display:none; margin-top:16px;">
             <h3 style="margin:0 0 8px 0;">Song Metadata</h3>
@@ -77,7 +74,7 @@ app.innerHTML = `
         </div>
 
         <br>
-        <button id="psarc-download-all" disabled>Download All (.zip)</button>
+        <button id="psarc-download-all" class="btn-primary" disabled>Download</button>
     </div>
 `;
 
@@ -112,9 +109,6 @@ const delayInput      = document.getElementById('meta-delay')          as HTMLIn
 const difficultyInput = document.getElementById('meta-difficulty')     as HTMLInputElement;
 const difficultyLabel = document.getElementById('meta-difficulty-value') as HTMLSpanElement;
 const downloadAllBtn  = document.getElementById('download-all')        as HTMLButtonElement;
-const downloadSongBtn = document.getElementById('download-song')       as HTMLButtonElement;
-const downloadBtn     = document.getElementById('download-arrangement') as HTMLButtonElement;
-const downloadKeysBtn = document.getElementById('download-keys')       as HTMLButtonElement;
 
 const psarcInput            = document.getElementById('psarc-input')             as HTMLInputElement;
 const psarcStatus           = document.getElementById('psarc-status')            as HTMLElement;
@@ -191,10 +185,7 @@ function runConversion(): void {
 }
 
 function setDownloadsEnabled(enabled: boolean): void {
-    downloadAllBtn.disabled  = !enabled;
-    downloadSongBtn.disabled = !enabled;
-    downloadBtn.disabled     = !enabled;
-    downloadKeysBtn.disabled = !enabled;
+    downloadAllBtn.disabled = !enabled;
 }
 
 function buildSongInfo(): SongInfo {
@@ -218,19 +209,6 @@ function buildSongInfo(): SongInfo {
     if (album) info.AlbumName = album;
     return info;
 }
-
-downloadSongBtn.addEventListener('click', () => {
-    if (!_keyboardNotes) return;
-    downloadJson('song.json', buildSongInfo());
-});
-
-downloadBtn.addEventListener('click', () => {
-    if (_structure) downloadJson('arrangement.json', _structure);
-});
-
-downloadKeysBtn.addEventListener('click', () => {
-    if (_keyboardNotes) downloadJson('keys.json', _keyboardNotes);
-});
 
 downloadAllBtn.addEventListener('click', () => {
     if (!_structure || !_keyboardNotes) return;
@@ -477,21 +455,6 @@ function extractMetadata(tracks: TMidiEvent[][]): { songName: string; artist: st
     }
 
     return { songName: candidates[0] ?? '', artist: candidates[1] ?? '' };
-}
-
-function downloadJson(filename: string, data: unknown): void {
-    const json = JSON.stringify(data, (_key, value) => {
-        if (value === null) return undefined;
-        if (Array.isArray(value) && value.length === 0) return undefined;
-        return value as unknown;
-    }, 2);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
 }
 
 function logMidi(filename: string, midi: IMidiFile, tempoMap: TempoChange[], noteCount: number): void {

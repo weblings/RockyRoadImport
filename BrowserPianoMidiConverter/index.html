@@ -3,7 +3,124 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <title>Piano MIDI Converter</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+
+      body {
+        background: #0a0a0a;
+        color: #ffffff;
+        font-family: 'Inter', system-ui, sans-serif;
+      }
+
+      #app {
+        max-width: 640px;
+        margin: 0 auto;
+        padding: 32px 24px 64px;
+      }
+
+      h2 {
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 16px;
+      }
+
+      h3 {
+        font-size: 14px;
+        font-weight: 700;
+        color: #c8c8c8;
+        margin-bottom: 8px;
+      }
+
+      /* Tabs — same pill shape/colors as Library's instrument-filter chips
+         (.lib-filter-btn in ThreeCP/v2/desktop.html), the one tab-like
+         precedent in ChartPlayer's desktop system. */
+      .tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 24px;
+      }
+      .tab-btn {
+        padding: 8px 20px; border: none; border-radius: 20px;
+        font-size: 14px; font-weight: 400; cursor: pointer; font-family: inherit;
+        background: #333333; color: #ffffff;
+      }
+      .tab-btn:hover { background: #515151; }
+      .tab-btn:active { background: #7c7c7c; }
+      .tab-btn.active { background: #dadada; color: #111111; }
+      .tab-btn.active:hover { background: #bebebe; }
+      .tab-btn.active:active { background: #9c9c9c; }
+
+      /* Text/number inputs — same treatment as Library's search field
+         (.lib-search). */
+      input[type="text"],
+      input[type="number"] {
+        background: #333333; border: none; border-radius: 6px;
+        color: #ffffff; font-size: 13px; font-family: inherit;
+        padding: 9px 12px;
+      }
+      input[type="text"]:hover,
+      input[type="number"]:hover { background: #515151; }
+      input[type="text"]:focus,
+      input[type="number"]:focus { outline: none; }
+
+      /* File inputs — only the button part is stylable; keep it matching
+         the same secondary-button look as everything else here. */
+      input[type="file"] {
+        color: #c8c8c8; font-size: 13px; font-family: inherit;
+      }
+      input[type="file"]::file-selector-button {
+        padding: 8px 14px; margin-right: 10px;
+        background: #333333; border: none; border-radius: 6px;
+        color: #ffffff; font-size: 13px; font-family: inherit; cursor: pointer;
+      }
+      input[type="file"]::file-selector-button:hover { background: #515151; }
+
+      /* Range slider — same accent as the Tuner's gain slider. */
+      input[type="range"] { accent-color: #8b8b8b; cursor: pointer; }
+      #meta-difficulty-value { font-size: 12px; color: #c8c8c8; }
+
+      /* Metadata forms stay <table>-based markup — styled as label/value
+         rows (same shape as .pre-toggle-row's label-left layout) rather
+         than restructured into flex divs. */
+      table { width: 100%; border-collapse: collapse; }
+      table tr { border-bottom: 1px solid #1e1e1e; }
+      table tr:last-child { border-bottom: none; }
+      table td { padding: 10px 0; vertical-align: middle; }
+      table td:first-child {
+        color: #c8c8c8; font-size: 13px; padding-right: 16px; white-space: nowrap;
+      }
+
+      /* Primary action button (Download) — same shape/colors as .pre-play-btn. */
+      .btn-primary {
+        padding: 10px 24px; margin-top: 16px;
+        background: #dadada; border: none; border-radius: 8px;
+        color: #111111; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit;
+      }
+      .btn-primary:hover { background: #bebebe; }
+      .btn-primary:disabled { background: #333333; color: #666666; cursor: not-allowed; }
+      .btn-primary:disabled:hover { background: #333333; }
+
+      /* Warning card — same recipe as #settings-panel (dark bg, subtle
+         border, rounded corners), scaled down for inline content instead
+         of a modal, with an amber accent on the heading/emphasis only. */
+      #hand-disclaimer {
+        background: #1a1a1a; border: 1px solid #333; border-radius: 8px;
+        padding: 12px 16px; margin: 16px 0; font-size: 13px;
+      }
+      #hand-disclaimer > strong {
+        display: block; margin-bottom: 6px; color: #f0a824;
+      }
+      #hand-disclaimer ul { color: #c8c8c8; padding-left: 20px; }
+      #hand-disclaimer li { margin-bottom: 4px; }
+      #hand-disclaimer li strong { color: #e8e8e8; }
+
+      /* PSARC status text — same muted tone as .pre-artist-name. */
+      #psarc-status { color: #8c8c8c; font-size: 13px; }
+    </style>
   </head>
   <body>
     <div id="app"></div>
