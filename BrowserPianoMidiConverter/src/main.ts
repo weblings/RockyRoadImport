@@ -33,6 +33,15 @@ app.innerHTML = `
                 <tr><td>Artist</td><td><input type="text" id="meta-artist" size="40" /></td></tr>
                 <tr><td>Album</td><td><input type="text" id="meta-album" size="40" /></td></tr>
                 <tr><td>Album Art (optional)</td><td><input type="file" id="meta-album-art" accept="image/*" /></td></tr>
+                <tr><td>Song Audio (optional)</td><td><input type="file" id="meta-audio" accept=".ogg,audio/ogg" /></td></tr>
+                <tr>
+                    <td></td>
+                    <td>
+                        <span class="field-note">*Audio must be .ogg format.
+                            <a href="https://www.freeconvert.com/midi-to-ogg/download" target="_blank" rel="noopener noreferrer">MIDI to OGG converter</a>
+                        </span>
+                    </td>
+                </tr>
                 <tr>
                     <td>Difficulty (0–5)</td>
                     <td>
@@ -104,6 +113,7 @@ const songNameInput   = document.getElementById('meta-song-name')      as HTMLIn
 const artistInput     = document.getElementById('meta-artist')         as HTMLInputElement;
 const albumInput      = document.getElementById('meta-album')          as HTMLInputElement;
 const albumArtInput   = document.getElementById('meta-album-art')      as HTMLInputElement;
+const audioInput      = document.getElementById('meta-audio')          as HTMLInputElement;
 const difficultyInput = document.getElementById('meta-difficulty')     as HTMLInputElement;
 const difficultyLabel = document.getElementById('meta-difficulty-value') as HTMLSpanElement;
 const downloadAllBtn  = document.getElementById('download-all')        as HTMLButtonElement;
@@ -218,20 +228,23 @@ downloadAllBtn.addEventListener('click', () => {
 
     const zipName = zipFilenameFor(songNameInput.value);
 
-    const artFile = albumArtInput.files?.[0];
-    if (artFile) {
-        artFile.arrayBuffer()
-            .then((buf) => {
-                files['albumart.png'] = new Uint8Array(buf);
-                triggerZipDownload(files, zipName);
-            })
-            .catch(() => {
-                // Art failed to read — proceed without it
-                triggerZipDownload(files, zipName);
-            });
-    } else {
+    // Album art and audio are both optional and read async — read whichever are present, then
+    // zip once both settle. A read failure drops that one file rather than blocking the download,
+    // same as album art's previous behavior.
+    const readOptionalFile = (input: HTMLInputElement): Promise<ArrayBuffer | null> => {
+        const file = input.files?.[0];
+        if (!file) return Promise.resolve(null);
+        return file.arrayBuffer().catch(() => null);
+    };
+
+    Promise.all([
+        readOptionalFile(albumArtInput),
+        readOptionalFile(audioInput),
+    ]).then(([artBuf, audioBuf]) => {
+        if (artBuf)   files['albumart.png'] = new Uint8Array(artBuf);
+        if (audioBuf) files['song.ogg']     = new Uint8Array(audioBuf);
         triggerZipDownload(files, zipName);
-    }
+    });
 });
 
 // --- .psarc (Rocksmith) import ---
