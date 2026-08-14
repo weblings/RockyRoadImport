@@ -17,62 +17,88 @@ import type { SongInfo, SongStructure, SongKeyboardNotes, PsarcSongResult } from
 
 const app = document.getElementById('app')!;
 app.innerHTML = `
-    <h2>Piano MIDI Converter</h2>
-    <input type="file" id="midi-input" accept=".mid,.midi" />
-
-    <div id="metadata-form" style="display:none; margin-top:16px;">
-        <h3 style="margin:0 0 8px 0;">Song Metadata</h3>
-        <table style="border-spacing:4px 6px;">
-            <tr><td>Song Name</td><td><input type="text" id="meta-song-name" size="40" /></td></tr>
-            <tr><td>Artist</td><td><input type="text" id="meta-artist" size="40" /></td></tr>
-            <tr><td>Album</td><td><input type="text" id="meta-album" size="40" /></td></tr>
-            <tr><td>Album Art (optional)</td><td><input type="file" id="meta-album-art" accept="image/*" /></td></tr>
-            <tr><td>MIDI Delay (ms)</td><td><input type="number" id="meta-delay" value="0" style="width:80px;" /></td></tr>
-            <tr>
-                <td>Difficulty (0–5)</td>
-                <td>
-                    <input type="range" id="meta-difficulty" min="0" max="5" step="0.5" value="0" />
-                    <span id="meta-difficulty-value">0</span>
-                </td>
-            </tr>
-        </table>
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="midi">MIDI</button>
+        <button class="tab-btn" data-tab="psarc">Rocksmith 2014</button>
     </div>
 
-    <br>
-    <div id="hand-disclaimer" style="display:none; color:#b45309; font-size:13px;">
-        <strong>&#9888; Hand Fallback Used</strong>
-        <ul>
-            <li><strong>No "Left Hand" / "Right Hand" track names detected</strong> — rename MIDI tracks to include these for accurate results.</li>
-            <li><strong>Hand assigned by pitch</strong> — below middle C (MIDI 60) → left, above → right. May be wrong where hands cross.</li>
-        </ul>
+    <div id="tab-midi" class="tab-panel active">
+        <h2>Piano MIDI Converter</h2>
+        <input type="file" id="midi-input" accept=".mid,.midi" />
+
+        <div id="metadata-form" style="display:none; margin-top:16px;">
+            <h3 style="margin:0 0 8px 0;">Song Metadata</h3>
+            <table style="border-spacing:4px 6px;">
+                <tr><td>Song Name</td><td><input type="text" id="meta-song-name" size="40" /></td></tr>
+                <tr><td>Artist</td><td><input type="text" id="meta-artist" size="40" /></td></tr>
+                <tr><td>Album</td><td><input type="text" id="meta-album" size="40" /></td></tr>
+                <tr><td>Album Art (optional)</td><td><input type="file" id="meta-album-art" accept="image/*" /></td></tr>
+                <tr><td>MIDI Delay (ms)</td><td><input type="number" id="meta-delay" value="0" style="width:80px;" /></td></tr>
+                <tr>
+                    <td>Difficulty (0–5)</td>
+                    <td>
+                        <input type="range" id="meta-difficulty" min="0" max="5" step="0.5" value="0" />
+                        <span id="meta-difficulty-value">0</span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <br>
+        <div id="hand-disclaimer" style="display:none; color:#b45309; font-size:13px;">
+            <strong>&#9888; Hand Fallback Used</strong>
+            <ul>
+                <li><strong>No "Left Hand" / "Right Hand" track names detected</strong> — rename MIDI tracks to include these for accurate results.</li>
+                <li><strong>Hand assigned by pitch</strong> — below middle C (MIDI 60) → left, above → right. May be wrong where hands cross.</li>
+            </ul>
+        </div>
+        <button id="download-all" disabled>Download All (.zip)</button>
+        <button id="download-song" disabled>Download song.json</button>
+        <button id="download-arrangement" disabled>Download arrangement.json</button>
+        <button id="download-keys" disabled>Download keys.json</button>
+        <details style="margin-top:12px;">
+            <summary style="cursor:pointer; font-size:13px; color:#555;">Show debug log</summary>
+            <pre id="output" style="font-size:12px; max-height:60vh; overflow:auto;"></pre>
+        </details>
     </div>
-    <button id="download-all" disabled>Download All (.zip)</button>
-    <button id="download-song" disabled>Download song.json</button>
-    <button id="download-arrangement" disabled>Download arrangement.json</button>
-    <button id="download-keys" disabled>Download keys.json</button>
-    <details style="margin-top:12px;">
-        <summary style="cursor:pointer; font-size:13px; color:#555;">Show debug log</summary>
-        <pre id="output" style="font-size:12px; max-height:60vh; overflow:auto;"></pre>
-    </details>
 
-    <hr style="margin:24px 0;">
+    <div id="tab-psarc" class="tab-panel" style="display:none;">
+        <h2>Rocksmith .psarc Importer</h2>
+        <input type="file" id="psarc-input" accept=".psarc" />
+        <div id="psarc-status" style="font-size:13px; color:#555; margin-top:4px;"></div>
 
-    <h2>Rocksmith .psarc Importer</h2>
-    <input type="file" id="psarc-input" accept=".psarc" />
-    <div id="psarc-status" style="font-size:13px; color:#555; margin-top:4px;"></div>
+        <div id="psarc-metadata-form" style="display:none; margin-top:16px;">
+            <h3 style="margin:0 0 8px 0;">Song Metadata</h3>
+            <table style="border-spacing:4px 6px;">
+                <tr><td>Song Name</td><td><input type="text" id="psarc-song-name" size="40" /></td></tr>
+                <tr><td>Artist</td><td><input type="text" id="psarc-artist" size="40" /></td></tr>
+                <tr><td>Album</td><td><input type="text" id="psarc-album" size="40" /></td></tr>
+            </table>
+        </div>
 
-    <div id="psarc-metadata-form" style="display:none; margin-top:16px;">
-        <h3 style="margin:0 0 8px 0;">Song Metadata</h3>
-        <table style="border-spacing:4px 6px;">
-            <tr><td>Song Name</td><td><input type="text" id="psarc-song-name" size="40" /></td></tr>
-            <tr><td>Artist</td><td><input type="text" id="psarc-artist" size="40" /></td></tr>
-            <tr><td>Album</td><td><input type="text" id="psarc-album" size="40" /></td></tr>
-        </table>
+        <br>
+        <button id="psarc-download-all" disabled>Download All (.zip)</button>
     </div>
-
-    <br>
-    <button id="psarc-download-all" disabled>Download All (.zip)</button>
 `;
+
+// Tabs: only one panel visible at a time, matches this file's existing
+// inline style.display convention (e.g. metadataForm below) rather than
+// introducing a stylesheet-driven .active rule ahead of the styling pass.
+const tabButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.tab-btn'));
+const tabPanels: Record<string, HTMLElement> = {
+    midi:  document.getElementById('tab-midi')!,
+    psarc: document.getElementById('tab-psarc')!,
+};
+tabButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab!;
+        tabButtons.forEach((b) => b.classList.toggle('active', b === btn));
+        for (const [key, panel] of Object.entries(tabPanels)) {
+            panel.classList.toggle('active', key === tab);
+            panel.style.display = key === tab ? 'block' : 'none';
+        }
+    });
+});
 
 const input           = document.getElementById('midi-input')          as HTMLInputElement;
 const output          = document.getElementById('output')              as HTMLPreElement;
