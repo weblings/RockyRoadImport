@@ -1,9 +1,13 @@
+v0.1.1
+- Added GuitarPro parsing support
+- Dev - Replicated lessons learned architecture from RockyRoad
+
 v0.1.0
 - Updated UI to match RockyRoad's v0.2.0 design system
 - Added a README
 
 v0.0.2
-- Modified dependencies to support WASM and a modification to OpenSongChart that captures variable difficulty
+- Modified dependencies to support WASM parsing of PSARC and a modification to OpenSongChart that captures variable difficulty
 
 v0.0.1
 - Distilled ChartConverter's MIDI logic to browser to support converting piano MIDI to OpenSongChart

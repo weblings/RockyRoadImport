@@ -337,7 +337,8 @@ function buildNote(
         HandFret: handFret,
         Techniques: techniquesToString(flags),
         ChordID: chordId,
-        FingerID: note.leftHandFinger !== alphaTab.model.Fingers.Unknown ? note.leftHandFinger : undefined,
+        // FingerID is not "which finger plays this" - it's a lookahead index into Chords[] for a
+        // chord-preview overlay (Rocksmith's "fingerprint" data). GP has no equivalent; left unset.
     };
 
     if (note.slideOutType === alphaTab.model.SlideOutType.Shift || note.slideOutType === alphaTab.model.SlideOutType.Legato) {
