@@ -13,13 +13,15 @@ import type {
 } from 'midi-json-parser-worker';
 import { buildTempoMap, buildSongStructure, type TempoChange } from './tempoMap';
 import { convertPianoMidi } from './pianoConverter';
+import type { GpConvertResult } from './gpConverter';
 import type { SongInfo, SongStructure, SongKeyboardNotes, PsarcSongResult } from './songformat';
 
 const app = document.getElementById('app')!;
 app.innerHTML = `
     <div class="tabs">
-        <button class="tab-btn active" data-tab="midi">MIDI</button>
+        <button class="tab-btn active" data-tab="midi">Piano MIDI</button>
         <button class="tab-btn" data-tab="psarc">Rocksmith 2014</button>
+        <button class="tab-btn" data-tab="gp">Guitar Pro</button>
     </div>
 
     <div id="tab-midi" class="tab-panel active">
@@ -84,6 +86,24 @@ app.innerHTML = `
         <br>
         <button id="psarc-download-all" class="btn-primary" disabled>Download</button>
     </div>
+
+    <div id="tab-gp" class="tab-panel" style="display:none;">
+        <h2>Guitar Pro Importer</h2>
+        <input type="file" id="gp-input" accept=".gp3,.gp4,.gp5" />
+        <div id="gp-status" style="margin-top:4px;"></div>
+
+        <div id="gp-metadata-form" style="display:none; margin-top:16px;">
+            <h3 style="margin:0 0 8px 0;">Song Metadata</h3>
+            <table style="border-spacing:4px 6px;">
+                <tr><td>Song Name</td><td><input type="text" id="gp-song-name" size="40" /></td></tr>
+                <tr><td>Artist</td><td><input type="text" id="gp-artist" size="40" /></td></tr>
+                <tr><td>Album</td><td><input type="text" id="gp-album" size="40" /></td></tr>
+            </table>
+        </div>
+
+        <br>
+        <button id="gp-download-all" class="btn-primary" disabled>Download</button>
+    </div>
 `;
 
 // Tabs: only one panel visible at a time, matches this file's existing
@@ -93,6 +113,7 @@ const tabButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.tab
 const tabPanels: Record<string, HTMLElement> = {
     midi:  document.getElementById('tab-midi')!,
     psarc: document.getElementById('tab-psarc')!,
+    gp:    document.getElementById('tab-gp')!,
 };
 tabButtons.forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -125,6 +146,14 @@ const psarcSongNameInput    = document.getElementById('psarc-song-name')        
 const psarcArtistInput      = document.getElementById('psarc-artist')            as HTMLInputElement;
 const psarcAlbumInput       = document.getElementById('psarc-album')             as HTMLInputElement;
 const psarcDownloadAllBtn   = document.getElementById('psarc-download-all')      as HTMLButtonElement;
+
+const gpInput            = document.getElementById('gp-input')             as HTMLInputElement;
+const gpStatus           = document.getElementById('gp-status')            as HTMLElement;
+const gpMetadataForm     = document.getElementById('gp-metadata-form')     as HTMLElement;
+const gpSongNameInput    = document.getElementById('gp-song-name')         as HTMLInputElement;
+const gpArtistInput      = document.getElementById('gp-artist')            as HTMLInputElement;
+const gpAlbumInput       = document.getElementById('gp-album')             as HTMLInputElement;
+const gpDownloadAllBtn   = document.getElementById('gp-download-all')      as HTMLButtonElement;
 
 difficultyInput.addEventListener('input', () => {
     difficultyLabel.textContent = difficultyInput.value;
@@ -423,11 +452,87 @@ psarcDownloadAllBtn.addEventListener('click', () => {
     triggerZipDownload(files, zipFilenameFor(psarcSongNameInput.value));
 });
 
+// --- Guitar Pro (.gp3/.gp4/.gp5) import ---
+// Parsing is entirely alphaTab's job (gpConverter.ts) - no wasm/C# involved, unlike the .psarc
+// path above. Still dynamically imported so MIDI-only users never pay to load it.
+
+let _gpResult: GpConvertResult | null = null;
+
+gpInput.addEventListener('change', () => {
+    const file = gpInput.files?.[0];
+    if (!file) return;
+
+    gpStatus.textContent = 'Parsing…';
+    gpMetadataForm.style.display = 'none';
+    gpDownloadAllBtn.disabled = true;
+    _gpResult = null;
+
+    file.arrayBuffer()
+        .then(async (buffer) => {
+            const { convertGuitarPro } = await import('./gpConverter');
+            const result = convertGuitarPro(new Uint8Array(buffer));
+
+            if (result.tracks.length === 0) {
+                gpStatus.textContent = result.skipped.length > 0
+                    ? `No fretted-instrument tracks found. Skipped: ${result.skipped.join(', ')}.`
+                    : 'No tracks found in this file.';
+                return;
+            }
+
+            _gpResult = result;
+            gpSongNameInput.value = result.songName;
+            gpArtistInput.value = result.artistName;
+            gpAlbumInput.value = '';
+            gpMetadataForm.style.display = 'block';
+
+            let status = `Converted ${result.tracks.length} track(s): ${result.tracks.map((t) => t.trackName).join(', ')}.`;
+            if (result.skipped.length > 0) status += ` Skipped (not a fretted instrument): ${result.skipped.join(', ')}.`;
+            gpStatus.textContent = status;
+
+            gpDownloadAllBtn.disabled = false;
+        })
+        .catch((err: unknown) => {
+            gpStatus.textContent = `Error parsing Guitar Pro file: ${err instanceof Error ? err.message : String(err)}`;
+        });
+});
+
+gpDownloadAllBtn.addEventListener('click', () => {
+    if (!_gpResult || _gpResult.tracks.length === 0) return;
+
+    const songInfo: SongInfo = {
+        SongName: gpSongNameInput.value.trim() || _gpResult.songName || 'Unknown',
+        ArtistName: gpArtistInput.value.trim() || _gpResult.artistName || 'Unknown',
+        SongLengthSeconds: _gpResult.tracks.reduce(
+            (max, t) => t.notes.Notes.reduce((m, n) => Math.max(m, n.EndTime), max),
+            0,
+        ),
+        InstrumentParts: _gpResult.tracks.map((t) => t.part),
+    };
+    const album = gpAlbumInput.value.trim();
+    if (album) songInfo.AlbumName = album;
+
+    const files: Record<string, Uint8Array> = {
+        'song.json': strToU8(JSON.stringify(songInfo, null, 2)),
+    };
+    for (const track of _gpResult.tracks) {
+        files[`${partFilenameFor(track.trackName)}.json`] = strToU8(JSON.stringify(track.notes, null, 2));
+    }
+
+    triggerZipDownload(files, zipFilenameFor(gpSongNameInput.value));
+});
+
 // strip whitespace and filesystem-unsafe
 // characters from the song name; falls back to "song.zip" when there's no name to use.
 function zipFilenameFor(songName: string): string {
     const safeName = songName.trim().replace(/\s+/g, '').replace(/[<>:"/\\|?*]/g, '');
     return `${safeName || 'song'}.zip`;
+}
+
+// Same sanitizing as zipFilenameFor, but for a per-track output filename (e.g.
+// "Rhythm Guitar" -> "RhythmGuitar.json") rather than the psarc path's short part.Name slugs.
+function partFilenameFor(trackName: string): string {
+    const safeName = trackName.trim().replace(/\s+/g, '').replace(/[<>:"/\\|?*]/g, '');
+    return safeName || 'part';
 }
 
 function triggerZipDownload(files: Record<string, Uint8Array>, zipName: string): void {

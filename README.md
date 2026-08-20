@@ -1,7 +1,8 @@
 # RockyRoadImport
 
-- Converts a Rocksmith 2014 (`.psarc`) song or a piano MIDI (`.mid`) file into OpenSongChart
-  format — the chart format [RockyRoad](https://github.com/weblings/RockyRoad) reads.
+- Converts a Rocksmith 2014 (`.psarc`) song, a Guitar Pro (`.gp3`/`.gp4`/`.gp5`) file, or a piano
+  MIDI (`.mid`) file into OpenSongChart format — the chart format
+  [RockyRoad](https://github.com/weblings/RockyRoad) reads.
 - Runs entirely in your browser — nothing is uploaded anywhere, your song files never leave your
   computer.
 
@@ -49,6 +50,14 @@ conversion runs C# code compiled to WebAssembly:
 4. Refresh the page (`npm run dev` doesn't need restarting) — the **Rocksmith 2014** tab now works.
    Choose your `.psarc` file, fill in the song metadata, and click **Download**.
 
+## Converting Guitar Pro (`.gp3`/`.gp4`/`.gp5`) files
+
+No extra setup beyond Quick Start above — unlike the Rocksmith 2014 path, this one is pure
+JavaScript (no .NET, no wasm build step). On the **Guitar Pro** tab, choose your `.gp3`, `.gp4`, or
+`.gp5` file, fill in the song metadata, and click **Download**. Newer Guitar Pro formats (`.gpx`
+from GP6, `.gp` from GP7/8) aren't supported — they're a different file format under the hood, not
+just a newer version of the same one.
+
 ## Troubleshooting
 
 **Rocksmith 2014 tab doesn't work / "Error parsing .psarc file":**
@@ -73,8 +82,8 @@ Repos by [Mike Oliphant](https://github.com/mikeoliphant). Without this amazing 
   this tool differs.
 
 **What file types are supported?**
-Rocksmith 2014 `.psarc` files and piano MIDI (`.mid`) files today. Rock Band conversion is planned
-but not yet available.
+Rocksmith 2014 `.psarc`, Guitar Pro `.gp3`/`.gp4`/`.gp5`, and piano MIDI (`.mid`) files today. Rock
+Band conversion is planned but not yet available.
 
 **What do I do with the converted output?**
 Unzip it into the songs folder RockyRoad points at — see RockyRoad's
