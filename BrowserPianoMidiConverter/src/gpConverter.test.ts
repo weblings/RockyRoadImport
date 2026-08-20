@@ -40,12 +40,23 @@ describe('convertScore', () => {
         expect(track.notes.Notes[1].Techniques).toContain('HammerOn');
     });
 
-    it('groups simultaneous notes into a chord with a shared ChordID', () => {
+    it('groups simultaneous notes into a chord with a shared, valid ChordID', () => {
+        // alphaTex's (a b c) grouping is just simultaneous notes, not a named GP chord diagram
+        // (no beat.chordId) - this is the incidental-chord path real files mostly hit.
         const score = scoreFrom('.\n:4 (0.6 2.5 2.4) |');
         const [track] = convertScore(score).tracks;
         expect(track.notes.Notes).toHaveLength(3);
-        const chordIds = new Set(track.notes.Notes.map((n) => n.ChordID));
-        expect(chordIds.size).toBe(1);
+
+        const chordId = track.notes.Notes[0].ChordID;
+        expect(chordId).toBeTypeOf('number');
+        expect(track.notes.Notes.every((n) => n.ChordID === chordId)).toBe(true);
+
+        // A Chord-tagged note with no resolvable ChordID is exactly the bug that silently
+        // dropped it from rendering - the chord entry must actually exist.
+        expect(track.notes.Chords[chordId!]).toBeDefined();
+        expect(track.notes.Chords[chordId!].Frets).toContain(0);
+        expect(track.notes.Chords[chordId!].Frets).toContain(2);
+
         expect(track.notes.Notes[0].Techniques).toContain('Chord');
         expect(track.notes.Notes[1].Techniques).toContain('ChordNote');
     });

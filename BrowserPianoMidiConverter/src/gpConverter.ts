@@ -246,19 +246,31 @@ function convertTrack(
                 const startTime = ticksToSeconds(beat.absolutePlaybackStart, tempoMap, division);
                 const endTime = ticksToSeconds(beat.absolutePlaybackStart + beat.playbackDuration, tempoMap, division);
 
+                // A multi-note beat isn't necessarily a named GP chord (beat.chordId) - most are
+                // incidental. buildNote() tags the first note Chord regardless, so without a
+                // synthesized chord here, its ChordID lookup fails and it silently drops.
                 let chordId: number | undefined;
-                if (beat.chordId && staff.hasChord(beat.chordId)) {
-                    const chord = staff.getChord(beat.chordId)!;
-                    const key = chord.uniqueId;
+                if (beat.notes.length > 1) {
+                    const namedChord = beat.chordId && staff.hasChord(beat.chordId) ? staff.getChord(beat.chordId) : null;
+
+                    let entry: SongChord;
+                    let key: string;
+                    if (namedChord) {
+                        // alphaTab orders named-chord strings highest-first, like Staff.tuning -
+                        // reverse to match this schema's lowest-first convention.
+                        const frets = [...namedChord.strings].reverse();
+                        entry = { Name: namedChord.name, Frets: frets, Fingers: frets.map(() => 0) };
+                        key = `named:${namedChord.uniqueId}`;
+                    } else {
+                        const frets = new Array(tuning.length).fill(-1);
+                        for (const n of beat.notes) frets[n.string - 1] = n.fret;
+                        entry = { Name: '', Frets: frets, Fingers: frets.map(() => 0) };
+                        key = `synth:${frets.join(',')}`;
+                    }
+
                     if (!chordIdByKey.has(key)) {
                         chordIdByKey.set(key, chords.length);
-                        chords.push({
-                            Name: chord.name,
-                            Frets: chord.strings,
-                            // alphaTab doesn't expose per-string fingering on Chord - left as
-                            // zeros (unknown) rather than guessed.
-                            Fingers: chord.strings.map(() => 0),
-                        });
+                        chords.push(entry);
                     }
                     chordId = chordIdByKey.get(key)!;
                 }
