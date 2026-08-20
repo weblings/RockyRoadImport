@@ -98,6 +98,12 @@ app.innerHTML = `
                 <tr><td>Song Name</td><td><input type="text" id="gp-song-name" size="40" /></td></tr>
                 <tr><td>Artist</td><td><input type="text" id="gp-artist" size="40" /></td></tr>
                 <tr><td>Album</td><td><input type="text" id="gp-album" size="40" /></td></tr>
+                <tr><td>Album Art (optional)</td><td><input type="file" id="gp-album-art" accept="image/*" /></td></tr>
+                <tr><td>Song Audio (optional)</td><td><input type="file" id="gp-audio" accept=".ogg,audio/ogg" /></td></tr>
+                <tr>
+                    <td></td>
+                    <td><span class="field-note">*Audio must be .ogg format.</span></td>
+                </tr>
             </table>
         </div>
 
@@ -153,6 +159,8 @@ const gpMetadataForm     = document.getElementById('gp-metadata-form')     as HT
 const gpSongNameInput    = document.getElementById('gp-song-name')         as HTMLInputElement;
 const gpArtistInput      = document.getElementById('gp-artist')            as HTMLInputElement;
 const gpAlbumInput       = document.getElementById('gp-album')             as HTMLInputElement;
+const gpAlbumArtInput    = document.getElementById('gp-album-art')         as HTMLInputElement;
+const gpAudioInput       = document.getElementById('gp-audio')             as HTMLInputElement;
 const gpDownloadAllBtn   = document.getElementById('gp-download-all')      as HTMLButtonElement;
 
 difficultyInput.addEventListener('input', () => {
@@ -260,12 +268,6 @@ downloadAllBtn.addEventListener('click', () => {
     // Album art and audio are both optional and read async — read whichever are present, then
     // zip once both settle. A read failure drops that one file rather than blocking the download,
     // same as album art's previous behavior.
-    const readOptionalFile = (input: HTMLInputElement): Promise<ArrayBuffer | null> => {
-        const file = input.files?.[0];
-        if (!file) return Promise.resolve(null);
-        return file.arrayBuffer().catch(() => null);
-    };
-
     Promise.all([
         readOptionalFile(albumArtInput),
         readOptionalFile(audioInput),
@@ -512,13 +514,22 @@ gpDownloadAllBtn.addEventListener('click', () => {
     if (album) songInfo.AlbumName = album;
 
     const files: Record<string, Uint8Array> = {
-        'song.json': strToU8(JSON.stringify(songInfo, null, 2)),
+        'song.json':        strToU8(JSON.stringify(songInfo, null, 2)),
+        'arrangement.json': strToU8(JSON.stringify(_gpResult.structure, null, 2)),
     };
     for (const track of _gpResult.tracks) {
-        files[`${partFilenameFor(track.trackName)}.json`] = strToU8(JSON.stringify(track.notes, null, 2));
+        files[`${track.part.InstrumentName}.json`] = strToU8(JSON.stringify(track.notes, null, 2));
     }
 
-    triggerZipDownload(files, zipFilenameFor(gpSongNameInput.value));
+    const zipName = zipFilenameFor(gpSongNameInput.value);
+    Promise.all([
+        readOptionalFile(gpAlbumArtInput),
+        readOptionalFile(gpAudioInput),
+    ]).then(([artBuf, audioBuf]) => {
+        if (artBuf)   files['albumart.png'] = new Uint8Array(artBuf);
+        if (audioBuf) files['song.ogg']     = new Uint8Array(audioBuf);
+        triggerZipDownload(files, zipName);
+    });
 });
 
 // strip whitespace and filesystem-unsafe
@@ -528,11 +539,13 @@ function zipFilenameFor(songName: string): string {
     return `${safeName || 'song'}.zip`;
 }
 
-// Same sanitizing as zipFilenameFor, but for a per-track output filename (e.g.
-// "Rhythm Guitar" -> "RhythmGuitar.json") rather than the psarc path's short part.Name slugs.
-function partFilenameFor(trackName: string): string {
-    const safeName = trackName.trim().replace(/\s+/g, '').replace(/[<>:"/\\|?*]/g, '');
-    return safeName || 'part';
+// Reads an optional <input type="file"> - no file selected or a read failure both resolve to
+// null rather than rejecting, so callers can Promise.all several of these without one missing
+// file blocking the rest of the download.
+function readOptionalFile(input: HTMLInputElement): Promise<ArrayBuffer | null> {
+    const file = input.files?.[0];
+    if (!file) return Promise.resolve(null);
+    return file.arrayBuffer().catch(() => null);
 }
 
 function triggerZipDownload(files: Record<string, Uint8Array>, zipName: string): void {

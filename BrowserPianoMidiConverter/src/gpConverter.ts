@@ -6,6 +6,8 @@ import type {
     SongNote,
     SongChord,
     SongSection,
+    SongBeat,
+    SongStructure,
     CentsOffset,
 } from './songformat';
 
@@ -24,6 +26,7 @@ export interface GpConvertResult {
     artistName: string;
     tracks: GpTrackResult[];
     skipped: string[]; // track names skipped (not a fretted instrument, e.g. drums)
+    structure: SongStructure; // shared across all tracks - RockyRoad requires arrangement.json
 }
 
 // ESongNoteTechnique bit flags - mirrors Dependencies/OpenSongChart/SongFormat/SongFormat.cs.
@@ -72,6 +75,36 @@ function isBassRange(tuning: number[]): boolean {
     return tuning[0] < 35;
 }
 
+interface Role {
+    instrumentName: string; // slug used for both InstrumentName and the output filename
+    instrumentType: string;
+}
+
+// Name keywords take priority (mirrors pianoConverter.ts's detectPianoTracks); with no hints,
+// the first kept track is assumed Lead (per Andrew's call), later ones Rhythm. nameCounts
+// de-dupes repeated roles ("rhythm", "rhythm2", ...) across the whole song.
+function determineRole(track: alphaTab.model.Track, tuning: number[], nameCounts: Map<string, number>, isFirstKept: boolean): Role {
+    const name = (track.name || '').toLowerCase();
+    let base: string;
+    let instrumentType: string;
+
+    if (isBassRange(tuning) || name.includes('bass')) {
+        base = 'bass'; instrumentType = 'BassGuitar';
+    } else if (name.includes('lead') || name.includes('solo')) {
+        base = 'lead'; instrumentType = 'LeadGuitar';
+    } else if (name.includes('rhythm') || name.includes('chord') || name.includes('comp')) {
+        base = 'rhythm'; instrumentType = 'RhythmGuitar';
+    } else if (isFirstKept) {
+        base = 'lead'; instrumentType = 'LeadGuitar';
+    } else {
+        base = 'rhythm'; instrumentType = 'RhythmGuitar';
+    }
+
+    const count = nameCounts.get(base) ?? 0;
+    nameCounts.set(base, count + 1);
+    return { instrumentName: count === 0 ? base : `${base}${count + 1}`, instrumentType };
+}
+
 function buildTuningOffsets(tuning: number[]): number[] {
     const standard = STANDARD_TUNING[tuning.length];
     if (!standard) {
@@ -104,6 +137,43 @@ function buildTempoMap(score: alphaTab.model.Score): { tempoMap: TempoChange[]; 
     return { tempoMap, division: midiFile.division };
 }
 
+// Shared across every track (RockyRoad's ActiveSceneScreen.ts requires this file to exist) -
+// built from whichever staff has bars, since bar/beat timing is the same for every track in a
+// score. Mirrors tempoMap.ts's buildSongStructure, but bar starts come from a real Beat's
+// absolutePlaybackStart rather than a running total, so mid-song time-signature changes still
+// line up correctly.
+function buildStructure(score: alphaTab.model.Score, tempoMap: TempoChange[], division: number): SongStructure {
+    const staff = score.tracks.map((t) => t.staves[0]).find((s) => s && s.bars.length > 0);
+    if (!staff) return { Sections: [], Beats: [] };
+
+    const sections: SongSection[] = [];
+    const beats: SongBeat[] = [];
+
+    for (const bar of staff.bars) {
+        const firstBeat = bar.voices[0]?.beats[0];
+        if (!firstBeat) continue;
+        const barStart = firstBeat.absolutePlaybackStart;
+        const masterBar = bar.masterBar;
+
+        if (masterBar.section) {
+            sections.push({
+                Name: masterBar.section.text || masterBar.section.marker,
+                StartTime: ticksToSeconds(barStart, tempoMap, division),
+            });
+        }
+
+        const ticksPerBeat = Math.round((division * 4) / masterBar.timeSignatureDenominator);
+        for (let i = 0; i < masterBar.timeSignatureNumerator; i++) {
+            beats.push({
+                TimeOffset: ticksToSeconds(barStart + i * ticksPerBeat, tempoMap, division),
+                IsMeasure: i === 0,
+            });
+        }
+    }
+
+    return { Sections: sections, Beats: beats };
+}
+
 export function convertGuitarPro(bytes: Uint8Array): GpConvertResult {
     return convertScore(alphaTab.importer.ScoreLoader.loadScoreFromBytes(bytes));
 }
@@ -115,6 +185,7 @@ export function convertScore(score: alphaTab.model.Score): GpConvertResult {
 
     const tracks: GpTrackResult[] = [];
     const skipped: string[] = [];
+    const nameCounts = new Map<string, number>();
 
     for (const track of score.tracks) {
         const staff = track.staves[0];
@@ -123,7 +194,9 @@ export function convertScore(score: alphaTab.model.Score): GpConvertResult {
             skipped.push(trackName);
             continue;
         }
-        tracks.push(convertTrack(track, staff, trackName, tempoMap, division));
+        const tuning = [...staff.tuning].reverse();
+        const role = determineRole(track, tuning, nameCounts, tracks.length === 0);
+        tracks.push(convertTrack(staff, trackName, tuning, role, tempoMap, division));
     }
 
     return {
@@ -131,23 +204,18 @@ export function convertScore(score: alphaTab.model.Score): GpConvertResult {
         artistName: score.artist || '',
         tracks,
         skipped,
+        structure: buildStructure(score, tempoMap, division),
     };
 }
 
 function convertTrack(
-    track: alphaTab.model.Track,
     staff: alphaTab.model.Staff,
     trackName: string,
+    tuning: number[],
+    role: Role,
     tempoMap: TempoChange[],
     division: number,
 ): GpTrackResult {
-    // alphaTab orders tuning highest-string-first; OpenSongChart/SongNote.String (mirrored from
-    // Rocksmith's StringIndex) are lowest-first - reverse once, use low-to-high everywhere below.
-    const tuning = [...staff.tuning].reverse();
-    const instrumentType = isBassRange(tuning) ? 'BassGuitar'
-        : track.index === 0 ? 'LeadGuitar'
-        : 'RhythmGuitar'; // first stringed track assumed lead, matching how the psarc path
-
     const sections: SongSection[] = [];
     const notes: SongNote[] = [];
     const chords: SongChord[] = [];
@@ -200,8 +268,8 @@ function convertTrack(
     return {
         trackName,
         part: {
-            InstrumentName: trackName,
-            InstrumentType: instrumentType,
+            InstrumentName: role.instrumentName,
+            InstrumentType: role.instrumentType,
             Tuning: { StringSemitoneOffsets: buildTuningOffsets(tuning) },
             CapoFret: staff.capo || undefined,
         },

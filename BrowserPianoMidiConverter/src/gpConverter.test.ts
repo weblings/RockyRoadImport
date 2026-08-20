@@ -59,4 +59,29 @@ describe('convertScore', () => {
         expect(result.skipped).toContain('Drums');
         expect(result.tracks.map((t) => t.trackName)).toEqual(['Guitar']);
     });
+
+    it('assumes Lead for a lone untitled track, and dedupes repeated roles across several', () => {
+        const score = scoreFrom(
+            '.\n:4 0.6 0.6 |\n' +
+            '\\track "Guitar 2"\n.\n:4 0.6 0.6 |\n' +
+            '\\track "Guitar 3"\n.\n:4 0.6 0.6 |',
+        );
+        const [t1, t2, t3] = convertScore(score).tracks;
+        expect(t1.part.InstrumentName).toBe('lead');
+        expect(t2.part.InstrumentName).toBe('rhythm');
+        expect(t3.part.InstrumentName).toBe('rhythm2');
+    });
+
+    it('uses a track name hint over position-based guessing', () => {
+        const score = scoreFrom('.\n:4 0.6 0.6 |\n\\track "Lead Guitar"\n.\n:4 0.6 0.6 |');
+        const [, second] = convertScore(score).tracks;
+        expect(second.part.InstrumentType).toBe('LeadGuitar');
+    });
+
+    it('produces a non-empty top-level structure (arrangement.json) even with no explicit sections', () => {
+        const score = scoreFrom('.\n:4 0.6 0.6 0.6 0.6 | 0.6 0.6 0.6 0.6 |');
+        const { structure } = convertScore(score);
+        expect(structure.Beats.length).toBeGreaterThan(0);
+        expect(structure.Beats.filter((b) => b.IsMeasure)).toHaveLength(2);
+    });
 });
