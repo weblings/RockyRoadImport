@@ -1,11 +1,11 @@
 {
   "name": "browser-piano-midi-converter",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "npm run build:wasm && tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "build:wasm": "dotnet build wasm/PsarcChartCore.Wasm -c Release && node scripts/copy-wasm.mjs"
