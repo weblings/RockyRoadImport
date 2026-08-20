@@ -16,6 +16,7 @@
     "vitest": "^4.1.2"
   },
   "dependencies": {
+    "@coderline/alphatab": "^1.8.4",
     "fflate": "^0.8.2",
     "midi-json-parser": "^8.1.73"
   }
