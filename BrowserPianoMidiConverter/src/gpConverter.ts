@@ -221,6 +221,12 @@ function convertTrack(
     const chords: SongChord[] = [];
     const chordIdByKey = new Map<string, number>(); // alphaTab chord uniqueId -> our ChordID index
 
+    // GP has no equivalent of Rocksmith's authored AnchorFretId, so this is an approximation:
+    // carries forward the lowest fretted note seen so far, updated whenever a beat has one.
+    // Must never be left undefined - the renderer uses it for open-string/chord positioning and
+    // an undefined value produces NaN geometry (confirmed via a real conversion).
+    let currentHandFret = 0;
+
     for (const bar of staff.bars) {
         const masterBar = bar.masterBar;
         if (masterBar.section) {
@@ -257,9 +263,12 @@ function convertTrack(
                     chordId = chordIdByKey.get(key)!;
                 }
 
+                const frettedFrets = beat.notes.map((n) => n.fret).filter((f) => f > 0);
+                if (frettedFrets.length > 0) currentHandFret = Math.min(...frettedFrets);
+
                 const isChordBeat = beat.notes.length > 1;
                 for (const note of beat.notes) {
-                    notes.push(buildNote(note, beat, startTime, endTime, chordId, isChordBeat));
+                    notes.push(buildNote(note, beat, startTime, endTime, chordId, isChordBeat, currentHandFret));
                 }
             }
         }
@@ -284,6 +293,7 @@ function buildNote(
     endTime: number,
     chordId: number | undefined,
     isChordBeat: boolean,
+    handFret: number,
 ): SongNote {
     let flags = 0;
     // Flag lands on the destination note (matches Rocksmith's own NoteMask convention) - the
@@ -308,6 +318,7 @@ function buildNote(
         EndTime: endTime,
         Fret: note.fret,
         String: note.string - 1, // alphaTab is 1-indexed (1 = lowest); this schema is 0-indexed
+        HandFret: handFret,
         Techniques: techniquesToString(flags),
         ChordID: chordId,
         FingerID: note.leftHandFinger !== alphaTab.model.Fingers.Unknown ? note.leftHandFinger : undefined,
