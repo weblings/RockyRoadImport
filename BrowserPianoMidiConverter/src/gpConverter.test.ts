@@ -53,9 +53,16 @@ describe('convertScore', () => {
 
         // A Chord-tagged note with no resolvable ChordID is exactly the bug that silently
         // dropped it from rendering - the chord entry must actually exist.
-        expect(track.notes.Chords[chordId!]).toBeDefined();
-        expect(track.notes.Chords[chordId!].Frets).toContain(0);
-        expect(track.notes.Chords[chordId!].Frets).toContain(2);
+        const chord = track.notes.Chords[chordId!];
+        expect(chord).toBeDefined();
+        expect(chord.Frets).toContain(0);
+        expect(chord.Frets).toContain(2);
+
+        // The renderer only skips a string when *both* Fingers and Frets are -1 there - a 0 in
+        // Fingers for an unplayed (-1) string draws a phantom note. Only 3 of 6 strings played.
+        for (let i = 0; i < chord.Frets.length; i++) {
+            if (chord.Frets[i] === -1) expect(chord.Fingers[i]).toBe(-1);
+        }
 
         expect(track.notes.Notes[0].Techniques).toContain('Chord');
         expect(track.notes.Notes[1].Techniques).toContain('ChordNote');

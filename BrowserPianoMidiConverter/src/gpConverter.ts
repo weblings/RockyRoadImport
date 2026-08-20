@@ -116,6 +116,12 @@ function buildTuningOffsets(tuning: number[]): number[] {
     return tuning.map((pitch, i) => pitch - standard[i]);
 }
 
+// No real fingering data to report, but -1 (not 0) marks an unplayed string here - the renderer
+// only skips a string when *both* Fingers and Frets are -1, so 0 would draw every string.
+function unknownFingers(frets: number[]): number[] {
+    return frets.map((f) => (f === -1 ? -1 : 0));
+}
+
 // alphaTab doesn't expose its ticks-per-quarter constant directly - generating a MidiFile is the
 // reliable way to get it, plus tempo events already resolved to absolute ticks.
 function buildTempoMap(score: alphaTab.model.Score): { tempoMap: TempoChange[]; division: number } {
@@ -137,11 +143,9 @@ function buildTempoMap(score: alphaTab.model.Score): { tempoMap: TempoChange[]; 
     return { tempoMap, division: midiFile.division };
 }
 
-// Shared across every track (RockyRoad's ActiveSceneScreen.ts requires this file to exist) -
-// built from whichever staff has bars, since bar/beat timing is the same for every track in a
-// score. Mirrors tempoMap.ts's buildSongStructure, but bar starts come from a real Beat's
-// absolutePlaybackStart rather than a running total, so mid-song time-signature changes still
-// line up correctly.
+// Shared across every track (RockyRoad's ActiveSceneScreen.ts requires this file to exist),
+// built from whichever staff has bars since bar/beat timing is the same for every track.
+// Mirrors tempoMap.ts's buildSongStructure, but from a real Beat's absolutePlaybackStart.
 function buildStructure(score: alphaTab.model.Score, tempoMap: TempoChange[], division: number): SongStructure {
     const staff = score.tracks.map((t) => t.staves[0]).find((s) => s && s.bars.length > 0);
     if (!staff) return { Sections: [], Beats: [] };
@@ -259,12 +263,12 @@ function convertTrack(
                         // alphaTab orders named-chord strings highest-first, like Staff.tuning -
                         // reverse to match this schema's lowest-first convention.
                         const frets = [...namedChord.strings].reverse();
-                        entry = { Name: namedChord.name, Frets: frets, Fingers: frets.map(() => 0) };
+                        entry = { Name: namedChord.name, Frets: frets, Fingers: unknownFingers(frets) };
                         key = `named:${namedChord.uniqueId}`;
                     } else {
                         const frets = new Array(tuning.length).fill(-1);
                         for (const n of beat.notes) frets[n.string - 1] = n.fret;
-                        entry = { Name: '', Frets: frets, Fingers: frets.map(() => 0) };
+                        entry = { Name: '', Frets: frets, Fingers: unknownFingers(frets) };
                         key = `synth:${frets.join(',')}`;
                     }
 
