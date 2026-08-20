@@ -58,6 +58,11 @@ JavaScript (no .NET, no wasm build step). On the **Guitar Pro** tab, choose your
 from GP6, `.gp` from GP7/8) aren't supported — they're a different file format under the hood, not
 just a newer version of the same one.
 
+Don't have a `.gp5` yet? [TuxGuitar](https://www.tuxguitar.app/) (free) is a good way to notate a
+tab from scratch or from another source — export as `.gp5` and feed it in here. It can also export
+audio, but as a `.wav`; convert it to `.ogg` (e.g. via `ffmpeg`) before using it as the optional
+Song Audio field above, which requires `.ogg`.
+
 ## Troubleshooting
 
 **Rocksmith 2014 tab doesn't work / "Error parsing .psarc file":**
