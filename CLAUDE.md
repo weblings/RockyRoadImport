@@ -14,7 +14,7 @@ instead.
 ## Lessons learned — one location, repo-wide
 
 `Analysis/lessons/` is the **only** lessons-learned location in this repo — for every
-subproject (`BrowserPianoMidiConverter`, `PsarcChartCore`), not just the one it happens to sit
+subproject (`SongConverter`, `PsarcChartCore`), not just the one it happens to sit
 next to. Before writing a new gotcha down, check `Analysis/lessons/README.md` for where it goes.
 Never start a new `LessonsLearned.md` (or similarly named doc) elsewhere in the repo. If you're
 ever unsure whether a lessons doc already exists somewhere, `find . -iname "*lesson*"` first.

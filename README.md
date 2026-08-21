@@ -22,7 +22,7 @@
 2. **Get the code.** Either `git clone https://github.com/weblings/RockyRoadImport.git`, or on the
    [GitHub repo page](https://github.com/weblings/RockyRoadImport), click the green **Code**
    button → **Download ZIP**, then unzip it — no git required.
-3. **Open a terminal in the `BrowserPianoMidiConverter` folder.**
+3. **Open a terminal in the `SongConverter` folder.**
 4. **Run `npm install`.** This downloads the project's dependencies — one-time setup, takes a
    minute or two.
 5. **Run `npm run dev`.** Open the URL it prints (something like `http://localhost:5173/`).
@@ -45,7 +45,7 @@ conversion runs C# code compiled to WebAssembly:
    Or grab the installer for your OS from the link above if you'd rather not use a package manager.
 2. **Install the WebAssembly build tools:** run `dotnet workload install wasm-tools` in a terminal
    (one-time, may take a few minutes).
-3. **Build the wasm module:** in the `BrowserPianoMidiConverter` folder, run
+3. **Build the wasm module:** in the `SongConverter` folder, run
    `npm run build:wasm`.
 4. Refresh the page (`npm run dev` doesn't need restarting) — the **Rocksmith 2014** tab now works.
    Choose your `.psarc` file, fill in the song metadata, and click **Download**.

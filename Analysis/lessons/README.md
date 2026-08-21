@@ -4,7 +4,7 @@ Gotchas, non-obvious findings, and hard-won decisions that aren't obvious from r
 planning docs. Add here whenever something costs more than 30 minutes to diagnose.
 
 **This directory is the only lessons-learned location in the repo** — for every subproject
-(`BrowserPianoMidiConverter`, `PsarcChartCore`), not just whichever one is being touched. Don't
+(`SongConverter`, `PsarcChartCore`), not just whichever one is being touched. Don't
 start a new `LessonsLearned.md` elsewhere; if unsure whether one already exists,
 `find . -iname "*lesson*"` first.
 
