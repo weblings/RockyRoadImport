@@ -10,10 +10,12 @@
     "build:demo": "cross-env VITE_DEMO_MODE=true npm run build",
     "preview": "vite preview",
     "test": "vitest run",
-    "build:wasm": "dotnet build wasm/PsarcChartCore.Wasm -c Release && node scripts/copy-wasm.mjs"
+    "build:wasm": "dotnet build wasm/PsarcChartCore.Wasm -c Release && node scripts/copy-wasm.mjs",
+    "deploy": "npm run build:demo && gh-pages -d dist"
   },
   "devDependencies": {
     "cross-env": "^10.1.0",
+    "gh-pages": "^6.1.1",
     "typescript": "~5.9.3",
     "vite": "^8.0.0",
     "vitest": "^4.1.2"

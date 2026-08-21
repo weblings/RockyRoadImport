@@ -306,15 +306,17 @@ function loadDotnetViaScriptTag(): Promise<any> {
             return;
         }
 
+        // Raw string, so Vite won't rewrite it — prefix with BASE_URL ourselves.
+        const base = import.meta.env.BASE_URL;
         const script = document.createElement('script');
         script.type = 'module';
         script.textContent = `
-            import { dotnet } from '/psarc-wasm/dotnet.js';
+            import { dotnet } from '${base}psarc-wasm/dotnet.js';
             window.__psarcDotnet = dotnet;
             window.dispatchEvent(new Event('psarc-dotnet-ready'));
         `;
         window.addEventListener('psarc-dotnet-ready', () => resolve(window.__psarcDotnet), { once: true });
-        script.onerror = () => reject(new Error('Failed to load /psarc-wasm/dotnet.js'));
+        script.onerror = () => reject(new Error(`Failed to load ${base}psarc-wasm/dotnet.js`));
         document.head.appendChild(script);
     });
 }

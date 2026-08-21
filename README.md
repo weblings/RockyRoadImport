@@ -1,10 +1,13 @@
 # RockyRoadImport
 
+
 - Converts a Rocksmith 2014 (`.psarc`) song, a Guitar Pro (`.gp3`/`.gp4`/`.gp5`) file, or a piano
   MIDI (`.mid`) file into OpenSongChart format — the chart format
   [RockyRoad](https://github.com/weblings/RockyRoad) reads.
 - Runs entirely in your browser — nothing is uploaded anywhere, your song files never leave your
   computer.
+
+**[Try GitHub Pages demo](https://weblings.github.io/RockyRoadImport/)** — no install needed.
 
 ## Quick Start (piano MIDI)
 
