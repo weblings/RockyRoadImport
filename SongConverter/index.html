@@ -28,15 +28,21 @@
       #app {
         max-width: 640px;
         margin: 0 auto;
-        padding: 32px 24px 64px;
+        padding: 24px 24px 64px;
       }
 
-      /* Demo-build-only ribbon (see main.ts's VITE_DEMO_MODE check) — full-width top banner.
-         The bar itself is just a background; only the text inside is a real link. */
+      /* Demo-build-only ribbon (see main.ts's VITE_DEMO_MODE check) — matches RockyRoad's
+         .lib-source-ribbon styling (no background, just centered link text), but pinned to
+         the viewport bottom via position:fixed since this page (unlike Library's fixed-height
+         flex screen) is a normal scrolling document — flow placement alone wouldn't stay
+         anchored to the window edge once the page is taller than the viewport. */
       #source-ribbon {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
         text-align: center;
         padding: 8px 0;
-        background: #1a1a1a;
         font-size: 13px;
       }
       #source-ribbon a {
