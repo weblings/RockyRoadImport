@@ -51,3 +51,37 @@ arrays made every unplayed string render as a phantom note.
 **Fix:** when two arrays are read together positionally, their "not applicable here" sentinel must
 match exactly — check how the consumer actually combines them, not just how each array looks in
 isolation.
+
+---
+
+## Vite's `base` config can't rewrite a path it never sees
+
+**Symptom:** Deployed to GitHub Pages under `/RockyRoadImport/` (not domain root) — the Rocksmith
+2014 wasm tab silently failed to load, even after setting `base` in `vite.config.ts`.
+
+**Root cause:** The wasm loader works around a Vite dev-server limitation by injecting a real
+`<script type="module">` tag whose `textContent` is a plain string containing
+`import { dotnet } from '/psarc-wasm/dotnet.js'`. That string is never parsed by Vite's own
+HTML/module-graph processing — it's just JS building a string at runtime — so `base` has nothing to
+rewrite it against, same as any other hardcoded absolute-root path used outside Vite's own asset
+pipeline.
+
+**Fix:** Build the path from `import.meta.env.BASE_URL` instead of a literal leading `/`, same
+treatment as any other runtime string referencing a public asset by URL, not just ones Vite happens
+to compile through its normal `<script src>`/`<link href>` handling.
+
+---
+
+## Grep the whole repo before renaming a shared project folder — a `.gitignore` pattern can be functional, not cosmetic
+
+**Symptom:** Renamed `BrowserPianoMidiConverter/` to `SongConverter/`. Everything built fine, but
+`.gitignore`'s own pattern for the wasm build's generated output directory still pointed at the old
+path name.
+
+**Root cause:** A stale `.gitignore` entry doesn't error or warn — it just silently stops ignoring
+the generated directory it used to cover, so the next `git status` (or worse, the next commit)
+starts tracking build output that was always meant to be regenerated, not committed.
+
+**Fix:** Before any folder rename, grep the whole repo for the old name — not just build configs
+and source imports. `.gitignore` patterns, CI configs, and docs are all just as capable of silently
+breaking as code is, and none of them fail loudly when they do.
