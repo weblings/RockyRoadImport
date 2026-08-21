@@ -9,7 +9,7 @@
 
 **[Try GitHub Pages demo](https://weblings.github.io/RockyRoadImport/)** — no install needed.
 
-## Quick Start (piano MIDI)
+## Quick Start
 
 1. **Install [Node.js](https://nodejs.org/)** (the one prerequisite — version 20 or newer). This
    gives you the `node` and `npm` commands used below. One-line install, per OS:
@@ -29,12 +29,30 @@
 4. **Run `npm install`.** This downloads the project's dependencies — one-time setup, takes a
    minute or two.
 5. **Run `npm run dev`.** Open the URL it prints (something like `http://localhost:5173/`).
-6. On the **MIDI** tab, choose your `.mid` file, fill in the song name/artist, and click
-   **Download** — you get a `.zip` with your converted song folder inside.
 
-## Converting Rocksmith 2014 (`.psarc`) files
+That's the shared setup for every format below — pick the tab for whatever you're converting.
 
-The **Rocksmith 2014** tab needs one extra one-time setup step beyond the above, because that
+## Converting your songs
+
+### Piano MIDI
+
+On the **MIDI** tab, choose your `.mid` file, fill in the song name/artist, and click **Download**.
+
+### Guitar Pro (`.gp3`/`.gp4`/`.gp5`)
+
+On the **Guitar Pro** tab, choose your `.gp3`, `.gp4`, or `.gp5` file, fill in the song metadata,
+and click **Download**. Newer Guitar Pro formats (`.gpx` from GP6, `.gp` from GP7/8) aren't
+supported — they're a different file format under the hood, not just a newer version of the same
+one.
+
+Don't have a `.gp5` yet? [TuxGuitar](https://www.tuxguitar.app/) (free) is a good way to notate a
+tab from scratch or from another source — export as `.gp5` and feed it in here. It can also export
+audio, but as a `.wav`; convert it to `.ogg` (e.g. via `ffmpeg`) before using it as the optional
+Song Audio field above, which requires `.ogg`.
+
+### Rocksmith 2014 (`.psarc`)
+
+The **Rocksmith 2014** tab needs one extra one-time setup step beyond Quick Start, because that
 conversion runs C# code compiled to WebAssembly:
 
 1. **Install the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0).** One-line
@@ -52,19 +70,6 @@ conversion runs C# code compiled to WebAssembly:
    `npm run build:wasm`.
 4. Refresh the page (`npm run dev` doesn't need restarting) — the **Rocksmith 2014** tab now works.
    Choose your `.psarc` file, fill in the song metadata, and click **Download**.
-
-## Converting Guitar Pro (`.gp3`/`.gp4`/`.gp5`) files
-
-No extra setup beyond Quick Start above — unlike the Rocksmith 2014 path, this one is pure
-JavaScript (no .NET, no wasm build step). On the **Guitar Pro** tab, choose your `.gp3`, `.gp4`, or
-`.gp5` file, fill in the song metadata, and click **Download**. Newer Guitar Pro formats (`.gpx`
-from GP6, `.gp` from GP7/8) aren't supported — they're a different file format under the hood, not
-just a newer version of the same one.
-
-Don't have a `.gp5` yet? [TuxGuitar](https://www.tuxguitar.app/) (free) is a good way to notate a
-tab from scratch or from another source — export as `.gp5` and feed it in here. It can also export
-audio, but as a `.wav`; convert it to `.ogg` (e.g. via `ffmpeg`) before using it as the optional
-Song Audio field above, which requires `.ogg`.
 
 ## Troubleshooting
 
