@@ -78,7 +78,7 @@ Song Audio field above, which requires `.ogg`.
 **What's OpenSongChart / ChartPlayer / ChartConverter?**
 
 Repos by [Mike Oliphant](https://github.com/mikeoliphant). Without this amazing tech foundation, I would not have even attempted this project!
-- [OpenSongChart](https://github.com/mikeoliphant/OpenSongFormat) is an open format for song
+- [OpenSongChart](https://github.com/mikeoliphant/OpenSongChart) is an open format for song
   charts — the one this tool produces and [RockyRoad](https://github.com/weblings/RockyRoad) reads.
 - [ChartPlayer](https://github.com/mikeoliphant/ChartPlayer) is a cross-platform application for
   playing along to OpenSongChart charts.
