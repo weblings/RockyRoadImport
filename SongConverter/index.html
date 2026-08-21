@@ -63,8 +63,27 @@
          precedent in ChartPlayer's desktop system. */
       .tabs {
         display: flex;
+        justify-content: center;
         gap: 8px;
         margin-bottom: 24px;
+      }
+
+      /* Divider between the tabs and each tab's fields. Deliberately wider than the fields
+         below it — extends out to #app's own outer edge (its 24px side padding) on each
+         side via the pseudo-element below, so the line reads as spanning the page's true
+         centered column, not just the (narrower) fields content sitting inside it. */
+      .tab-panel {
+        position: relative;
+        padding-top: 24px;
+      }
+      .tab-panel::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -24px;
+        right: -24px;
+        height: 3px;
+        background: #1a1a1a;
       }
       .tab-btn {
         padding: 8px 20px; border: none; border-radius: 20px;
