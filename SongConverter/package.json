@@ -5,12 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:demo": "cross-env VITE_DEMO_MODE=true npm run dev",
     "build": "npm run build:wasm && tsc && vite build",
+    "build:demo": "cross-env VITE_DEMO_MODE=true npm run build",
     "preview": "vite preview",
     "test": "vitest run",
     "build:wasm": "dotnet build wasm/PsarcChartCore.Wasm -c Release && node scripts/copy-wasm.mjs"
   },
   "devDependencies": {
+    "cross-env": "^10.1.0",
     "typescript": "~5.9.3",
     "vite": "^8.0.0",
     "vitest": "^4.1.2"

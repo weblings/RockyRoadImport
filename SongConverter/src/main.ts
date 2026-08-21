@@ -16,6 +16,18 @@ import { convertPianoMidi } from './pianoConverter';
 import type { GpConvertResult } from './gpConverter';
 import type { SongInfo, SongStructure, SongKeyboardNotes, PsarcSongResult } from './songformat';
 
+if (import.meta.env.VITE_DEMO_MODE === 'true') {
+    const ribbon = document.createElement('div');
+    ribbon.id = 'source-ribbon';
+    const link = document.createElement('a');
+    link.href = 'https://github.com/weblings/RockyRoadImport';
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = 'View Source Code';
+    ribbon.appendChild(link);
+    document.body.prepend(ribbon);
+}
+
 const app = document.getElementById('app')!;
 app.innerHTML = `
     <div class="tabs">
