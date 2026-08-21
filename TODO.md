@@ -1,11 +1,5 @@
 # TODO
 
-v0.1.1
-- [x] Add lessons learned logic to this repo too
-- [ ] Upload v0.1.0 as a GitHub page
-- [ ] Reach out to Mike if he wants these and dependency changes
-- [x] Add GuitarPro5 import support
-
 Future
 - [ ] Add Rock Band conversion to Browser
 - [ ] Tweak Rock Band conversion logic to support multiple difficulties
