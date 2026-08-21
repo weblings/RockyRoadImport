@@ -1,0 +1,6 @@
+[submodule "Dependencies/PsarcUtil"]
+	path = Dependencies/PsarcUtil
+	url = https://github.com/weblings/PsarcUtil.git
+[submodule "Dependencies/OpenSongChart"]
+	path = Dependencies/OpenSongChart
+	url = https://github.com/weblings/OpenSongChart.git

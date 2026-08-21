@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <title>RockyRoadImport</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+
+      /* Always reserve the vertical scrollbar's width, whether or not the current tab's
+         content actually overflows — otherwise #app's margin:auto centering shifts left by
+         half the scrollbar's width whenever a scrollbar appears, and shifts inconsistently
+         between tabs with different content heights. */
+      html {
+        scrollbar-gutter: stable;
+        overflow-y: scroll;
+      }
+
+      body {
+        background: #0a0a0a;
+        color: #ffffff;
+        font-family: 'Inter', system-ui, sans-serif;
+      }
+
+      #app {
+        max-width: 640px;
+        margin: 0 auto;
+        padding: 24px 24px 64px;
+      }
+
+      /* Demo-build-only ribbon (see main.ts's VITE_DEMO_MODE check) — matches RockyRoad's
+         .lib-source-ribbon styling (no background, just centered link text), but pinned to
+         the viewport bottom via position:fixed since this page (unlike Library's fixed-height
+         flex screen) is a normal scrolling document — flow placement alone wouldn't stay
+         anchored to the window edge once the page is taller than the viewport. */
+      #source-ribbon {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        text-align: center;
+        padding: 8px 0;
+        font-size: 13px;
+      }
+      #source-ribbon a {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: #c8c8c8;
+        text-decoration: none;
+      }
+      #source-ribbon svg { fill: currentColor; }
+      #source-ribbon a:hover {
+        color: #ffffff;
+        text-decoration: underline;
+      }
+
+      h2 {
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 16px;
+      }
+
+      h3 {
+        font-size: 14px;
+        font-weight: 700;
+        color: #c8c8c8;
+        margin-bottom: 8px;
+      }
+
+      /* Tabs — same pill shape/colors as Library's instrument-filter chips
+         (.lib-filter-btn in ThreeCP/v2/desktop.html), the one tab-like
+         precedent in ChartPlayer's desktop system. */
+      .tabs {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        margin-bottom: 24px;
+      }
+
+      /* Divider between the tabs and each tab's fields. Deliberately wider than the fields
+         below it — extends out to #app's own outer edge (its 24px side padding) on each
+         side via the pseudo-element below, so the line reads as spanning the page's true
+         centered column, not just the (narrower) fields content sitting inside it. */
+      .tab-panel {
+        position: relative;
+        padding-top: 24px;
+      }
+      .tab-panel::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -24px;
+        right: -24px;
+        height: 3px;
+        background: #1a1a1a;
+      }
+      .tab-btn {
+        padding: 8px 20px; border: none; border-radius: 20px;
+        font-size: 14px; font-weight: 400; cursor: pointer; font-family: inherit;
+        background: #333333; color: #ffffff;
+      }
+      .tab-btn:hover { background: #515151; }
+      .tab-btn:active { background: #7c7c7c; }
+      .tab-btn.active { background: #dadada; color: #111111; }
+      .tab-btn.active:hover { background: #bebebe; }
+      .tab-btn.active:active { background: #9c9c9c; }
+
+      /* Text/number inputs — same treatment as Library's search field
+         (.lib-search). */
+      input[type="text"],
+      input[type="number"] {
+        background: #333333; border: none; border-radius: 6px;
+        color: #ffffff; font-size: 13px; font-family: inherit;
+        padding: 9px 12px;
+      }
+      input[type="text"]:hover,
+      input[type="number"]:hover { background: #515151; }
+      input[type="text"]:focus,
+      input[type="number"]:focus { outline: none; }
+
+      /* File inputs — only the button part is stylable; keep it matching
+         the same secondary-button look as everything else here. */
+      input[type="file"] {
+        color: #c8c8c8; font-size: 13px; font-family: inherit;
+      }
+      input[type="file"]::file-selector-button {
+        padding: 8px 14px; margin-right: 10px;
+        background: #333333; border: none; border-radius: 6px;
+        color: #ffffff; font-size: 13px; font-family: inherit; cursor: pointer;
+      }
+      input[type="file"]::file-selector-button:hover { background: #515151; }
+
+      /* Range slider — same accent as the Tuner's gain slider. */
+      input[type="range"] { accent-color: #8b8b8b; cursor: pointer; }
+      #meta-difficulty-value { font-size: 12px; color: #c8c8c8; }
+
+      /* Metadata forms stay <table>-based markup — styled as label/value
+         rows (same shape as .pre-toggle-row's label-left layout) rather
+         than restructured into flex divs. */
+      table { width: 100%; border-collapse: collapse; }
+      table tr { border-bottom: 1px solid #1e1e1e; }
+      table tr:last-child { border-bottom: none; }
+      table td { padding: 10px 0; vertical-align: middle; }
+      table td:first-child {
+        color: #c8c8c8; font-size: 13px; padding-right: 16px; white-space: nowrap;
+      }
+
+      /* Inline help text under a field — same muted tone as .pre-artist-name. */
+      .field-note {
+        display: block; color: #8c8c8c; font-size: 12px; line-height: 1.5;
+      }
+      .field-note a {
+        color: #4d9fff; text-decoration: underline;
+      }
+      .field-note a:hover { color: #7db8ff; }
+
+      /* Primary action button (Download) — same shape/colors as .pre-play-btn. */
+      .btn-primary {
+        padding: 10px 24px; margin-top: 16px;
+        background: #dadada; border: none; border-radius: 8px;
+        color: #111111; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit;
+      }
+      .btn-primary:hover { background: #bebebe; }
+      .btn-primary:disabled { background: #333333; color: #666666; cursor: not-allowed; }
+      .btn-primary:disabled:hover { background: #333333; }
+
+      /* Warning card — same recipe as #settings-panel (dark bg, subtle
+         border, rounded corners), scaled down for inline content instead
+         of a modal, with an amber accent on the heading/emphasis only. */
+      #hand-disclaimer {
+        background: #1a1a1a; border: 1px solid #333; border-radius: 8px;
+        padding: 12px 16px; margin: 16px 0; font-size: 13px;
+      }
+      #hand-disclaimer > strong {
+        display: block; margin-bottom: 6px; color: #f0a824;
+      }
+      #hand-disclaimer ul { color: #c8c8c8; padding-left: 20px; }
+      #hand-disclaimer li { margin-bottom: 4px; }
+      #hand-disclaimer li strong { color: #e8e8e8; }
+
+      /* PSARC status text — same muted tone as .pre-artist-name. */
+      #psarc-status { color: #8c8c8c; font-size: 13px; }
+    </style>
+    <script type="module" crossorigin src="/RockyRoadImport/assets/index-DXQ8OaBy.js"></script>
+  </head>
+  <body>
+    <div id="app"></div>
+  </body>
+</html>
