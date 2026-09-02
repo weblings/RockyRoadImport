@@ -79,3 +79,11 @@ Unzip it into the songs folder RockyRoad points at — see RockyRoad's
 **Why not just use ChartConverter?**
 - ChartConverter by default only takes the most difficult charts in psarc. To get all of the difficulties, RockyRoad has slightly modified how it writes and reads OpenSongChart. I'll look into if these tweaks are worthwhile upstream changes or not.
 - ChartConverter doesn't support MIDI or GuitarPro as input as of now.
+
+## License
+
+RockyRoadImport is licensed under the [GNU General Public License v3.0 or later](LICENSE).
+`PsarcChartCore` directly compiles source from [ChartConverter](https://github.com/mikeoliphant/ChartConverter)
+(GPL-3.0), so this project carries the same license forward. The `PsarcUtil` and `OpenSongChart`
+submodules keep their own MIT licenses — GPL applies to RockyRoadImport's own code, not to those
+dependencies.
