@@ -101,6 +101,7 @@ function endNote(
     const note: SongKeyboardNote = {
         TimeOffset: timeOffset,
         TimeLength: timeLength,
+        EndTime: timeOffset + timeLength,
         Note: noteNumber,
         Velocity: p.velocity,
         Hand: resolvedHand,
