@@ -40,6 +40,7 @@ export interface SongInfo {
     ArtistName: string;
     AlbumName?: string;
     InstrumentParts: SongInstrumentPart[];
+    GeneratedBy: string;
 }
 
 export interface SongKeyboardNote extends ISongEvent {

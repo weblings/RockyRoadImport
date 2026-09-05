@@ -15,6 +15,7 @@ import { buildTempoMap, buildSongStructure, type TempoChange } from './tempoMap'
 import { convertPianoMidi } from './pianoConverter';
 import type { GpConvertResult } from './gpConverter';
 import type { SongInfo, SongStructure, SongKeyboardNotes, PsarcSongResult } from './songformat';
+import { GENERATED_BY } from './version';
 
 const app = document.getElementById('app')!;
 app.innerHTML = `
@@ -242,6 +243,7 @@ function buildSongInfo(): SongInfo {
             InstrumentType: 'Keys',
             ...(difficulty > 0 ? { SongDifficulty: difficulty } : {}),
         }],
+        GeneratedBy: GENERATED_BY,
     };
     const album = albumInput.value.trim();
     if (album) info.AlbumName = album;
@@ -431,6 +433,7 @@ psarcDownloadAllBtn.addEventListener('click', () => {
         SongName: psarcSongNameInput.value.trim() || _psarcResult.SongData.SongName,
         ArtistName: psarcArtistInput.value.trim() || _psarcResult.SongData.ArtistName,
         AlbumName: psarcAlbumInput.value.trim() || undefined,
+        GeneratedBy: GENERATED_BY,
     };
 
     const files: Record<string, Uint8Array> = {
@@ -511,6 +514,7 @@ gpDownloadAllBtn.addEventListener('click', () => {
             0,
         ),
         InstrumentParts: _gpResult.tracks.map((t) => t.part),
+        GeneratedBy: GENERATED_BY,
     };
     const album = gpAlbumInput.value.trim();
     if (album) songInfo.AlbumName = album;
