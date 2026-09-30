@@ -6,3 +6,5 @@ stands and what resumes it. Planning docs stay clean: decisions, status, and poi
 
 | Date | Milestone | Beads |
 |---|---|---|
+| 2026-09-30 | Partial migration: triage, restructure, tagging, scripts, lessons (steps 1–5) | — |
+| 2026-09-30 | Migration done: beads, contract, archive (steps 6–8) | RockyRoadImport-ngd, RockyRoadImport-wxl, RockyRoadImport-9im, RockyRoadImport-df9 |

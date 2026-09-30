@@ -5,7 +5,7 @@ every run. Human lookup for `[[id]]` citations elsewhere in `docs/`.
 
 | Id | Path | Title |
 |---|---|---|
-| `aurora-docs-migration` | [planning/AuroraDocsMigrationPlan.md](planning/AuroraDocsMigrationPlan.md) | Migrate docs infra to Aurora's system (+ beads) |
+| `aurora-docs-migration` | [archive/AuroraDocsMigrationPlan.md](archive/AuroraDocsMigrationPlan.md) | Migrate docs infra to Aurora's system (+ beads) |
 | `browser-piano-midi-port-plan` | [archive/BrowserPianoMidiPortPlan.md](archive/BrowserPianoMidiPortPlan.md) | Browser Piano MIDI Port Plan |
 | `native-logic-reuse-decision` | [native-logic-reuse-decision.md](native-logic-reuse-decision.md) | Reusing existing native-language logic in a browser tool |
 | `piano-midi-analysis` | [archive/PIANO_MIDI_ANALYSIS.md](archive/PIANO_MIDI_ANALYSIS.md) | Piano MIDI → OpenSongChart: Gap Analysis |
