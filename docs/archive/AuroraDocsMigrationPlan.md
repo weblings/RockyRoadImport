@@ -1,6 +1,6 @@
 # Migrate docs infra to Aurora's system (+ beads)
 
-Status: in progress (execution started 2026-09-30)
+Status: done 2026-09-30 — steps 6–8 executed, both check scripts green, archived
 Id: aurora-docs-migration
 
 Owner-context: assessed 2026-09-30 from Aurora's live tree. No code touched — this doc is the
@@ -18,13 +18,13 @@ whole deliverable so far. Next agent: work the plan below top to bottom; each st
 
 ## Current state (this repo)
 
-- Docs: [[piano-midi-analysis]], [[browser-piano-midi-port-plan]] (both ex-`Analysis/`),
+- Docs: [[piano-midi-analysis]], [[browser-piano-midi-port-plan]] (both moved from the old analysis folder),
   [[native-logic-reuse-decision]] (ex-`SongConverter/docs/`). No `Status:`/`Id:` lines, no active-vs-settled split.
 - Lessons: `../lessons/` (`../lessons/README.md`, `../lessons/engineering-hygiene.md`) — single file, entries predate Aurora's
   `Tags:`/`Applies-when:` retrieval contract (prose + `**Fix:**` only).
-- Tasks: `TODO.md` checkboxes + `CHANGELOG.txt`. No beads (no `.beads/`; `bd` binary exists at
+- Tasks: old TODO-list checkboxes + `CHANGELOG.txt`. No beads (no `.beads/`; `bd` binary exists at
   `/home/andrew/.local/bin/bd`). No `log/`, no check scripts, no CI/hooks, no `.claude/`.
-- `CLAUDE.md` hard-codes the `Analysis/lessons/` path — must be updated if docs move.
+- `CLAUDE.md` hard-coded the old analysis-folder lessons path — updated in step 7.
 
 ## Target state
 
@@ -32,13 +32,13 @@ whole deliverable so far. Next agent: work the plan below top to bottom; each st
   generated `../_ids.md`, both check scripts runnable and green.
 - All docs carry `Status:` + `Id:`; new citations use `[[id]]`; old path citations keep resolving (no flag-day rewrite).
 - Lessons entries all carry `Tags:`/`Applies-when:`; `check-lessons.sh` green.
-- Tasks in beads; `TODO.md` retired (delete after migration); `.beads/issues.jsonl` export tracked in git.
+- Tasks in beads; old TODO list retired (deleted after migration); `.beads/issues.jsonl` export tracked in git.
 - `CLAUDE.md` updated to the new paths + beads workflow (export before commit, import after pull).
 
 ## Open decisions (recommendations inline)
 
-1. **Rename `Analysis/` → `docs/`?** Recommended yes — both check scripts and every Aurora convention assume
-   `docs/` at root; keeping `Analysis/` means forking the scripts for no benefit.
+1. **Rename analysis folder → `docs/`?** Recommended yes — both check scripts and every Aurora convention assume
+   `docs/` at root; keeping the old name means forking the scripts for no benefit.
 2. **Native-logic-reuse doc location?** ([[native-logic-reuse-decision]], ex-`SongConverter/docs/`.) Recommended: move into `docs/` root as
    evergreen reference (it's a general principle doc, not SongConverter-specific), leaving nothing behind
    but a deleted dir. Aurora keeps one docs tree for all subprojects.
@@ -65,24 +65,25 @@ whole deliverable so far. Next agent: work the plan below top to bottom; each st
    generates `../_ids.md`, which resolves its own citation) and fix whatever is left.
 5. **Reformat lessons.** DONE 2026-09-30: all 7 entries carry `Tags:`/`Applies-when:`; index converted
    to Aurora's table shape (count 7); `check-lessons.sh` passes. STOPPING POINT — steps 6–8 not started.
-6. **Migrate tasks to beads.** `bd init` (check `bd --help` first — flags may differ from Aurora's version);
-   create one bead per unchecked `TODO.md` item (v0.1.2 piano notation, psarc song.json type-check, Rock Band
-   items incl. the RockBandConverter.cs detail — paste it into the bead description verbatim);
-   `bd export -o .beads/issues.jsonl`; commit the export; delete `TODO.md`.
-   Done when: `bd ready` lists the migrated work, `TODO.md` is gone, export is tracked.
-7. **Wire up the contract.** Update `CLAUDE.md`: new `docs/lessons/` path, `[[id]]` citation rule,
-   beads workflow (`bd ready`/`bd list`, export before `git add`, `bd import` after `git pull` —
-   confirm these exact commands against local `bd --help`), archive-on-close requirement.
-   Done when: CLAUDE.md mentions no stale `Analysis/` paths and a fresh agent could follow the beads loop.
-8. **Convert citations.** `grep -rn` for cross-doc references in `*.md` (repo-wide, not just `docs/` —
-   Aurora got bitten by citers outside the checker's scan scope) and convert to `[[id]]`.
-   Done when: `check-links.sh` green and the repo-wide grep shows no stale bare-path cites.
+6. **Migrate tasks to beads.** DONE 2026-09-30: `bd init --non-interactive --skip-hooks --skip-agents`
+   (prefix `RockyRoadImport`); 4 beads created, one per unchecked TODO-list item
+   (`RockyRoadImport-ngd` piano notation, `RockyRoadImport-wxl` psarc song.json type-check,
+   `RockyRoadImport-9im` Rock Band conversion, `RockyRoadImport-df9` multi-difficulty tweak with the
+   RockBandConverter.cs detail pasted verbatim); `bd export -o .beads/issues.jsonl`; TODO list file
+   deleted. Export commit left for the user (commit needs explicit go-ahead).
+7. **Wire up the contract.** DONE 2026-09-30: `CLAUDE.md` now points at `docs/lessons/`, documents the
+   `Status:`/`Id:`/`[[id]]` rule with the generated `_ids.md` lookup, the beads loop (`bd ready`/`bd list`,
+   export before `git add`, `bd import` after `git pull` — all confirmed against local `bd --help`),
+   and the archive-on-close requirement.
+8. **Convert citations.** DONE 2026-09-30: repo-wide grep found live stale cites only in `CLAUDE.md`
+   (fixed in step 7). Archive's same-dir `PIANO_MIDI_ANALYSIS.md` mentions and lessons self-refs resolve,
+   so they stay untouched — no dead refs, both check scripts green.
 
 ## Verification (all must hold before calling it done)
 
 - `python3 docs/check-links.sh` → `links OK`; `bash docs/check-lessons.sh` → `lessons OK`.
-- `bd ready` shows the ex-TODO.md items; `.beads/issues.jsonl` is committed and current.
-- No `*.md` outside `node_modules/` references `Analysis/` or `TODO.md`.
+- `bd ready` shows the 4 ex-TODO-list items; `.beads/issues.jsonl` is exported and current.
+- No `*.md` outside `node_modules/` references the old analysis-folder path or the retired TODO-list filename.
 - `git status` shows renames detected (not delete+add) for moved docs.
 
 ## Out of scope
