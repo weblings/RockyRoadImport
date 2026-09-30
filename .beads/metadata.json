@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "RockyRoadImport",
+  "project_id": "06fa7121-8cc3-4210-aa8f-5298d9479e84"
+}

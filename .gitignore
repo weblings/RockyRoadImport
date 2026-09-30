@@ -10,3 +10,10 @@ obj/
 # published PsarcChartCore.Wasm framework output copied here for Vite to serve as a
 # static asset. Regenerate, don't commit.
 SongConverter/public/psarc-wasm/
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
+.beads/proxieddb/
+*.gate.lock*
