@@ -1,5 +1,8 @@
 # Reusing existing native-language logic in a browser tool
 
+Status: evergreen reference, not a plan
+Id: native-logic-reuse-decision
+
 When a browser tool needs functionality that already exists as working, tested logic in
 another language — especially binary-format parsing, cryptography, or other
 correctness-critical code — there are two ways to get it into the browser: **compile and

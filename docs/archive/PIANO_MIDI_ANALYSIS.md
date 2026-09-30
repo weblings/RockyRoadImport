@@ -1,5 +1,8 @@
 # Piano MIDI → OpenSongChart: Gap Analysis
 
+Status: shipped (piano MIDI conversion live in SongConverter since v0.0.1)
+Id: piano-midi-analysis
+
 This document analyzes what would be required to add support for converting general piano MIDI files to OpenSongChart format, given the existing PSARC and Phase Shift converters as reference.
 
 ---

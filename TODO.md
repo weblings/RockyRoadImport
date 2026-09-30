@@ -1,5 +1,10 @@
 # TODO
 
+v0.1.2
+- [x] Add GeneratedBy field to assist debugging
+- [ ] Piano notation output support
+- [ ] Type-check psarc song.json against SongInfo
+
 Future
 - [ ] Add Rock Band conversion to Browser
 - [ ] Tweak Rock Band conversion logic to support multiple difficulties

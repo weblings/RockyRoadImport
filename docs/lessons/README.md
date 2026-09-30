@@ -5,13 +5,17 @@ planning docs. Add here whenever something costs more than 30 minutes to diagnos
 
 **This directory is the only lessons-learned location in the repo** — for every subproject
 (`SongConverter`, `PsarcChartCore`), not just whichever one is being touched. Don't
-start a new `LessonsLearned.md` elsewhere; if unsure whether one already exists,
+start a new LessonsLearned-style doc elsewhere; if unsure whether one already exists,
 `find . -iname "*lesson*"` first.
 
 ## Index
 
-- [`engineering-hygiene.md`](engineering-hygiene.md) — general design principles, small enough to
-  read whole, no sub-index needed.
+| File | Scope | Entries | File here when |
+|---|---|---|---|
+| [engineering-hygiene.md](engineering-hygiene.md) | general design principles | 7 | general principle, demonstrated by a real bug here |
+
+Counts as of 2026-09-30 — bump the count when adding entries
+(`grep -c '^## '` per file).
 
 ## Where a new lesson goes
 
@@ -19,7 +23,7 @@ start a new `LessonsLearned.md` elsewhere; if unsure whether one already exists,
    (`feedback_*`), not the repo.
 2. General software-design principle, demonstrated by a real bug here? → `engineering-hygiene.md`.
 3. Everything else, for now — this repo is small enough that one file covers it. Split into
-   topic-specific sibling files (mirroring RockyRoad's `Analysis/lessons/` shape) once
+   topic-specific sibling files (mirroring RockyRoad's `docs/lessons/` shape) once
    `engineering-hygiene.md` gets too long to skim (rough proxy: 15+ entries).
 
 Tied to now-removed code? Keep the principle if it still applies, drop the dead specifics, and say

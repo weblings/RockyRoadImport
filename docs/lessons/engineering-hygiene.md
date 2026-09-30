@@ -6,6 +6,8 @@ General software-design principles, each demonstrated via a real bug hit in this
 ---
 
 ## Tests and a clean build don't prove correctness against real content
+Tags: testing, fixtures, real-files
+Applies-when: verifying a converter or format-mapping change
 
 `gpConverter.ts`'s alphaTex-based unit tests all passed, `tsc`/`npm run build` were clean, yet
 converting one real `.gp5` file surfaced three separate rendering bugs (`HandFret`, chord
@@ -18,6 +20,8 @@ hand-written fixtures pass.
 ---
 
 ## An optional-looking field can gate whether something renders at all
+Tags: schema, optional-fields, renderer
+Applies-when: leaving a schema field unpopulated
 
 `SongNote.HandFret` reads like a cosmetic hint, but RockyRoad's renderer uses it to position
 open-string notes *and* to resolve which chord to draw — leaving it `undefined` produced `NaN`
@@ -29,6 +33,8 @@ assuming it's cosmetic because its own type/doc comment reads that way.
 ---
 
 ## Tagging data with a flag that implies a companion reference must guarantee that reference resolves
+Tags: flags, foreign-keys, chords
+Applies-when: setting a flag that implies a downstream lookup
 
 `gpConverter.ts` tagged the first note of any multi-note beat as `Chord`, but only built a real
 `ChordID`/`SongChord` entry when the source format happened to have a *named* chord association —
@@ -42,6 +48,8 @@ never set the flag "optimistically" and leave the reference to fail quietly.
 ---
 
 ## A shared "unset" sentinel must use the same value in every parallel array a consumer reads together
+Tags: sentinels, parallel-arrays, renderer
+Applies-when: adding a parallel array read positionally alongside another
 
 `SongChord.Frets` uses `-1` for an unplayed string; `gpConverter.ts`'s `Fingers` array (no real
 fingering data available) used `0` for "unknown" instead. The renderer only skips a string when
@@ -55,6 +63,8 @@ isolation.
 ---
 
 ## Vite's `base` config can't rewrite a path it never sees
+Tags: vite, base-path, github-pages, wasm
+Applies-when: referencing a public asset by URL in a runtime-built string
 
 **Symptom:** Deployed to GitHub Pages under `/RockyRoadImport/` (not domain root) — the Rocksmith
 2014 wasm tab silently failed to load, even after setting `base` in `vite.config.ts`.
@@ -73,6 +83,8 @@ to compile through its normal `<script src>`/`<link href>` handling.
 ---
 
 ## Grep the whole repo before renaming a shared project folder — a `.gitignore` pattern can be functional, not cosmetic
+Tags: renames, gitignore, grep
+Applies-when: renaming a shared folder
 
 **Symptom:** Renamed `BrowserPianoMidiConverter/` to `SongConverter/`. Everything built fine, but
 `.gitignore`'s own pattern for the wasm build's generated output directory still pointed at the old
@@ -85,3 +97,20 @@ starts tracking build output that was always meant to be regenerated, not commit
 **Fix:** Before any folder rename, grep the whole repo for the old name — not just build configs
 and source imports. `.gitignore` patterns, CI configs, and docs are all just as capable of silently
 breaking as code is, and none of them fail loudly when they do.
+
+---
+
+## A required field added to a shared type is only enforced where a construction site is explicitly annotated with that type
+Tags: typescript, type-annotation, songinfo
+Applies-when: adding a required field to a shared type
+
+Adding `GeneratedBy: string` to `SongInfo` correctly made `tsc` flag the two `song.json` builders
+written as `const x: SongInfo = {...}`. The third (.psarc path) builds its object via
+`{ ...SongData, SongName: ..., ... }` with no `SongInfo` annotation at all — it flows straight into
+`JSON.stringify()`, which accepts anything — so a future edit there could drop `GeneratedBy` (or
+any required field) with zero compiler warning.
+
+**Fix:** when a shared type has multiple independent construction sites, "compiles clean" only
+proves the annotated ones are actually checked — grep for which sites carry the type annotation,
+not just which ones are shaped like it. (Also: `song.json` has three separate ad-hoc builders in
+`main.ts` with no shared factory — worth remembering before adding the next `SongInfo` field.)

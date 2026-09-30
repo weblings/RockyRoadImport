@@ -1,5 +1,8 @@
 # Browser Piano MIDI Port Plan
 
+Status: shipped (phases 0–7 complete in SongConverter, incl. zip + album art)
+Id: browser-piano-midi-port-plan
+
 This document covers what it would take to port the MIDI → OpenSongChart conversion logic to TypeScript so it can run entirely in a browser. It draws on the existing ChartConverter C# codebase and the ThreeCP (ChartPlayer → Three.js) conversion as a reference.
 
 ---
