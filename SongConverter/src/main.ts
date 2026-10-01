@@ -23,6 +23,7 @@ app.innerHTML = `
         <button class="tab-btn active" data-tab="midi">Piano MIDI</button>
         <button class="tab-btn" data-tab="psarc">Rocksmith 2014</button>
         <button class="tab-btn" data-tab="gp">Guitar Pro</button>
+        <button class="tab-btn" data-tab="musicxml">MusicXML</button>
     </div>
 
     <div id="tab-midi" class="tab-panel active">
@@ -111,6 +112,30 @@ app.innerHTML = `
         <br>
         <button id="gp-download-all" class="btn-primary" disabled>Download</button>
     </div>
+
+    <div id="tab-musicxml" class="tab-panel" style="display:none;">
+        <h2>MusicXML Importer</h2>
+        <input type="file" id="musicxml-input" accept=".musicxml,.xml,.mxl" />
+        <div id="musicxml-status" style="margin-top:4px;"></div>
+
+        <div id="musicxml-metadata-form" style="display:none; margin-top:16px;">
+            <h3 style="margin:0 0 8px 0;">Song Metadata</h3>
+            <table style="border-spacing:4px 6px;">
+                <tr><td>Song Name</td><td><input type="text" id="musicxml-song-name" size="40" /></td></tr>
+                <tr><td>Artist</td><td><input type="text" id="musicxml-artist" size="40" /></td></tr>
+                <tr><td>Album</td><td><input type="text" id="musicxml-album" size="40" /></td></tr>
+                <tr><td>Album Art (optional)</td><td><input type="file" id="musicxml-album-art" accept="image/*" /></td></tr>
+                <tr><td>Song Audio (optional)</td><td><input type="file" id="musicxml-audio" accept=".ogg,audio/ogg" /></td></tr>
+                <tr>
+                    <td></td>
+                    <td><span class="field-note">*Audio must be .ogg format.</span></td>
+                </tr>
+            </table>
+        </div>
+
+        <br>
+        <button id="musicxml-download-all" class="btn-primary" disabled>Download</button>
+    </div>
 `;
 
 // Tabs: only one panel visible at a time, matches this file's existing
@@ -121,6 +146,7 @@ const tabPanels: Record<string, HTMLElement> = {
     midi:  document.getElementById('tab-midi')!,
     psarc: document.getElementById('tab-psarc')!,
     gp:    document.getElementById('tab-gp')!,
+    musicxml: document.getElementById('tab-musicxml')!,
 };
 tabButtons.forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -163,6 +189,16 @@ const gpAlbumInput       = document.getElementById('gp-album')             as HT
 const gpAlbumArtInput    = document.getElementById('gp-album-art')         as HTMLInputElement;
 const gpAudioInput       = document.getElementById('gp-audio')             as HTMLInputElement;
 const gpDownloadAllBtn   = document.getElementById('gp-download-all')      as HTMLButtonElement;
+
+const musicxmlInput            = document.getElementById('musicxml-input')             as HTMLInputElement;
+const musicxmlStatus           = document.getElementById('musicxml-status')            as HTMLElement;
+const musicxmlMetadataForm     = document.getElementById('musicxml-metadata-form')     as HTMLElement;
+const musicxmlSongNameInput    = document.getElementById('musicxml-song-name')         as HTMLInputElement;
+const musicxmlArtistInput      = document.getElementById('musicxml-artist')            as HTMLInputElement;
+const musicxmlAlbumInput       = document.getElementById('musicxml-album')             as HTMLInputElement;
+const musicxmlAlbumArtInput    = document.getElementById('musicxml-album-art')         as HTMLInputElement;
+const musicxmlAudioInput       = document.getElementById('musicxml-audio')             as HTMLInputElement;
+const musicxmlDownloadAllBtn   = document.getElementById('musicxml-download-all')      as HTMLButtonElement;
 
 difficultyInput.addEventListener('input', () => {
     difficultyLabel.textContent = difficultyInput.value;
@@ -531,6 +567,86 @@ gpDownloadAllBtn.addEventListener('click', () => {
     Promise.all([
         readOptionalFile(gpAlbumArtInput),
         readOptionalFile(gpAudioInput),
+    ]).then(([artBuf, audioBuf]) => {
+        if (artBuf)   files['albumart.png'] = new Uint8Array(artBuf);
+        if (audioBuf) files['song.ogg']     = new Uint8Array(audioBuf);
+        triggerZipDownload(files, zipName);
+    });
+});
+
+// --- MusicXML (.musicxml/.xml/.mxl) import ---
+// Same shape as the GP tab above; only the entry point differs. Content-sniffing lives in
+// ScoreLoader, so .mxl needs no special handling here. IDs stay format-scoped (musicxml-*,
+// not guitar-*) so a future piano path can add its own tab without colliding.
+
+let _musicxmlResult: ScoreConvertResult | null = null;
+
+musicxmlInput.addEventListener('change', () => {
+    const file = musicxmlInput.files?.[0];
+    if (!file) return;
+
+    musicxmlStatus.textContent = 'Parsing…';
+    musicxmlMetadataForm.style.display = 'none';
+    musicxmlDownloadAllBtn.disabled = true;
+    _musicxmlResult = null;
+
+    file.arrayBuffer()
+        .then(async (buffer) => {
+            const { convertMusicXml } = await import('./scoreConverter');
+            const result = convertMusicXml(new Uint8Array(buffer));
+
+            if (result.tracks.length === 0) {
+                musicxmlStatus.textContent = result.skipped.length > 0
+                    ? `No fretted-instrument tracks found. Skipped: ${result.skipped.join(', ')}.`
+                    : 'No tracks found in this file.';
+                return;
+            }
+
+            _musicxmlResult = result;
+            musicxmlSongNameInput.value = result.songName;
+            musicxmlArtistInput.value = result.artistName;
+            musicxmlAlbumInput.value = '';
+            musicxmlMetadataForm.style.display = 'block';
+
+            let status = `Converted ${result.tracks.length} track(s): ${result.tracks.map((t) => t.trackName).join(', ')}.`;
+            if (result.skipped.length > 0) status += ` Skipped (not a fretted instrument): ${result.skipped.join(', ')}.`;
+            musicxmlStatus.textContent = status;
+
+            musicxmlDownloadAllBtn.disabled = false;
+        })
+        .catch((err: unknown) => {
+            musicxmlStatus.textContent = `Error parsing MusicXML file: ${err instanceof Error ? err.message : String(err)}`;
+        });
+});
+
+musicxmlDownloadAllBtn.addEventListener('click', () => {
+    if (!_musicxmlResult || _musicxmlResult.tracks.length === 0) return;
+
+    const songInfo: SongInfo = {
+        SongName: musicxmlSongNameInput.value.trim() || _musicxmlResult.songName || 'Unknown',
+        ArtistName: musicxmlArtistInput.value.trim() || _musicxmlResult.artistName || 'Unknown',
+        SongLengthSeconds: _musicxmlResult.tracks.reduce(
+            (max, t) => t.notes.Notes.reduce((m, n) => Math.max(m, n.EndTime), max),
+            0,
+        ),
+        InstrumentParts: _musicxmlResult.tracks.map((t) => t.part),
+        GeneratedBy: GENERATED_BY,
+    };
+    const album = musicxmlAlbumInput.value.trim();
+    if (album) songInfo.AlbumName = album;
+
+    const files: Record<string, Uint8Array> = {
+        'song.json':        strToU8(JSON.stringify(songInfo, null, 2)),
+        'arrangement.json': strToU8(JSON.stringify(_musicxmlResult.structure, null, 2)),
+    };
+    for (const track of _musicxmlResult.tracks) {
+        files[`${track.part.InstrumentName}.json`] = strToU8(JSON.stringify(track.notes, null, 2));
+    }
+
+    const zipName = zipFilenameFor(musicxmlSongNameInput.value);
+    Promise.all([
+        readOptionalFile(musicxmlAlbumArtInput),
+        readOptionalFile(musicxmlAudioInput),
     ]).then(([artBuf, audioBuf]) => {
         if (artBuf)   files['albumart.png'] = new Uint8Array(artBuf);
         if (audioBuf) files['song.ogg']     = new Uint8Array(audioBuf);

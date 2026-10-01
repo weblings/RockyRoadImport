@@ -99,4 +99,12 @@ describe('convertMusicXml', () => {
         expect(t1.part.InstrumentName).toBe('lead');
         expect(t2.part.InstrumentName).toBe('rhythm');
     });
+
+    it('rejects foreign files with a clean error instead of a garbage score', () => {
+        const encode = (s: string) => new TextEncoder().encode(s);
+        // Well-formed XML that is not MusicXML, and plain text: neither may slip through
+        // the AlphaTexImporter catch-all as a bogus score.
+        expect(() => convertMusicXml(encode('<note><foo>bar</foo></note>'))).toThrow();
+        expect(() => convertMusicXml(encode('just some words'))).toThrow();
+    });
 });
