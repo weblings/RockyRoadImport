@@ -9,7 +9,7 @@ General software-design principles, each demonstrated via a real bug hit in this
 Tags: testing, fixtures, real-files
 Applies-when: verifying a converter or format-mapping change
 
-`gpConverter.ts`'s alphaTex-based unit tests all passed, `tsc`/`npm run build` were clean, yet
+`scoreConverter.ts`'s alphaTex-based unit tests all passed, `tsc`/`npm run build` were clean, yet
 converting one real `.gp5` file surfaced three separate rendering bugs (`HandFret`, chord
 `ChordID`, `Fingers`/`Frets` sentinel mismatch) that no synthetic fixture had exercised.
 
@@ -36,7 +36,7 @@ assuming it's cosmetic because its own type/doc comment reads that way.
 Tags: flags, foreign-keys, chords
 Applies-when: setting a flag that implies a downstream lookup
 
-`gpConverter.ts` tagged the first note of any multi-note beat as `Chord`, but only built a real
+`scoreConverter.ts` tagged the first note of any multi-note beat as `Chord`, but only built a real
 `ChordID`/`SongChord` entry when the source format happened to have a *named* chord association —
 so most real chords got the flag with no resolvable chord behind it, and the renderer silently
 drew nothing for that note.
@@ -51,7 +51,7 @@ never set the flag "optimistically" and leave the reference to fail quietly.
 Tags: sentinels, parallel-arrays, renderer
 Applies-when: adding a parallel array read positionally alongside another
 
-`SongChord.Frets` uses `-1` for an unplayed string; `gpConverter.ts`'s `Fingers` array (no real
+`SongChord.Frets` uses `-1` for an unplayed string; `scoreConverter.ts`'s `Fingers` array (no real
 fingering data available) used `0` for "unknown" instead. The renderer only skips a string when
 *both* `Frets[str]` and `Fingers[str]` are `-1` — mismatching the sentinel in just one of the two
 arrays made every unplayed string render as a phantom note.
@@ -114,3 +114,32 @@ any required field) with zero compiler warning.
 proves the annotated ones are actually checked — grep for which sites carry the type annotation,
 not just which ones are shaped like it. (Also: `song.json` has three separate ad-hoc builders in
 `main.ts` with no shared factory — worth remembering before adding the next `SongInfo` field.)
+
+---
+
+## Re-index a lookup whenever the key field is assigned, not just on attach/remove
+Tags: indexes, mutable-keys, parse-order
+Applies-when: indexing parsed objects by a field assigned later in the same parse pass
+
+alphaTab's `Beat.addNote()` snapshots each note into `noteStringLookup` keyed by `note.string` —
+but its MusicXML importer assigns `note.string` only when `<technical><string>` parses, after
+attachment. The map kept the default (`-1`), so hammer-on/pull-off linking searched a stale index
+and silently cleared a valid flag. GP's binary format sets the field before attach, which is why
+only one import path broke while sharing the same linking code.
+
+**Fix:** treat every key-field assignment as index maintenance, and distrust a passing sibling
+path — same shared code with differently-ordered inputs fails exactly there.
+
+---
+
+## A literal match on another tool's default text is coincidence, not contract
+Tags: interop, literals, defaults
+Applies-when: matching another tool's emitted text or labels exactly
+
+alphaTab detects palm mute only on the literal `<words>` text `P.M.` — which happens to be
+MuseScore's style default, while TuxGuitar emits bare `<words>P.M.</words>` with no `<dashes>`,
+so that path ignores it entirely (its `<play><mute>palm</mute>` formal element is what works).
+Any retyped label or alternate spelling silently disables the flag with no error.
+
+**Fix:** when interop hinges on a literal, verify the exact bytes each real exporter emits from
+its source, not its docs — and write down which defaults the match depends on.

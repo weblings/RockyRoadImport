@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as alphaTab from '@coderline/alphatab';
-import { convertScore } from './gpConverter';
+import { convertScore } from './scoreConverter';
 
 // Builds a Score via alphaTab's own alphaTex importer rather than needing binary .gp3/.gp4/.gp5
 // fixture files - loadAlphaTex feeds the same Score model convertScore consumes either way.

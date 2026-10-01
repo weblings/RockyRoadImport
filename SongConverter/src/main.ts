@@ -13,7 +13,7 @@ import type {
 } from 'midi-json-parser-worker';
 import { buildTempoMap, buildSongStructure, type TempoChange } from './tempoMap';
 import { convertPianoMidi } from './pianoConverter';
-import type { GpConvertResult } from './gpConverter';
+import type { ScoreConvertResult } from './scoreConverter';
 import type { SongInfo, SongStructure, SongKeyboardNotes, PsarcSongResult } from './songformat';
 import { GENERATED_BY } from './version';
 
@@ -460,10 +460,10 @@ psarcDownloadAllBtn.addEventListener('click', () => {
 });
 
 // --- Guitar Pro (.gp3/.gp4/.gp5) import ---
-// Parsing is entirely alphaTab's job (gpConverter.ts) - no wasm/C# involved, unlike the .psarc
+// Parsing is entirely alphaTab's job (scoreConverter.ts) - no wasm/C# involved, unlike the .psarc
 // path above. Still dynamically imported so MIDI-only users never pay to load it.
 
-let _gpResult: GpConvertResult | null = null;
+let _gpResult: ScoreConvertResult | null = null;
 
 gpInput.addEventListener('change', () => {
     const file = gpInput.files?.[0];
@@ -476,7 +476,7 @@ gpInput.addEventListener('change', () => {
 
     file.arrayBuffer()
         .then(async (buffer) => {
-            const { convertGuitarPro } = await import('./gpConverter');
+            const { convertGuitarPro } = await import('./scoreConverter');
             const result = convertGuitarPro(new Uint8Array(buffer));
 
             if (result.tracks.length === 0) {

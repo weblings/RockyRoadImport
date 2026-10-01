@@ -1,0 +1,22 @@
+diff --git a/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs b/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs
+index b6203da..78f6e75 100644
+--- a/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs
++++ b/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs
+@@ -24352,7 +24352,16 @@ class MusicXmlImporter extends ScoreImporter {
+ 				if (note) note.fret = Number.parseInt(c.innerText, 10);
+ 				break;
+ 			case "string":
+-				if (note) note.string = beat.voice.bar.staff.tuning.length - Number.parseInt(c.innerText, 10) + 1;
++				if (note) {
++					const previousString = note.string;
++					note.string = beat.voice.bar.staff.tuning.length - Number.parseInt(c.innerText, 10) + 1;
++					if (note.beat && note.isStringed) {
++						if (note.beat.noteStringLookup.get(previousString) === note) {
++							note.beat.noteStringLookup.delete(previousString);
++						}
++						note.beat.noteStringLookup.set(note.string, note);
++					}
++				}
+ 				break;
+ 			case "hammer-on":
+ 			case "pull-off":

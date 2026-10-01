@@ -11,20 +11,22 @@ import type {
     CentsOffset,
 } from './songformat';
 
-// Guitar Pro (.gp3/.gp4/.gp5) → OpenSongChart conversion. alphaTab does the parsing; this file
-// maps its Score/Track/Bar/Beat/Note model onto the same shape the psarc (Rocksmith) path
-// produces, reusing tempoMap.ts's tick math for timing.
+// alphaTab Score (Guitar Pro, MusicXML, ...) → OpenSongChart conversion. alphaTab does the
+// parsing; this file maps its Score/Track/Bar/Beat/Note model onto the same shape the psarc
+// (Rocksmith) path produces, reusing tempoMap.ts's tick math for timing. v1 covers fretted
+// instruments only; a future piano path gets its own mapping (mirroring pianoConverter.ts)
+// rather than extending this one.
 
-export interface GpTrackResult {
+export interface ScoreTrackResult {
     trackName: string;
     part: SongInstrumentPart;
     notes: SongInstrumentNotes;
 }
 
-export interface GpConvertResult {
+export interface ScoreConvertResult {
     songName: string;
     artistName: string;
-    tracks: GpTrackResult[];
+    tracks: ScoreTrackResult[];
     skipped: string[]; // track names skipped (not a fretted instrument, e.g. drums)
     structure: SongStructure; // shared across all tracks - RockyRoad requires arrangement.json
 }
@@ -178,16 +180,24 @@ function buildStructure(score: alphaTab.model.Score, tempoMap: TempoChange[], di
     return { Sections: sections, Beats: beats };
 }
 
-export function convertGuitarPro(bytes: Uint8Array): GpConvertResult {
+export function convertGuitarPro(bytes: Uint8Array): ScoreConvertResult {
     return convertScore(alphaTab.importer.ScoreLoader.loadScoreFromBytes(bytes));
 }
 
-// Split out from convertGuitarPro so tests can build a Score via alphaTab's alphaTex importer
+// Same entry for MusicXML (plain .musicxml/.xml and compressed .mxl) - ScoreLoader sniffs
+// the content, so no extension branching is needed here or in the UI beyond the file-picker
+// accept hint. Shares convertScore wholesale; techniques the MusicXML importer leaves
+// unpopulated are handled per docs/planning/MusicXMLSupport.md Phase 5.
+export function convertMusicXml(bytes: Uint8Array): ScoreConvertResult {
+    return convertScore(alphaTab.importer.ScoreLoader.loadScoreFromBytes(bytes));
+}
+
+// Split out from the entries above so tests can build a Score via alphaTab's alphaTex importer
 // (ScoreLoader.loadAlphaTex) instead of needing binary .gp3/.gp4/.gp5 fixture files.
-export function convertScore(score: alphaTab.model.Score): GpConvertResult {
+export function convertScore(score: alphaTab.model.Score): ScoreConvertResult {
     const { tempoMap, division } = buildTempoMap(score);
 
-    const tracks: GpTrackResult[] = [];
+    const tracks: ScoreTrackResult[] = [];
     const skipped: string[] = [];
     const nameCounts = new Map<string, number>();
 
@@ -219,7 +229,7 @@ function convertTrack(
     role: Role,
     tempoMap: TempoChange[],
     division: number,
-): GpTrackResult {
+): ScoreTrackResult {
     const sections: SongSection[] = [];
     const notes: SongNote[] = [];
     const chords: SongChord[] = [];
