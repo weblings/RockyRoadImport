@@ -100,6 +100,43 @@ describe('convertMusicXml', () => {
         expect(t2.part.InstrumentName).toBe('rhythm');
     });
 
+    it('maps an X notehead to FretHandMute (upstream #2866 workaround)', () => {
+        const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<score-partwise version="4.0">
+  <part-list><score-part id="P1"><part-name>Guitar</part-name></score-part></part-list>
+  <part id="P1">
+    <measure number="1">
+      <attributes>
+        <divisions>4</divisions>
+        <key><fifths>0</fifths></key>
+        <time><beats>4</beats><beat-type>4</beat-type></time>
+        <clef><sign>TAB</sign></clef>
+        <staff-details>
+          <staff-lines>6</staff-lines>
+          <staff-tuning line="1"><tuning-step>E</tuning-step><tuning-octave>2</tuning-octave></staff-tuning>
+          <staff-tuning line="2"><tuning-step>A</tuning-step><tuning-octave>2</tuning-octave></staff-tuning>
+          <staff-tuning line="3"><tuning-step>D</tuning-step><tuning-octave>3</tuning-octave></staff-tuning>
+          <staff-tuning line="4"><tuning-step>G</tuning-step><tuning-octave>3</tuning-octave></staff-tuning>
+          <staff-tuning line="5"><tuning-step>B</tuning-step><tuning-octave>3</tuning-octave></staff-tuning>
+          <staff-tuning line="6"><tuning-step>E</tuning-step><tuning-octave>4</tuning-octave></staff-tuning>
+        </staff-details>
+      </attributes>
+      <note>
+        <pitch><step>E</step><octave>4</octave></pitch>
+        <duration>4</duration>
+        <type>quarter</type>
+        <notehead>x</notehead>
+        <notations><technical><string>1</string><fret>0</fret></technical></notations>
+      </note>
+    </measure>
+  </part>
+</score-partwise>
+`;
+        const [track] = convertMusicXml(new TextEncoder().encode(xml)).tracks;
+        expect(track.notes.Notes).toHaveLength(1);
+        expect(track.notes.Notes[0].Techniques).toContain('FretHandMute');
+    });
+
     it('rejects foreign files with a clean error instead of a garbage score', () => {
         const encode = (s: string) => new TextEncoder().encode(s);
         // Well-formed XML that is not MusicXML, and plain text: neither may slip through

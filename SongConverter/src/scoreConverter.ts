@@ -56,6 +56,17 @@ const Technique = {
 } as const;
 const TECHNIQUE_NAMES = Object.keys(Technique) as (keyof typeof Technique)[];
 
+// alphaTab's MusicXML importer records an X notehead's shape but never maps it to isDead
+// (upstream issue #2866) - read around it here rather than waiting on the fix. All five
+// duration variants count; a non-X notehead leaves the flag to isDead alone.
+const X_NOTEHEADS = new Set([
+    alphaTab.model.MusicFontSymbol.NoteheadXDoubleWhole,
+    alphaTab.model.MusicFontSymbol.NoteheadXWhole,
+    alphaTab.model.MusicFontSymbol.NoteheadXHalf,
+    alphaTab.model.MusicFontSymbol.NoteheadXBlack,
+    alphaTab.model.MusicFontSymbol.NoteheadXOrnate,
+]);
+
 function techniquesToString(flags: number): string | undefined {
     if (flags === 0) return undefined;
     return TECHNIQUE_NAMES.filter((name) => (flags & Technique[name]) !== 0).join(', ');
@@ -327,7 +338,9 @@ function buildNote(
     if (note.isHammerPullDestination) flags |= note.fret > (note.hammerPullOrigin?.fret ?? note.fret) ? Technique.HammerOn : Technique.PullOff;
     if (note.accentuated !== alphaTab.model.AccentuationType.None) flags |= Technique.Accent;
     if (note.isPalmMute || beat.isPalmMute) flags |= Technique.PalmMute;
-    if (note.isDead) flags |= Technique.FretHandMute;
+    if (note.isDead || (note.style?.noteHead !== undefined && X_NOTEHEADS.has(note.style.noteHead))) {
+        flags |= Technique.FretHandMute;
+    }
     if (note.slideInType !== alphaTab.model.SlideInType.None || note.slideOutType !== alphaTab.model.SlideOutType.None) flags |= Technique.Slide;
     if (note.hasBend) flags |= Technique.Bend;
     if (beat.vibrato !== alphaTab.model.VibratoType.None || note.vibrato !== alphaTab.model.VibratoType.None) flags |= Technique.Vibrato;

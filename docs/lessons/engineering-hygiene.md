@@ -143,3 +143,17 @@ Any retyped label or alternate spelling silently disables the flag with no error
 
 **Fix:** when interop hinges on a literal, verify the exact bytes each real exporter emits from
 its source, not its docs — and write down which defaults the match depends on.
+
+---
+
+## State an untraceable gap statically instead of detecting it per item
+Tags: limitations, status-ux, honesty
+Applies-when: an upstream gap leaves no trace in the converted output
+
+alphaTab's harmonic handling is a confirmed no-op — nothing lands in the model, so no per-note
+check can ever report "this harmonic was dropped." Trying to detect it per file would mean
+re-parsing the source XML for what the importer ignored.
+
+**Fix:** when the gap is at the importer level, say so once in the result status (a static
+known-limits suffix next to the skipped-track report) rather than building detection for data
+that isn't there. Reserve per-item surfacing for gaps with a detectable signal.

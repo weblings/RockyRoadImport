@@ -610,6 +610,9 @@ musicxmlInput.addEventListener('change', () => {
 
             let status = `Converted ${result.tracks.length} track(s): ${result.tracks.map((t) => t.trackName).join(', ')}.`;
             if (result.skipped.length > 0) status += ` Skipped (not a fretted instrument): ${result.skipped.join(', ')}.`;
+            // Static per-format truth, not per-file detection: the importer leaves these
+            // techniques unpopulated, so flag the omission rather than silently dropping it.
+            status += ' Known MusicXML limits: slap, pop, and harmonic detail are not imported.';
             musicxmlStatus.textContent = status;
 
             musicxmlDownloadAllBtn.disabled = false;
