@@ -213,9 +213,12 @@ export function convertScore(score: alphaTab.model.Score): ScoreConvertResult {
     const nameCounts = new Map<string, number>();
 
     for (const track of score.tracks) {
-        const staff = track.staves[0];
         const trackName = track.name || `Track ${track.index + 1}`;
-        if (!staff || track.isPercussion || staff.isPercussion || !staff.isStringed) {
+        // GP tracks are single-staff and stringed at index 0, but multi-staff MusicXML exports
+        // (TuxGuitar, MuseScore) put standard notation on staff 0 and the tab staff elsewhere -
+        // scan all staves rather than assuming index 0 (confirmed via a real TuxGuitar export).
+        const staff = track.isPercussion ? undefined : track.staves.find((s) => !s.isPercussion && s.isStringed);
+        if (!staff) {
             skipped.push(trackName);
             continue;
         }
