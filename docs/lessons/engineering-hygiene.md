@@ -162,6 +162,42 @@ single-staff-first.
 
 ---
 
+## A root-cause theory built from a compiled artifact isn't verified until checked against primary source
+Tags: root-cause, verification, dist-vs-source
+Applies-when: explaining why a fix works, from a patch written against built/vendored output
+
+Our local alphaTab fix (patched against `node_modules/@coderline/alphatab/dist/...`) worked,
+and the write-up built from that dist read said the bug was `note.string` defaulting to `-1`
+and the lookup map holding a stale wrong value. Reading the real upstream TypeScript source
+(once the fork was cloned) showed the actual default is `NaN`, and `Beat.addNote()`'s
+`note.string >= 0` guard just skips indexing an unset note — a different mechanism than
+described, even though the fix *location* was correct.
+
+**Fix:** a patch that demonstrably works is not the same claim as an accurate explanation of
+why. Before writing up root cause for anyone else to read (an upstream issue, a lessons
+entry, a PR description), verify the explanation against primary source if it's available —
+not just the compiled/vendored copy the original diagnosis was read from.
+
+---
+
+## Read a target repo's own contribution rules before drafting anything for it
+Tags: upstream, contributing, process
+Applies-when: preparing an issue or PR for a project you don't maintain
+
+A Huenicorn-style upstream write-up (friendly context, grouped fixes, inline diff, "here's
+the root cause") was drafted for alphaTab before its contributing guide and dedicated
+instructions-for-AI-agents doc had been read. alphaTab's actual rules are stricter and
+incompatible with that draft: no PR without an accepted issue first, issues must describe
+observed behavior only (no diff, no file/line claims, no source-code diagnosis), and a
+non-removable AI-disclosure block is mandatory.
+
+**Fix:** one project's accepted contribution style doesn't transfer to the next one, even
+when both are small OSS projects you've contributed to before. Read the target repo's own
+contributing guide and any agent-specific instructions doc and issue templates before
+drafting anything, not after.
+
+---
+
 ## State an untraceable gap statically instead of detecting it per item
 Tags: limitations, status-ux, honesty
 Applies-when: an upstream gap leaves no trace in the converted output

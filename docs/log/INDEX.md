@@ -11,3 +11,4 @@ stands and what resumes it. Planning docs stay clean: decisions, status, and poi
 | 2026-10-01 | MusicXML Phases 1–2: export survey + core entry, hammer-on patch, tests | RockyRoadImport-e6d, RockyRoadImport-ic6 |
 | 2026-10-01 | MusicXML Phases 4–5: tab wiring, dead-note workaround, limits surfacing | RockyRoadImport-e86, RockyRoadImport-l1i |
 | 2026-10-01 | MusicXML real-file test surfaces staff-index bug, fixed | RockyRoadImport-3yj |
+| 2026-10-01 | MusicXML: lyrics decisions, ic6 closed, alphaTab fork fix prepared | RockyRoadImport-0fx, RockyRoadImport-msr, RockyRoadImport-ic6 |
