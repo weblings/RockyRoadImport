@@ -12,7 +12,7 @@ start a new LessonsLearned-style doc elsewhere; if unsure whether one already ex
 
 | File | Scope | Entries | File here when |
 |---|---|---|---|
-| [engineering-hygiene.md](engineering-hygiene.md) | general design principles | 10 | general principle, demonstrated by a real bug here |
+| [engineering-hygiene.md](engineering-hygiene.md) | general design principles | 11 | general principle, demonstrated by a real bug here |
 
 Counts as of 2026-10-01 — bump the count when adding entries
 (`grep -c '^## '` per file).

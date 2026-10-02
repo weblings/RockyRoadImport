@@ -146,6 +146,22 @@ its source, not its docs — and write down which defaults the match depends on.
 
 ---
 
+## A structural position that happens to hold the right data in every fixture isn't a guarantee
+Tags: real-files, structural-assumptions, musicxml
+Applies-when: picking "which one" from a parallel/indexed collection by position
+
+`convertScore()` read `track.staves[0]` to find a track's fretted staff — correct for every
+alphaTab-built fixture and for GP (single-staff, tab-native). A real TuxGuitar export put
+standard notation on staff 1 and the actual tab data on staff 2, so the only guitar track in a
+real file was silently pushed into `skipped` and never converted.
+
+**Fix:** when a property (here, `isStringed`) determines which element of a same-shaped
+collection matters, search for the element with that property instead of trusting a position —
+especially when every fixture that validated the position-based code happened to be built
+single-staff-first.
+
+---
+
 ## State an untraceable gap statically instead of detecting it per item
 Tags: limitations, status-ux, honesty
 Applies-when: an upstream gap leaves no trace in the converted output

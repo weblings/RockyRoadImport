@@ -137,6 +137,56 @@ describe('convertMusicXml', () => {
         expect(track.notes.Notes[0].Techniques).toContain('FretHandMute');
     });
 
+    it('finds the tab staff even when it is not staves[0] (TuxGuitar/MuseScore shape)', () => {
+        // Multi-staff guitar part: staff 1 is standard notation (no tuning), staff 2 is the
+        // TAB staff. Real TuxGuitar/MuseScore exports order staves this way, not tab-first.
+        const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<score-partwise version="4.0">
+  <part-list><score-part id="P1"><part-name>Guitar</part-name></score-part></part-list>
+  <part id="P1">
+    <measure number="1">
+      <attributes>
+        <divisions>4</divisions>
+        <key><fifths>0</fifths></key>
+        <time><beats>4</beats><beat-type>4</beat-type></time>
+        <staves>2</staves>
+        <clef number="1"><sign>G</sign><line>2</line></clef>
+        <clef number="2"><sign>TAB</sign></clef>
+        <staff-details number="2">
+          <staff-lines>6</staff-lines>
+          <staff-tuning line="1"><tuning-step>E</tuning-step><tuning-octave>2</tuning-octave></staff-tuning>
+          <staff-tuning line="2"><tuning-step>A</tuning-step><tuning-octave>2</tuning-octave></staff-tuning>
+          <staff-tuning line="3"><tuning-step>D</tuning-step><tuning-octave>3</tuning-octave></staff-tuning>
+          <staff-tuning line="4"><tuning-step>G</tuning-step><tuning-octave>3</tuning-octave></staff-tuning>
+          <staff-tuning line="5"><tuning-step>B</tuning-step><tuning-octave>3</tuning-octave></staff-tuning>
+          <staff-tuning line="6"><tuning-step>E</tuning-step><tuning-octave>4</tuning-octave></staff-tuning>
+        </staff-details>
+      </attributes>
+      <note>
+        <pitch><step>E</step><octave>4</octave></pitch>
+        <duration>4</duration>
+        <type>quarter</type>
+        <staff>1</staff>
+      </note>
+      <backup><duration>4</duration></backup>
+      <note>
+        <pitch><step>E</step><octave>4</octave></pitch>
+        <duration>4</duration>
+        <type>quarter</type>
+        <staff>2</staff>
+        <notations><technical><string>1</string><fret>0</fret></technical></notations>
+      </note>
+    </measure>
+  </part>
+</score-partwise>
+`;
+        const result = convertMusicXml(new TextEncoder().encode(xml));
+        expect(result.skipped).toEqual([]);
+        expect(result.tracks).toHaveLength(1);
+        expect(result.tracks[0].notes.Notes).toHaveLength(1);
+        expect(result.tracks[0].part.Tuning?.StringSemitoneOffsets).toEqual([0, 0, 0, 0, 0, 0]);
+    });
+
     it('rejects foreign files with a clean error instead of a garbage score', () => {
         const encode = (s: string) => new TextEncoder().encode(s);
         // Well-formed XML that is not MusicXML, and plain text: neither may slip through
