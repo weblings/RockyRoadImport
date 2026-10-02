@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import fixtureXml from './fixtures/guitar-three-notes.musicxml?raw';
 import { convertMusicXml } from './scoreConverter';
 
 // Minimal hand-authored MusicXML (a few notes, not a real song) exercising the
@@ -185,6 +186,17 @@ describe('convertMusicXml', () => {
         expect(result.tracks).toHaveLength(1);
         expect(result.tracks[0].notes.Notes).toHaveLength(1);
         expect(result.tracks[0].part.Tuning?.StringSemitoneOffsets).toEqual([0, 0, 0, 0, 0, 0]);
+    });
+
+    it('converts the hand-authored .musicxml fixture from disk', () => {
+        // Phase 6: the XML-to-Score step needs real .musicxml input, unlike the
+        // shared convertScore mapping (covered via alphaTex in scoreConverter.test.ts).
+        const result = convertMusicXml(new TextEncoder().encode(fixtureXml));
+        expect(result.songName).toBe('FixtureTune');
+        expect(result.tracks).toHaveLength(1);
+        const [track] = result.tracks;
+        expect(track.part.Tuning?.StringSemitoneOffsets).toEqual([0, 0, 0, 0, 0, 0]);
+        expect(track.notes.Notes.map((n) => n.Fret)).toEqual([0, 3, 5]);
     });
 
     it('rejects foreign files with a clean error instead of a garbage score', () => {
