@@ -246,3 +246,17 @@ prove nothing.
 parse, round-trip, render) and pin each with an assertion — or a written
 reason it is unaffected. A green focused test that only exercises one layer
 is not coverage of the others.
+
+---
+
+## Identical-looking strings can differ invisibly after an importer pass
+Tags: testing, dependencies
+Applies-when: asserting against strings that passed through a parser/importer
+
+alphaTab rewrites U+0020 to U+00A0 in MusicXML track names, so `toEqual`
+fails with both sides printing "Lead Vocal". Fixtures now use single-word
+names; UI code reuses result strings throughout, so it stays self-consistent.
+
+**Fix:** when a diff looks identical on both sides, dump code points before
+re-reading logic. Never match importer-output strings against source-text
+literals — compare within one layer.

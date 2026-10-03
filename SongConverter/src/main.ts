@@ -14,6 +14,7 @@ import type {
 import { buildTempoMap, buildSongStructure, type TempoChange } from './tempoMap';
 import { convertPianoMidi } from './pianoConverter';
 import type { ScoreConvertResult } from './scoreConverter';
+import type { TrackLyrics } from './vocals';
 import type { SongInfo, SongStructure, SongKeyboardNotes, PsarcSongResult } from './songformat';
 import { GENERATED_BY } from './version';
 
@@ -126,6 +127,7 @@ app.innerHTML = `
                 <tr><td>Album</td><td><input type="text" id="musicxml-album" size="40" /></td></tr>
                 <tr><td>Album Art (optional)</td><td><input type="file" id="musicxml-album-art" accept="image/*" /></td></tr>
                 <tr><td>Song Audio (optional)</td><td><input type="file" id="musicxml-audio" accept=".ogg,audio/ogg" /></td></tr>
+                <tr id="musicxml-lyrics-row" style="display:none;"><td>Lyrics from</td><td><select id="musicxml-lyrics-select"></select></td></tr>
                 <tr>
                     <td></td>
                     <td><span class="field-note">*Audio must be .ogg format.</span></td>
@@ -199,6 +201,8 @@ const musicxmlAlbumInput       = document.getElementById('musicxml-album')      
 const musicxmlAlbumArtInput    = document.getElementById('musicxml-album-art')         as HTMLInputElement;
 const musicxmlAudioInput       = document.getElementById('musicxml-audio')             as HTMLInputElement;
 const musicxmlDownloadAllBtn   = document.getElementById('musicxml-download-all')      as HTMLButtonElement;
+const musicxmlLyricsRow        = document.getElementById('musicxml-lyrics-row')        as HTMLElement;
+const musicxmlLyricsSelect     = document.getElementById('musicxml-lyrics-select')     as HTMLSelectElement;
 
 difficultyInput.addEventListener('input', () => {
     difficultyLabel.textContent = difficultyInput.value;
@@ -594,8 +598,9 @@ musicxmlInput.addEventListener('change', () => {
         .then(async (buffer) => {
             const { convertMusicXml } = await import('./scoreConverter');
             const result = convertMusicXml(new Uint8Array(buffer));
+            const lyricTracks = result.lyrics.filter((l) => l.vocals.length > 0);
 
-            if (result.tracks.length === 0) {
+            if (result.tracks.length === 0 && lyricTracks.length === 0) {
                 musicxmlStatus.textContent = result.skipped.length > 0
                     ? `No fretted-instrument tracks found. Skipped: ${result.skipped.join(', ')}.`
                     : 'No tracks found in this file.';
@@ -608,11 +613,35 @@ musicxmlInput.addEventListener('change', () => {
             musicxmlAlbumInput.value = '';
             musicxmlMetadataForm.style.display = 'block';
 
-            let status = `Converted ${result.tracks.length} track(s): ${result.tracks.map((t) => t.trackName).join(', ')}.`;
-            if (result.skipped.length > 0) status += ` Skipped (not a fretted instrument): ${result.skipped.join(', ')}.`;
+            // One lyric part is auto-picked (the common case, no UI shown); several
+            // get a <select> defaulting to the first rather than a naming guess.
+            musicxmlLyricsSelect.replaceChildren();
+            if (lyricTracks.length > 1) {
+                for (const l of lyricTracks) {
+                    const opt = document.createElement('option');
+                    opt.value = l.trackName;
+                    opt.textContent = l.trackName;
+                    musicxmlLyricsSelect.appendChild(opt);
+                }
+                musicxmlLyricsRow.style.display = '';
+            } else {
+                musicxmlLyricsRow.style.display = 'none';
+            }
+
+            // Lyric-bearing tracks aren't "skipped" - they convert as vocals instead.
+            const skippedShown = result.skipped.filter((n) => !lyricTracks.some((l) => l.trackName === n));
+            let status = result.tracks.length > 0
+                ? `Converted ${result.tracks.length} track(s): ${result.tracks.map((t) => t.trackName).join(', ')}.`
+                : 'No fretted-instrument tracks found.';
+            if (skippedShown.length > 0) status += ` Skipped (not a fretted instrument): ${skippedShown.join(', ')}.`;
+            if (lyricTracks.length === 1) status += ` Lyrics: ${lyricTracks[0].trackName}.`;
+            if (lyricTracks.length > 1) status += ` Lyrics in ${lyricTracks.length} tracks - choose one.`;
             // Static per-format truth, not per-file detection: the importer leaves these
             // techniques unpopulated, so flag the omission rather than silently dropping it.
-            status += ' Known MusicXML limits: slap, pop, and harmonic detail are not imported.';
+            // Without syllabic data (unpatched alphaTab) multi-syllable words also split.
+            status += lyricTracks.some((l) => !l.syllabic)
+                ? ' Known MusicXML limits: slap, pop, harmonic detail, and multi-syllable word-joining are not imported.'
+                : ' Known MusicXML limits: slap, pop, and harmonic detail are not imported.';
             musicxmlStatus.textContent = status;
 
             musicxmlDownloadAllBtn.disabled = false;
@@ -622,17 +651,37 @@ musicxmlInput.addEventListener('change', () => {
         });
 });
 
+// Single lyric part auto-picks; several read the <select> (defaults to the first).
+function pickMusicXmlLyrics(result: ScoreConvertResult): TrackLyrics | null {
+    const options = result.lyrics.filter((l) => l.vocals.length > 0);
+    if (options.length === 0) return null;
+    if (options.length === 1) return options[0];
+    return options.find((l) => l.trackName === musicxmlLyricsSelect.value) ?? options[0];
+}
+
 musicxmlDownloadAllBtn.addEventListener('click', () => {
-    if (!_musicxmlResult || _musicxmlResult.tracks.length === 0) return;
+    if (!_musicxmlResult) return;
+    const lyrics = pickMusicXmlLyrics(_musicxmlResult);
+    if (_musicxmlResult.tracks.length === 0 && !lyrics) return;
+
+    const noteLength = _musicxmlResult.tracks.reduce(
+        (max, t) => t.notes.Notes.reduce((m, n) => Math.max(m, n.EndTime), max),
+        0,
+    );
+    // Vocals carry onsets only, so the length folds in the last vocal onset as an
+    // approximation rather than a true end time.
+    const songLengthSeconds = lyrics
+        ? lyrics.vocals.reduce((m, v) => Math.max(m, v.TimeOffset), noteLength)
+        : noteLength;
 
     const songInfo: SongInfo = {
         SongName: musicxmlSongNameInput.value.trim() || _musicxmlResult.songName || 'Unknown',
         ArtistName: musicxmlArtistInput.value.trim() || _musicxmlResult.artistName || 'Unknown',
-        SongLengthSeconds: _musicxmlResult.tracks.reduce(
-            (max, t) => t.notes.Notes.reduce((m, n) => Math.max(m, n.EndTime), max),
-            0,
-        ),
-        InstrumentParts: _musicxmlResult.tracks.map((t) => t.part),
+        SongLengthSeconds: songLengthSeconds,
+        InstrumentParts: [
+            ..._musicxmlResult.tracks.map((t) => t.part),
+            ...(lyrics ? [{ InstrumentName: 'vocals', InstrumentType: 'Vocals' }] : []),
+        ],
         GeneratedBy: GENERATED_BY,
     };
     const album = musicxmlAlbumInput.value.trim();
@@ -644,6 +693,9 @@ musicxmlDownloadAllBtn.addEventListener('click', () => {
     };
     for (const track of _musicxmlResult.tracks) {
         files[`${track.part.InstrumentName}.json`] = strToU8(JSON.stringify(track.notes, null, 2));
+    }
+    if (lyrics) {
+        files['vocals.json'] = strToU8(JSON.stringify(lyrics.vocals, null, 2));
     }
 
     const zipName = zipFilenameFor(musicxmlSongNameInput.value);

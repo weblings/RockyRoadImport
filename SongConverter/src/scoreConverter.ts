@@ -1,5 +1,6 @@
 import * as alphaTab from '@coderline/alphatab';
 import { ticksToSeconds, type TempoChange } from './tempoMap';
+import { extractTrackLyrics, type TrackLyrics } from './vocals';
 import type {
     SongInstrumentPart,
     SongInstrumentNotes,
@@ -28,6 +29,7 @@ export interface ScoreConvertResult {
     artistName: string;
     tracks: ScoreTrackResult[];
     skipped: string[]; // track names skipped (not a fretted instrument, e.g. drums)
+    lyrics: TrackLyrics[]; // per-track vocals, verse line 0 - lyric scan ignores the fretted gate
     structure: SongStructure; // shared across all tracks - RockyRoad requires arrangement.json
 }
 
@@ -212,8 +214,11 @@ export function convertScore(score: alphaTab.model.Score): ScoreConvertResult {
     const skipped: string[] = [];
     const nameCounts = new Map<string, number>();
 
+    const lyrics: TrackLyrics[] = [];
     for (const track of score.tracks) {
         const trackName = track.name || `Track ${track.index + 1}`;
+        const trackLyrics = extractTrackLyrics(track, trackName, tempoMap, division);
+        if (trackLyrics.vocals.length > 0) lyrics.push(trackLyrics);
         // GP tracks are single-staff and stringed at index 0, but multi-staff MusicXML exports
         // (TuxGuitar, MuseScore) put standard notation on staff 0 and the tab staff elsewhere -
         // scan all staves rather than assuming index 0 (confirmed via a real TuxGuitar export).
@@ -232,6 +237,7 @@ export function convertScore(score: alphaTab.model.Score): ScoreConvertResult {
         artistName: score.artist || '',
         tracks,
         skipped,
+        lyrics,
         structure: buildStructure(score, tempoMap, division),
     };
 }
