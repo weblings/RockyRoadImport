@@ -1,6 +1,6 @@
 # MusicXML → OpenSongChart: License & Library Findings
 
-Status: active (research findings recorded; implementation phases 1–7 open, tracked as beads)
+Status: active (guitar v1 + vocals built; Phase 7 docs and piano scope open, tracked as beads)
 Id: musicxml-support
 
 This document captures findings from an exploratory look at adding MusicXML conversion support: whether it has license impacts, and whether an existing MusicXML library is worth using vs. hand-rolling a parser.
@@ -127,11 +127,11 @@ Unlike `.gp3/.gp4/.gp5` (which alphaTab's ecosystem treats as fundamentally tab-
 - **Pedal marks exist, but as bar-level engraved marks, not a continuous signal.** `<direction><pedal type="start"/"stop"/"change">` is parsed (`_parsePedal`, line 2281) into `SustainPedalMarker { pedalType: Down/Up/Hold }`, pushed onto `bar.sustainPedals`. This is the same information a printed pedal line conveys — usable to derive a per-note `SustainActive` boolean (was a pedal marker set Down, with no subsequent Up, at or before this note's time?), but it's discrete engraved marks, not `pianoConverter.ts`'s continuous CC64-per-tick MIDI signal. Corrects my earlier claim that no pedal data exists at all.
 - **Dynamics give a coarse, mappable velocity signal.** `<dynamics>` marks (`pp`/`mf`/`ff`/etc.) are parsed into an 8-level `DynamicValue` enum (`PPP`=0 .. `FFF`=7, plus rarely-used `PPPP`+/`FFFF`+ extremes) and assigned per-beat (`beat.dynamics`, line 3404-3409; also inherited across beats via `_currentDynamics` until the next mark). This is coarser than real MIDI velocity (8 discrete levels vs. 0-127) but directly mappable via a fixed table (e.g. evenly spaced 16-127), and — unlike raw velocity — it's authorial intent rather than performance noise, which may actually suit a notation-derived chart better. Corrects my earlier claim that no velocity-equivalent data exists.
 - **Pitch-to-MIDI-number conversion is already done for you.** `note.realValue`/`note.calculateRealValue(...)` (used internally by the importer itself, e.g. in `_parseOrnaments`'s trill-direction check against B4=71) returns a standard 0-127 MIDI pitch number — directly usable as `SongKeyboardNote.Note` with no manual `<step>/<alter>/<octave>` math needed.
-- **Piano-part detection has no MusicXML-native taxonomy to key off.** MusicXML 4.0 has a formal `<score-instrument><instrument-sound>` taxonomy (e.g. `keyboard.piano`) for exactly this purpose, but the importer doesn't parse it (no `instrument-sound` case found anywhere in the file). What *is* parsed is `<midi-instrument><midi-program>` into `track.playbackInfo.program`/`articulation.outputMidiProgram` (confirmed in Phase 2's findings) — the same GM patch number (0-7 = piano family) [[piano-midi-analysis]] already documents as the detection heuristic for the MIDI path. So MusicXML piano detection could reuse that exact heuristic/constant rather than inventing a new one — a real code/logic-reuse opportunity across the two piano paths, not just the guitar ones.
+- **Piano-part detection has no MusicXML-native taxonomy to key off.** MusicXML 4.0 has a formal `<score-instrument><instrument-sound>` taxonomy (e.g. `keyboard.piano`) for exactly this purpose, but the importer doesn't parse it (no `instrument-sound` case found anywhere in the file). What *is* parsed is `<midi-instrument><midi-program>` into `track.playbackInfo.program`/`articulation.outputMidiProgram` (confirmed in Phase 2's findings) — the same GM patch number (0-7 = piano family) [[piano-midi-analysis]] already documents as the detection heuristic for the MIDI path. So MusicXML piano detection could reuse that exact heuristic/constant rather than inventing a new one — a real code/logic-reuse opportunity across the two piano paths, not just the guitar ones. **Corrected 2026-10-03 (probe):** the part-list `<midi-program>` does land in `track.playbackInfo.program` (1-based in XML, alphaTab subtracts 1), but a part with no `<midi-instrument>` also reads `0` — indistinguishable from acoustic grand. Program alone can't detect piano; see Phase 8.
 - **Voice-plurality within a staff should already work.** Piano writing is often polyphonic within one hand (two independent lines on one staff) — MusicXML represents this via multiple `<voice>` values on one staff, and `scoreConverter.ts`'s existing `convertTrack()` already iterates `for (const voice of bar.voices) { for (const beat of voice.beats) ... }` generically, so this isn't guitar-specific code that would need piano-specific rework — **resolved, no longer open**, though not verified against a real polyphonic piano file.
 **Still open (product decision, not more research) — piano only:** whether a piano MusicXML path is in scope for a first version at all. The technical picture is now much more favorable than the first pass suggested — hand-splitting is structurally *better* than the existing MIDI path, not worse — so this reads less like "extra unproven work" and more like "a plausible third `SongKeyboardNote` feed with its own (different, not missing) data characteristics," which may be worth weighing into the scope call.
 
-**Decided 2026-10-01:** v1 is guitar-only, but nothing in the core (Phase 2) or tab wiring (Phase 4) may bake in guitar-only assumptions — generic naming, no guitar-locked output shape — so piano can be added later without rework. The cheap vocals path above still rides along in v1.
+**Decided 2026-10-01:** v1 is guitar-only, but nothing in the core (Phase 2) or tab wiring (Phase 4) may bake in guitar-only assumptions — generic naming, no guitar-locked output shape — so piano can be added later without rework. The cheap vocals path above still rides along in v1. **Decided 2026-10-03:** piano is in scope now — plan and bead sequence in Phase 8.
 
 ### Lyrics/vocals — a separate, much smaller item, not bundled with piano
 
@@ -141,9 +141,9 @@ Corrected from the previous pass at this phase, which lumped lyrics into the pia
 
 **Feasibility for MusicXML:** alphaTab's importer already parses `<lyric>` into `beat.lyrics: string[]` per beat (Phase 1's `_parseLyric` finding — text + elision). Producing `SongVocal[]` is a walk over every track's beats emitting `{ Vocal: beat.lyrics[0], TimeOffset: <converted seconds> }` wherever present, written through the same generic `${partName}.json` mechanism already in `main.ts`. No new architecture, no new conversion concepts (unlike piano's hand-splitting/dynamics/pedal work) — genuinely small and self-contained.
 
-**One real fidelity gap:** Rocksmith's own lyric convention (`vocal.Lyric.Replace('+', '\n')`, `PsarcConverter.cs:143`) encodes explicit line breaks, and `ChartUtil.FormatVocals` does syllable-aware line-wrapping on that. MusicXML's equivalent — `<lyric><syllabic>begin/middle/end</syllabic></lyric>`, marking whether a syllable continues a word — is explicitly unsupported by alphaTab's importer (`// case 'syllabic' not supported`, confirmed in Phase 1). So multi-syllable words would come through as separate lyric entries without the word-joining hint Rocksmith's format carries. Narrow, not a blocker.
+**One real fidelity gap:** Rocksmith's own lyric convention (`vocal.Lyric.Replace('+', '\n')`, `PsarcConverter.cs:143`) encodes explicit line breaks, and `ChartUtil.FormatVocals` does syllable-aware line-wrapping on that. MusicXML's equivalent — `<lyric><syllabic>begin/middle/end</syllabic></lyric>`, marking whether a syllable continues a word — is explicitly unsupported by alphaTab's importer (`// case 'syllabic' not supported`, confirmed in Phase 1). So multi-syllable words would come through as separate lyric entries without the word-joining hint Rocksmith's format carries. Narrow, not a blocker. **Resolved 2026-10-03:** local alphaTab patch surfaces `beat.lyricsSyllabic` (RockyRoadImport-msr); `vocals.ts` joins begin/middle/end runs, falling back to separate entries plus a status caveat if the patch signal is absent.
 
-**Still open:** which track's lyrics to use when a MusicXML file has multiple parts (always the melody/vocal-labeled part, or any part that happens to carry `<lyric>` data, including one whose notes are also being converted for its own instrument) — a small design call, not a research gap.
+**Still open:** which track's lyrics to use when a MusicXML file has multiple parts (always the melody/vocal-labeled part, or any part that happens to carry `<lyric>` data, including one whose notes are also being converted for its own instrument) — a small design call, not a research gap. **Decided 2026-10-01, built 2026-10-03:** auto-pick when exactly one part carries lyrics, else a "Lyrics from" `<select>` in the MusicXML metadata form (RockyRoadImport-m2g).
 
 ### Phase 4 — UI wiring
 
@@ -181,3 +181,29 @@ Update [SongConverter](../../SongConverter)'s README (if one documents the suppo
 
 **Open questions:**
 - None specific — flagged mainly as a reminder per this repo's own convention (`Analysis/lessons/` is the only lessons-learned location repo-wide; project instructions call out checking for stale README claims in the same pass as any lessons capture).
+
+### Phase 8 — Piano path
+
+Tracked under RockyRoadImport-ngd (umbrella, the original "piano notation output" TODO item). Findings
+below come from a 2026-10-03 probe: a hand-authored grand-staff file through installed alphaTab 1.8.4.
+
+**Confirmed, no work needed:**
+- Hands: `<staff>1/2</staff>` lands on `track.staves[0]`/`[1]` as Phase 3 predicted.
+- Ottava: `note.realValue` is sounding pitch (MusicXML `<pitch>` is already performed pitch); `displayValue` carries the shift. Use `realValue`.
+- Pedal: `<pedal>` lands in `bar.sustainPedals` with `pedalType` (Down=0/Hold=1/Up=2) and `ratioPosition` within the bar, so a time is derivable.
+- Grace notes: on-beat, steal ticks from the following beat; existing tick math handles them.
+
+**Found gaps (each owned by a bead below):**
+- Detection: missing `<midi-program>` reads as program 0 (see Phase 3 correction). Rule: program 1–7 → piano; program 0 only with a 2-staff part or a name keyword (reuse `pianoConverter.ts`'s list).
+- Gate: `convertScore()` skips non-stringed tracks; piano needs its own scan, like the lyrics scan.
+- Ties: guitar keeps tied notes separate (`Technique.Continued`); `SongKeyboardNote` has no such flag, so tie chains merge into one `TimeLength`.
+- Dynamics leak across staves: `_currentDynamics` is part-wide and parse-ordered, so after a `<backup>` the bass staff inherits marks from later in the treble staff (probe: `p` at t=0 → bass beats read `f`). Default with no mark is `F`. Patch vs workaround is open — a third upstream fix candidate.
+- Pedal placement: markers sit only on the staff the `<direction>` was attached to (usually bass); `SustainActive` must apply part-wide.
+- Hand fallback: 1-staff or 3+-staff parts need the MIDI path's middle-C split.
+- Repeats: not expanded on the Score path at all (RockyRoadImport-3sp) — affects guitar too.
+- No real piano export surveyed yet (the one real file on hand is guitar-only).
+
+**Sequence (beads):** export survey → detection+gate (with grand-staff fixture) → note mapping
+(ties, hands) → dynamics and pedal (parallel) → output/UI → upstream alphaTab filing.
+- Output mirrors the MIDI path: all piano parts merge into one `keys.json` with a `keys`/`Keys` InstrumentPart, in the existing MusicXML tab (a mixed guitar+piano+vocals file stays one upload).
+- Upstream filing (ic6 + msr + any piano fixes) waits until guitar and piano conversion both work.

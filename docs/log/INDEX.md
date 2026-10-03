@@ -16,3 +16,4 @@ stands and what resumes it. Planning docs stay clean: decisions, status, and poi
 | 2026-10-03 | MusicXML msr patch + fork prep, vocals-consumer bead, 2 lessons | RockyRoadImport-msr, RockyRoadImport-m2g |
 | 2026-10-03 | MusicXML vocals consumer built, tested, bead closed, 1 lesson | RockyRoadImport-m2g |
 | 2026-10-03 | MusicXML msr gap close-out verified, upstream deferred to workstream end | RockyRoadImport-msr |
+| 2026-10-03 | MusicXML piano scoped + sequenced (Phase 8), repeats bug filed | RockyRoadImport-0fx, RockyRoadImport-ngd, RockyRoadImport-3sp, RockyRoadImport-aio |
