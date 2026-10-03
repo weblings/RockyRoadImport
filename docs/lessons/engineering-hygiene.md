@@ -209,3 +209,40 @@ re-parsing the source XML for what the importer ignored.
 **Fix:** when the gap is at the importer level, say so once in the result status (a static
 known-limits suffix next to the skipped-track report) rather than building detection for data
 that isn't there. Reserve per-item surfacing for gaps with a detectable signal.
+
+---
+
+## Patch the bundle your toolchain resolves, not the package's other copies
+Tags: patch-package, vendoring, bundles
+Applies-when: patching a dependency that ships multiple build artifacts
+
+`@coderline/alphatab` ships a facade `alphaTab.mjs` re-exporting `alphaTab.core.mjs`,
+a CJS `alphaTab.js`, and min builds. Vite/vitest resolve the ESM chain, so the
+hammer-on and syllabic patches target `dist/alphaTab.core.mjs` — while `dist/alphaTab.js`
+carries its own copy of the same importer code, still unpatched. Patching the wrong
+copy would pass no test and fix no user path, silently.
+
+**Fix:** before writing a dependency patch, confirm which artifact your runner and
+bundler actually load (facade re-exports, the exports-map `import` vs `require`
+conditions), scope the patch there, and write down which copies stay unpatched so
+nobody later assumes coverage.
+
+---
+
+## A new model field must be pinned at every layer it crosses
+Tags: codegen, serialization, testing
+Applies-when: adding a field to a shared model
+
+`Beat.lyricsSyllabic` needed five coordinated touches: the model field, the
+auto-generated cloner and serializer (running `generate-typescript` produced
+exactly those lines with no noise — hand-editing generated files would have
+been both riskier and unnecessary), the parser case, and the JSON round-trip,
+which generic `stringify` carries for free but was asserted rather than
+assumed. Rendering needed nothing: the field is data-only, so the fork test
+uses the no-render `loadFile` precedent instead of a PNG fixture that would
+prove nothing.
+
+**Fix:** enumerate every layer a new field crosses (model, clone, serialize,
+parse, round-trip, render) and pin each with an assertion — or a written
+reason it is unaffected. A green focused test that only exercises one layer
+is not coverage of the others.

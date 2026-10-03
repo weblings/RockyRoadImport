@@ -13,3 +13,4 @@ stands and what resumes it. Planning docs stay clean: decisions, status, and poi
 | 2026-10-01 | MusicXML real-file test surfaces staff-index bug, fixed | RockyRoadImport-3yj |
 | 2026-10-01 | MusicXML: lyrics decisions, ic6 closed, alphaTab fork fix prepared | RockyRoadImport-0fx, RockyRoadImport-msr, RockyRoadImport-ic6 |
 | 2026-10-02 | MusicXML Phase 6: hand-authored fixture, XML-to-Score test green | RockyRoadImport-1mi |
+| 2026-10-03 | MusicXML msr patch + fork prep, vocals-consumer bead, 2 lessons | RockyRoadImport-msr, RockyRoadImport-m2g |
