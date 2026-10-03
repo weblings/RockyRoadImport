@@ -201,7 +201,16 @@ below come from a 2026-10-03 probe: a hand-authored grand-staff file through ins
 - Pedal placement: markers sit only on the staff the `<direction>` was attached to (usually bass); `SustainActive` must apply part-wide.
 - Hand fallback: 1-staff or 3+-staff parts need the MIDI path's middle-C split.
 - Repeats: not expanded on the Score path at all (RockyRoadImport-3sp) — affects guitar too.
-- No real piano export surveyed yet (the one real file on hand is guitar-only).
+- **Survey 2026-10-03 (RockyRoadImport-ngd.1):** two `.mxl` files from [musetrainer/library](https://github.com/musetrainer/library) (local only, not committed): Ode to Joy easy variation (MuseScore 2.3.2, 17 bars) and Mozart's 12 Variations on Twinkle (MuseScore 3.5.2, 325 bars). Both are a single grand-staff `Piano` part.
+  - Detection: `<midi-program>1` → program 0 in both; the "program 0 + 2 staves" rule catches them.
+  - Ties: 4 and 43 `<tie>` pairs, all surfaced as `isTieDestination`; tie merge needed as planned.
+  - Dynamics leak runs both ways in real files. Forward: Ode's `<mf/>` on staff 2 at m.9 reaches the treble only at m.10. Backward: Twinkle's mid-bar `<f/>` on staff 1 (7 such marks, e.g. m.151) turns the whole bass bar `f`, beats before the mark included. Neither staff's values can be trusted as the timeline, so lean patch over workaround.
+  - Dynamics outside PPP..FFF occur (`fp` → `FP`=17), so the velocity table needs the accent-type values too. Hairpins (`<wedge>`) surface only as `beat.crescendo`.
+  - Repeats matter: Twinkle has 26 repeat pairs and 2 volta sets, so it converts wrong until RockyRoadImport-3sp lands.
+  - Sections: variation titles are plain `<words>`, not rehearsal marks, so `masterBar.section` is empty for both (sections=0).
+  - Up to 3 voices per staff; bass staff reaches A5 (81), so staff = hand, not pitch.
+  - Ode's title exists only in `<credit-words>` (alphaTab title empty); Twinkle's comes through.
+  - Still unverified: pedal emission (neither file has `<pedal>`), parts with no `<midi-program>`, octave shifts and grace notes in a real file, and MuseScore 4 output.
 
 **Sequence (beads):** export survey → detection+gate (with grand-staff fixture) → note mapping
 (ties, hands) → dynamics and pedal (parallel) → output/UI → upstream alphaTab filing.
