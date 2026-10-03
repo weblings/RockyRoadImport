@@ -34,3 +34,7 @@ pre-existing staleness from the Phase 4 tab landing, owned by `tak`
 (Phase 7 docs), not by this session's changes. Left for tak.
 
 Open: `m2g` (consumer), `msr` (upstream filing), `tak`, `0fx` (piano scope).
+
+## Close-out (2026-10-03)
+
+Verified ESM-only scope (exports `import` → `alphaTab.mjs` → `alphaTab.core.mjs`, patched; `require` → `alphaTab.js` unpatched by decision) and serializer N/A locally (no Score JSON round-trip; fork covers it). Fallback guard + status caveat intact; focused 16/16, full 36/36, `tsc` clean. Upstream filing waits for the MusicXML workstream end, batched `ic6`+`msr`; piano (`0fx`) unstarted.
