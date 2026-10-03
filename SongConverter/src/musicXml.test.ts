@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import * as alphaTab from '@coderline/alphatab';
 import fixtureXml from './fixtures/guitar-three-notes.musicxml?raw';
 import { convertMusicXml } from './scoreConverter';
 
@@ -197,6 +198,53 @@ describe('convertMusicXml', () => {
         const [track] = result.tracks;
         expect(track.part.Tuning?.StringSemitoneOffsets).toEqual([0, 0, 0, 0, 0, 0]);
         expect(track.notes.Notes.map((n) => n.Fret)).toEqual([0, 3, 5]);
+    });
+
+    it('surfaces <syllabic> alongside lyrics (patched _parseLyric)', () => {
+        // Parallel-signal shape per msr/m2g contract: per-verse syllabic values
+        // next to beat.lyrics, so the m2g consumer can merge begin/middle/end
+        // runs. A lyric without <syllabic> defaults to "" like lyric text does.
+        const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<score-partwise version="4.0">
+  <part-list><score-part id="P1"><part-name>Voice</part-name></score-part></part-list>
+  <part id="P1">
+    <measure number="1">
+      <attributes>
+        <divisions>4</divisions>
+        <key><fifths>0</fifths></key>
+        <time><beats>4</beats><beat-type>4</beat-type></time>
+        <clef><sign>G</sign><line>2</line></clef>
+      </attributes>
+      <note>
+        <pitch><step>C</step><octave>4</octave></pitch>
+        <duration>4</duration>
+        <type>quarter</type>
+        <lyric number="1"><syllabic>begin</syllabic><text>Hel</text></lyric>
+      </note>
+      <note>
+        <pitch><step>D</step><octave>4</octave></pitch>
+        <duration>4</duration>
+        <type>quarter</type>
+        <lyric number="1"><syllabic>end</syllabic><text>lo</text></lyric>
+      </note>
+      <note>
+        <pitch><step>E</step><octave>4</octave></pitch>
+        <duration>4</duration>
+        <type>quarter</type>
+        <lyric number="1"><text>hey</text></lyric>
+      </note>
+    </measure>
+  </part>
+</score-partwise>
+`;
+        const score = alphaTab.importer.ScoreLoader.loadScoreFromBytes(new TextEncoder().encode(xml));
+        const beats = score.tracks[0].staves[0].bars[0].voices[0].beats;
+        expect(beats.map((b) => (b.lyrics?.length ? b.lyrics[0] : ''))).toEqual(['Hel', 'lo', 'hey']);
+        expect(beats.map((b) => (b.lyricsSyllabic?.length ? b.lyricsSyllabic[0] : undefined))).toEqual([
+            'begin',
+            'end',
+            '',
+        ]);
     });
 
     it('rejects foreign files with a clean error instead of a garbage score', () => {

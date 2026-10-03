@@ -1,8 +1,47 @@
 diff --git a/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs b/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs
-index b6203da..78f6e75 100644
+index b6203da..5e82b5c 100644
 --- a/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs
 +++ b/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs
-@@ -24352,7 +24352,16 @@ class MusicXmlImporter extends ScoreImporter {
+@@ -7143,6 +7143,11 @@ class Beat {
+ 	*/
+ 	lyrics = null;
+ 	/**
++	* Parallel to lyrics: the <syllabic> value (single/begin/end/middle) per
++	* verse line, "" when the lyric carries none. The consumer joins runs.
++	*/
++	lyricsSyllabic = null;
++	/**
+ 	* Gets or sets a value indicating whether the beat is played in rasgueado style.
+ 	*/
+ 	get hasRasgueado() {
+@@ -7880,6 +7885,7 @@ class BeatCloner {
+ 		clone.dots = original.dots;
+ 		clone.fade = original.fade;
+ 		clone.lyrics = original.lyrics ? original.lyrics.slice() : null;
++		clone.lyricsSyllabic = original.lyricsSyllabic ? original.lyricsSyllabic.slice() : null;
+ 		clone.pop = original.pop;
+ 		clone.slap = original.slap;
+ 		clone.tap = original.tap;
+@@ -24195,6 +24201,8 @@ class MusicXmlImporter extends ScoreImporter {
+ 		const index = this._indexToTrackInfo.get(track.index).getLyricLine(element.getAttribute("number", ""));
+ 		if (beat.lyrics === null) beat.lyrics = [];
+ 		while (beat.lyrics.length <= index) beat.lyrics.push("");
++		if (beat.lyricsSyllabic === null) beat.lyricsSyllabic = [];
++		while (beat.lyricsSyllabic.length <= index) beat.lyricsSyllabic.push("");
+ 		for (const c of element.childElements()) switch (c.localName) {
+ 			case "text":
+ 				if (beat.lyrics[index]) beat.lyrics[index] += ` ${c.innerText}`;
+@@ -24203,6 +24211,9 @@ class MusicXmlImporter extends ScoreImporter {
+ 			case "elision":
+ 				beat.lyrics[index] += c.innerText;
+ 				break;
++			case "syllabic":
++				beat.lyricsSyllabic[index] = c.innerText;
++				break;
+ 		}
+ 	}
+ 	_parseNotations(element, note, beat) {
+@@ -24352,7 +24363,16 @@ class MusicXmlImporter extends ScoreImporter {
  				if (note) note.fret = Number.parseInt(c.innerText, 10);
  				break;
  			case "string":
@@ -20,3 +59,18 @@ index b6203da..78f6e75 100644
  				break;
  			case "hammer-on":
  			case "pull-off":
+diff --git a/node_modules/@coderline/alphatab/dist/alphaTab.d.ts b/node_modules/@coderline/alphatab/dist/alphaTab.d.ts
+index 6491fc0..3f7586e 100644
+--- a/node_modules/@coderline/alphatab/dist/alphaTab.d.ts
++++ b/node_modules/@coderline/alphatab/dist/alphaTab.d.ts
+@@ -4924,6 +4924,10 @@ declare class Beat {
+      * Gets or sets the lyrics shown on this beat.
+      */
+     lyrics: string[] | null;
++    /**
++     * Parallel to lyrics: the MusicXML syllabic value per verse line.
++     */
++    lyricsSyllabic: string[] | null;
+     /**
+      * Gets or sets a value indicating whether the beat is played in rasgueado style.
+      */
