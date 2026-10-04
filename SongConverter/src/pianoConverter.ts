@@ -8,6 +8,7 @@ import type {
 } from 'midi-json-parser-worker';
 import { ticksToSeconds, type TempoChange } from './tempoMap';
 import type { SongKeyboardNote, SongKeyboardNotes } from './songformat';
+import { trackNameHas, TRACK_NAME_ALIASES as NAME } from './trackNames';
 
 interface PendingNote {
     startTick: number;
@@ -36,17 +37,17 @@ function detectPianoTracks(tracks: TMidiEvent[][]): DetectedTrack[] {
         const hasNotes = track.some((e) => 'noteOn' in e);
         if (!hasNotes) continue;
 
-        const name = (getTrackName(track) ?? '').toLowerCase();
+        const name = getTrackName(track) ?? '';
 
-        // Track name keywords take priority
+        // Track name keywords take priority (whole-word via trackNames.ts)
         if (
-            name.includes('piano') ||
-            name.includes('right') || name.includes('rh') ||
-            name.includes('left')  || name.includes('lh')
+            trackNameHas(name, NAME.piano) ||
+            trackNameHas(name, NAME.right) ||
+            trackNameHas(name, NAME.left)
         ) {
             const hand: 'left' | 'right' | null =
-                name.includes('left') || name.includes('lh') ? 'left' :
-                name.includes('right') || name.includes('rh') ? 'right' :
+                trackNameHas(name, NAME.left) ? 'left' :
+                trackNameHas(name, NAME.right) ? 'right' :
                 null;
             results.push({ track, hand });
             continue;

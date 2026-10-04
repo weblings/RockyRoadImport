@@ -599,8 +599,9 @@ musicxmlInput.addEventListener('change', () => {
             const { convertMusicXml } = await import('./scoreConverter');
             const result = convertMusicXml(new Uint8Array(buffer));
             const lyricTracks = result.lyrics.filter((l) => l.vocals.length > 0);
+            const pianoNames = result.pianoTracks.map((p) => p.trackName);
 
-            if (result.tracks.length === 0 && lyricTracks.length === 0) {
+            if (result.tracks.length === 0 && lyricTracks.length === 0 && result.pianoTracks.length === 0) {
                 musicxmlStatus.textContent = result.skipped.length > 0
                     ? `No fretted-instrument tracks found. Skipped: ${result.skipped.join(', ')}.`
                     : 'No tracks found in this file.';
@@ -628,11 +629,13 @@ musicxmlInput.addEventListener('change', () => {
                 musicxmlLyricsRow.style.display = 'none';
             }
 
-            // Lyric-bearing tracks aren't "skipped" - they convert as vocals instead.
-            const skippedShown = result.skipped.filter((n) => !lyricTracks.some((l) => l.trackName === n));
+            // Lyric-bearing and detected-piano tracks aren't "skipped" - vocals
+            // convert as vocals, piano note mapping follows in a later step.
+            const skippedShown = result.skipped.filter((n) => !lyricTracks.some((l) => l.trackName === n) && !pianoNames.includes(n));
             let status = result.tracks.length > 0
                 ? `Converted ${result.tracks.length} track(s): ${result.tracks.map((t) => t.trackName).join(', ')}.`
                 : 'No fretted-instrument tracks found.';
+            if (pianoNames.length > 0) status += ` Piano part(s) detected (not yet converted): ${pianoNames.join(', ')}.`;
             if (skippedShown.length > 0) status += ` Skipped (not a fretted instrument): ${skippedShown.join(', ')}.`;
             if (lyricTracks.length === 1) status += ` Lyrics: ${lyricTracks[0].trackName}.`;
             if (lyricTracks.length > 1) status += ` Lyrics in ${lyricTracks.length} tracks - choose one.`;
@@ -662,7 +665,7 @@ function pickMusicXmlLyrics(result: ScoreConvertResult): TrackLyrics | null {
 musicxmlDownloadAllBtn.addEventListener('click', () => {
     if (!_musicxmlResult) return;
     const lyrics = pickMusicXmlLyrics(_musicxmlResult);
-    if (_musicxmlResult.tracks.length === 0 && !lyrics) return;
+    if (_musicxmlResult.tracks.length === 0 && !lyrics && _musicxmlResult.pianoTracks.length === 0) return;
 
     const noteLength = _musicxmlResult.tracks.reduce(
         (max, t) => t.notes.Notes.reduce((m, n) => Math.max(m, n.EndTime), max),

@@ -76,6 +76,7 @@ describe('convertScore', () => {
         const result = convertScore(score);
         expect(result.skipped).toContain('Drums');
         expect(result.tracks.map((t) => t.trackName)).toEqual(['Guitar']);
+        expect(result.pianoTracks).toEqual([]);
     });
 
     it('assumes Lead for a lone untitled track, and dedupes repeated roles across several', () => {
@@ -94,6 +95,20 @@ describe('convertScore', () => {
         const score = scoreFrom('.\n:4 0.6 0.6 |\n\\track "Lead Guitar"\n.\n:4 0.6 0.6 |');
         const [, second] = convertScore(score).tracks;
         expect(second.part.InstrumentType).toBe('LeadGuitar');
+    });
+
+    it('matches name keywords whole-word (Bassoon/Misleading are not bass/lead)', () => {
+        const [bassoon] = convertScore(scoreFrom('\\track "Bassoon"\n.\n:4 0.6 0.6 |')).tracks;
+        expect(bassoon.part.InstrumentType).toBe('LeadGuitar');
+        const [, misleading] = convertScore(scoreFrom('.\n:4 0.6 0.6 |\n\\track "Misleading"\n.\n:4 0.6 0.6 |')).tracks;
+        expect(misleading.part.InstrumentName).toBe('rhythm');
+    });
+
+    it('keeps suffix forms substring matching got by accident (Chords/Soloist)', () => {
+        const [chords] = convertScore(scoreFrom('\\track "Chords"\n.\n:4 0.6 0.6 |')).tracks;
+        expect(chords.part.InstrumentType).toBe('RhythmGuitar');
+        const [, soloist] = convertScore(scoreFrom('.\n:4 0.6 0.6 |\n\\track "Soloist"\n.\n:4 0.6 0.6 |')).tracks;
+        expect(soloist.part.InstrumentType).toBe('LeadGuitar');
     });
 
     it('produces a non-empty top-level structure (arrangement.json) even with no explicit sections', () => {

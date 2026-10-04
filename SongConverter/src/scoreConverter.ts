@@ -1,6 +1,7 @@
 import * as alphaTab from '@coderline/alphatab';
 import { ticksToSeconds, type TempoChange } from './tempoMap';
 import { extractTrackLyrics, type TrackLyrics } from './vocals';
+import { trackNameHas, TRACK_NAME_ALIASES as NAME } from './trackNames';
 import type {
     SongInstrumentPart,
     SongInstrumentNotes,
@@ -24,12 +25,17 @@ export interface ScoreTrackResult {
     notes: SongInstrumentNotes;
 }
 
+export interface PianoTrackInfo {
+    trackName: string; // detection only for now - note mapping follows in a later step
+}
+
 export interface ScoreConvertResult {
     songName: string;
     artistName: string;
     tracks: ScoreTrackResult[];
-    skipped: string[]; // track names skipped (not a fretted instrument, e.g. drums)
+    skipped: string[]; // track names skipped (neither fretted nor detected piano, e.g. drums)
     lyrics: TrackLyrics[]; // per-track vocals, verse line 0 - lyric scan ignores the fretted gate
+    pianoTracks: PianoTrackInfo[]; // detected piano parts - same independent-scan shape as lyrics
     structure: SongStructure; // shared across all tracks - RockyRoad requires arrangement.json
 }
 
@@ -95,19 +101,19 @@ interface Role {
     instrumentType: string;
 }
 
-// Name keywords take priority (mirrors pianoConverter.ts's detectPianoTracks); with no hints,
-// the first kept track is assumed Lead (per Andrew's call), later ones Rhythm. nameCounts
-// de-dupes repeated roles ("rhythm", "rhythm2", ...) across the whole song.
+// Name keywords take priority (whole-word via trackNames.ts, shared with the piano
+// paths); with no hints, the first kept track is assumed Lead (per Andrew's call),
+// later ones Rhythm. nameCounts de-dupes repeated roles ("rhythm", "rhythm2", ...).
 function determineRole(track: alphaTab.model.Track, tuning: number[], nameCounts: Map<string, number>, isFirstKept: boolean): Role {
-    const name = (track.name || '').toLowerCase();
+    const name = track.name || '';
     let base: string;
     let instrumentType: string;
 
-    if (isBassRange(tuning) || name.includes('bass')) {
+    if (isBassRange(tuning) || trackNameHas(name, NAME.bass)) {
         base = 'bass'; instrumentType = 'BassGuitar';
-    } else if (name.includes('lead') || name.includes('solo')) {
+    } else if (trackNameHas(name, NAME.lead) || trackNameHas(name, NAME.solo)) {
         base = 'lead'; instrumentType = 'LeadGuitar';
-    } else if (name.includes('rhythm') || name.includes('chord') || name.includes('comp')) {
+    } else if (trackNameHas(name, NAME.rhythm) || trackNameHas(name, NAME.chord) || trackNameHas(name, NAME.comp)) {
         base = 'rhythm'; instrumentType = 'RhythmGuitar';
     } else if (isFirstKept) {
         base = 'lead'; instrumentType = 'LeadGuitar';
@@ -205,6 +211,20 @@ export function convertMusicXml(bytes: Uint8Array): ScoreConvertResult {
     return convertScore(alphaTab.importer.ScoreLoader.loadScoreFromBytes(bytes));
 }
 
+// Piano detection, independent of the fretted gate like the lyrics scan. Program is
+// zero-based (XML <midi-program> is 1-based, alphaTab subtracts 1); 0 is ambiguous
+// (acoustic grand and "no <midi-instrument>" both read 0), so it needs a second
+// signal: a grand staff or a name keyword. A 2-staff harp/organ part without a
+// <midi-program> also matches - accepted, fix-on-find. Percussion never matches.
+function isPianoTrack(track: alphaTab.model.Track): boolean {
+    if (track.isPercussion) return false;
+    const program = track.playbackInfo.program;
+    if (program >= 1 && program <= 7) return true;
+    if (program !== 0) return false;
+    if (track.staves.length === 2) return true;
+    return trackNameHas(track.name || '', NAME.piano);
+}
+
 // Split out from the entries above so tests can build a Score via alphaTab's alphaTex importer
 // (ScoreLoader.loadAlphaTex) instead of needing binary .gp3/.gp4/.gp5 fixture files.
 export function convertScore(score: alphaTab.model.Score): ScoreConvertResult {
@@ -212,24 +232,31 @@ export function convertScore(score: alphaTab.model.Score): ScoreConvertResult {
 
     const tracks: ScoreTrackResult[] = [];
     const skipped: string[] = [];
+    const lyrics: TrackLyrics[] = [];
+    const pianoTracks: PianoTrackInfo[] = [];
     const nameCounts = new Map<string, number>();
 
-    const lyrics: TrackLyrics[] = [];
     for (const track of score.tracks) {
         const trackName = track.name || `Track ${track.index + 1}`;
         const trackLyrics = extractTrackLyrics(track, trackName, tempoMap, division);
         if (trackLyrics.vocals.length > 0) lyrics.push(trackLyrics);
+        // Fretted gate runs first: a guitar part with notation+tab staves (2 staves,
+        // program 0 with no <midi-program>) must never be mistaken for piano.
         // GP tracks are single-staff and stringed at index 0, but multi-staff MusicXML exports
         // (TuxGuitar, MuseScore) put standard notation on staff 0 and the tab staff elsewhere -
         // scan all staves rather than assuming index 0 (confirmed via a real TuxGuitar export).
         const staff = track.isPercussion ? undefined : track.staves.find((s) => !s.isPercussion && s.isStringed);
-        if (!staff) {
-            skipped.push(trackName);
+        if (staff) {
+            const tuning = [...staff.tuning].reverse();
+            const role = determineRole(track, tuning, nameCounts, tracks.length === 0);
+            tracks.push(convertTrack(staff, trackName, tuning, role, tempoMap, division));
             continue;
         }
-        const tuning = [...staff.tuning].reverse();
-        const role = determineRole(track, tuning, nameCounts, tracks.length === 0);
-        tracks.push(convertTrack(staff, trackName, tuning, role, tempoMap, division));
+        if (isPianoTrack(track)) {
+            pianoTracks.push({ trackName });
+            continue;
+        }
+        skipped.push(trackName);
     }
 
     return {
@@ -238,6 +265,7 @@ export function convertScore(score: alphaTab.model.Score): ScoreConvertResult {
         tracks,
         skipped,
         lyrics,
+        pianoTracks,
         structure: buildStructure(score, tempoMap, division),
     };
 }
