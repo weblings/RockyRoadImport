@@ -260,3 +260,20 @@ names; UI code reuses result strings throughout, so it stays self-consistent.
 **Fix:** when a diff looks identical on both sides, dump code points before
 re-reading logic. Never match importer-output strings against source-text
 literals — compare within one layer.
+
+---
+
+## A generated export is also the recovery path when its tool is unavailable
+Tags: beads, workflow, recovery
+Applies-when: updating beads without a working `bd` CLI
+
+**Symptom:** the sandbox blocked every `bd` call, but bead updates (ngd.3
+status, new hnd follow-up) still had to land somewhere reviewable.
+
+**Root cause:** `.beads/issues.jsonl` is written by `bd export` yet also read
+by `bd import` — so the export round-trips: hand-edit it, `bd import` loads
+the live DB, re-export normalizes.
+
+**Fix:** keep schema/counts consistent by hand (`dependency_count`,
+`dependent_count`, id suffixes checked unique against the file), then
+`bd import && bd export -o .beads/issues.jsonl` and review the `git diff`.

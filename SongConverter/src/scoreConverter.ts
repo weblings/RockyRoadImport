@@ -5,6 +5,7 @@ import { trackNameHas, TRACK_NAME_ALIASES as NAME } from './trackNames';
 import type {
     SongInstrumentPart,
     SongInstrumentNotes,
+    SongKeyboardNote,
     SongNote,
     SongChord,
     SongSection,
@@ -12,6 +13,7 @@ import type {
     SongStructure,
     CentsOffset,
 } from './songformat';
+import { handForScoreNote } from './hands';
 
 // alphaTab Score (Guitar Pro, MusicXML, ...) → OpenSongChart conversion. alphaTab does the
 // parsing; this file maps its Score/Track/Bar/Beat/Note model onto the same shape the psarc
@@ -26,7 +28,9 @@ export interface ScoreTrackResult {
 }
 
 export interface PianoTrackInfo {
-    trackName: string; // detection only for now - note mapping follows in a later step
+    trackName: string;
+    notes: SongKeyboardNote[]; // ngd.3 mapping - merged into one keys.json in ngd.6
+    usedHandFallback: boolean; // true when any note resolved via clef/voice/pitch (staffCount != 2)
 }
 
 export interface ScoreConvertResult {
@@ -253,7 +257,7 @@ export function convertScore(score: alphaTab.model.Score): ScoreConvertResult {
             continue;
         }
         if (isPianoTrack(track)) {
-            pianoTracks.push({ trackName });
+            pianoTracks.push({ trackName, ...convertPianoTrack(track, tempoMap, division) });
             continue;
         }
         skipped.push(trackName);
@@ -268,6 +272,69 @@ export function convertScore(score: alphaTab.model.Score): ScoreConvertResult {
         pianoTracks,
         structure: buildStructure(score, tempoMap, division),
     };
+}
+
+// Provisional until ngd.4 maps beat dynamics (whose no-mark default is F).
+const PIANO_PLACEHOLDER_VELOCITY = 96;
+
+// Score beats -> SongKeyboardNote (ngd.3). Pitch is note.realValue (ottava
+// already applied); timing reuses the guitar path's tick math; Hand comes
+// from the staff index on grand-staff parts via handForScoreNote. Tie chains
+// merge into one note with summed TimeLength (SongKeyboardNote has no
+// Continued flag); rests are skipped. Sections ride the shared structure;
+// merging tracks into keys.json and the tab wiring belong to ngd.6.
+function convertPianoTrack(
+    track: alphaTab.model.Track,
+    tempoMap: TempoChange[],
+    division: number,
+): { notes: SongKeyboardNote[]; usedHandFallback: boolean } {
+    const notes: SongKeyboardNote[] = [];
+    const staffCount = track.staves.length;
+    const usedHandFallback = staffCount !== 2;
+    const openByPitch = track.staves.map(() => new Map<number, SongKeyboardNote>());
+
+    track.staves.forEach((staff, staffIndex) => {
+        for (const bar of staff.bars) {
+            for (const voice of bar.voices) {
+                for (const beat of voice.beats) {
+                    if (beat.isRest || beat.notes.length === 0) continue;
+
+                    const startTime = ticksToSeconds(beat.absolutePlaybackStart, tempoMap, division);
+                    const endTime = ticksToSeconds(beat.absolutePlaybackStart + beat.playbackDuration, tempoMap, division);
+
+                    for (const note of beat.notes) {
+                        const pitch = note.realValue;
+                        const open = openByPitch[staffIndex].get(pitch);
+                        if (note.isTieDestination && open) {
+                            open.EndTime = endTime;
+                            open.TimeLength = endTime - open.TimeOffset;
+                            continue;
+                        }
+                        const entry: SongKeyboardNote = {
+                            TimeOffset: startTime,
+                            TimeLength: endTime - startTime,
+                            EndTime: endTime,
+                            Note: pitch,
+                            Velocity: PIANO_PLACEHOLDER_VELOCITY,
+                            Hand: handForScoreNote({
+                                staffCount,
+                                staffIndex,
+                                clef: bar.clef,
+                                voiceIndex: voice.index,
+                                multiVoice: bar.isMultiVoice,
+                                pitch,
+                            }),
+                        };
+                        notes.push(entry);
+                        openByPitch[staffIndex].set(pitch, entry);
+                    }
+                }
+            }
+        }
+    });
+
+    notes.sort((a, b) => a.TimeOffset - b.TimeOffset);
+    return { notes, usedHandFallback };
 }
 
 function convertTrack(

@@ -18,3 +18,4 @@ stands and what resumes it. Planning docs stay clean: decisions, status, and poi
 | 2026-10-03 | MusicXML msr gap close-out verified, upstream deferred to workstream end | RockyRoadImport-msr |
 | 2026-10-03 | MusicXML piano scoped + sequenced (Phase 8), repeats bug filed | RockyRoadImport-0fx, RockyRoadImport-ngd, RockyRoadImport-3sp, RockyRoadImport-aio |
 | 2026-10-04 | MusicXML piano detection + gate, grand-staff fixture, 52 tests green | RockyRoadImport-ngd.2 |
+| 2026-10-04 | MusicXML piano note mapping implemented + tests written, verification pending (no shell in sandbox); MIDI hand-split follow-up filed | RockyRoadImport-ngd.3, RockyRoadImport-hnd |

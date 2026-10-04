@@ -211,6 +211,7 @@ below come from a 2026-10-03 probe: a hand-authored grand-staff file through ins
   - Up to 3 voices per staff; bass staff reaches A5 (81), so staff = hand, not pitch.
   - Ode's title exists only in `<credit-words>` (alphaTab title empty); Twinkle's comes through.
   - Still unverified: pedal emission (neither file has `<pedal>`), parts with no `<midi-program>`, octave shifts and grace notes in a real file, and MuseScore 4 output.
+  - Probe 2026-10-04 (installed 1.8.4 types): hand fallback has model support — `Bar.clef` (G2/F4/C3/C4/Neutral) + `clefOttava` per bar, `Beat.ottava`, `Note.realValue` (sounding) vs `displayValue`, `Beat.graceType`, `Bar.voices`/`isMultiVoice` + `Voice.index`; no semantic stem-direction (engraving only), so voice is the single-staff split signal. (RockyRoadImport-ngd.3) fallback: staff, then clef, then voice, then shared pitch helper; MIDI adaptive split is follow-up (RockyRoadImport-hnd).
 
 **Sequence (beads):** export survey → detection+gate (with grand-staff fixture) → note mapping
 (ties, hands) → dynamics and pedal (parallel) → output/UI → upstream alphaTab filing.

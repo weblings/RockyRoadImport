@@ -9,6 +9,7 @@ import type {
 import { ticksToSeconds, type TempoChange } from './tempoMap';
 import type { SongKeyboardNote, SongKeyboardNotes } from './songformat';
 import { trackNameHas, TRACK_NAME_ALIASES as NAME } from './trackNames';
+import { pitchFallbackHand } from './hands';
 
 interface PendingNote {
     startTick: number;
@@ -97,7 +98,7 @@ function endNote(
     const timeLength = ticksToSeconds(endTick, tempoMap, division) - ticksToSeconds(p.startTick, tempoMap, division);
 
     const resolvedHand: 'left' | 'right' | undefined =
-        hand ?? (noteNumber < 60 ? 'left' : 'right');
+        hand ?? pitchFallbackHand(noteNumber);
 
     const note: SongKeyboardNote = {
         TimeOffset: timeOffset,

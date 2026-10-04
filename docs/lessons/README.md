@@ -14,8 +14,8 @@ start a new LessonsLearned-style doc elsewhere; if unsure whether one already ex
 |---|---|---|---|
 | [engineering-hygiene.md](engineering-hygiene.md) | general design principles | 16 | general principle, demonstrated by a real bug here |
 
-Counts as of 2026-10-03 — bump the count when adding entries
-(`grep -c '^## '` per file). At 16 entries this file is past the split
+Counts as of 2026-10-04 — bump the count when adding entries
+(`grep -c '^## '` per file). At 17 entries this file is past the split
 threshold; next capture should do the topic-file split.
 
 ## Where a new lesson goes
