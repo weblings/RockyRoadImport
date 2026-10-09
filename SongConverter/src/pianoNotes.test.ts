@@ -46,6 +46,45 @@ function wedge(type: 'crescendo' | 'diminuendo' | 'stop'): string {
 
 const encode = (s: string) => new TextEncoder().encode(s);
 
+// Hand-authored grand staff (G+F clefs, 2 staves) for ngd.5: pedal marks sit
+// on the bass staff only, like real exports. Quarter notes on both staves
+// keep both hands sounding through every pedal window.
+function pedalPart(m1: string, m2 = ''): string {
+    const measure = (n: number, inner: string) => `<measure number="${n}">${inner}</measure>`;
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<score-partwise version="4.0">
+  <part-list><score-part id="P1"><part-name>Piano</part-name></score-part></part-list>
+  <part id="P1">
+    <measure number="1">
+      <attributes>
+        <divisions>4</divisions>
+        <key><fifths>0</fifths></key>
+        <time><beats>4</beats><beat-type>4</beat-type></time>
+        <staves>2</staves>
+        <clef number="1"><sign>G</sign><line>2</line></clef>
+        <clef number="2"><sign>F</sign><line>4</line></clef>
+      </attributes>
+      ${m1}
+    </measure>
+    ${m2 ? measure(2, m2) : ''}
+  </part>
+</score-partwise>
+`;
+}
+
+function staffNote(step: string, octave: number, staff: 1 | 2): string {
+    return `<note><pitch><step>${step}</step><octave>${octave}</octave></pitch><duration>4</duration><type>quarter</type><staff>${staff}</staff></note>`;
+}
+
+function pedalMark(type: 'start' | 'stop' | 'change'): string {
+    return `<direction><direction-type><pedal type="${type}"/></direction-type><staff>2</staff></direction>`;
+}
+
+function sustainFlags(xml: string): { Note: number; Hand?: string; Sustain: boolean; Time: number }[] {
+    const [piano] = convertMusicXml(encode(xml)).pianoTracks;
+    return piano.notes.map((n) => ({ Note: n.Note, Hand: n.Hand, Sustain: n.SustainActive ?? false, Time: n.TimeOffset }));
+}
+
 describe('piano note mapping', () => {
     it('maps the grand-staff fixture by staff (treble right, bass left)', () => {
         const [piano] = convertMusicXml(encode(pianoFixtureXml)).pianoTracks;
@@ -129,6 +168,72 @@ describe('piano note mapping', () => {
         const [piano] = convertMusicXml(encode(xml)).pianoTracks;
         expect(piano.notes.map((n) => n.Note)).toEqual([60, 60]);
         expect(piano.notes.map((n) => n.Hand)).toEqual(['right', 'left']);
+    });
+});
+
+describe('piano pedal to SustainActive', () => {
+    // Bass-only marks apply part-wide: the treble notes sustain too.
+    // m.1: down at 0, up mid-bar at 8; m.2: down at 0, change at 8, no stop.
+    const xml = pedalPart(
+        `${staffNote('C', 5, 1)}${staffNote('D', 5, 1)}${staffNote('E', 5, 1)}${staffNote('F', 5, 1)}` +
+        '<backup><duration>16</duration></backup>' +
+        `${pedalMark('start')}${staffNote('C', 3, 2)}${staffNote('D', 3, 2)}` +
+        `${pedalMark('stop')}${staffNote('E', 3, 2)}${staffNote('F', 3, 2)}`,
+        `${staffNote('G', 5, 1)}${staffNote('A', 5, 1)}${staffNote('B', 5, 1)}${staffNote('C', 6, 1)}` +
+        '<backup><duration>16</duration></backup>' +
+        `${pedalMark('start')}${staffNote('G', 2, 2)}${staffNote('A', 2, 2)}` +
+        `${pedalMark('change')}${staffNote('B', 2, 2)}${staffNote('C', 3, 2)}`,
+    );
+
+    it('marks notes while the pedal is down on both hands', () => {
+        // m.1 C5 (right) and C3 (left) at offset 0; C3 repeats in m.2, so
+        // scope by time (quarters are 0.5s, each bar lasts 2s).
+        const flags = sustainFlags(xml)
+            .filter((n) => (n.Note === 72 || n.Note === 48) && n.Time < 2)
+            .map(({ Note, Hand, Sustain }) => ({ Note, Hand, Sustain }));
+        expect(flags).toEqual([
+            { Note: 72, Hand: 'right', Sustain: true },
+            { Note: 48, Hand: 'left', Sustain: true },
+        ]);
+    });
+
+    it('clears notes after a mid-bar stop on both hands', () => {
+        const flags = sustainFlags(xml)
+            .filter((n) => n.Note === 77 || n.Note === 53)
+            .map(({ Note, Hand, Sustain }) => ({ Note, Hand, Sustain }));
+        // F5 (right) and F3 (left) sound at offset 12, after the stop at 8.
+        expect(flags).toEqual([
+            { Note: 77, Hand: 'right', Sustain: false },
+            { Note: 53, Hand: 'left', Sustain: false },
+        ]);
+    });
+
+    it('holds through change and an unpaired down to the part end', () => {
+        const flags = sustainFlags(xml).filter((n) => n.Note >= 79 || (n.Note <= 50 && n.Note >= 43));
+        // m.2 throughout (down at 0, change at 8, no stop) plus m.1's
+        // pre-stop C3/D3 - ten sustained notes in all.
+        expect(flags.every((n) => n.Sustain)).toBe(true);
+        expect(flags).toHaveLength(10);
+    });
+
+    it('keeps a stop alone in a later bar (cross-bar span patch)', () => {
+        // Fails while the importer drops a stop with no same-bar opener:
+        // the m.1 span would stick down through m.2 instead of ending.
+        const twoBar = pedalPart(
+            `${staffNote('C', 5, 1)}${staffNote('D', 5, 1)}${staffNote('E', 5, 1)}${staffNote('F', 5, 1)}` +
+            '<backup><duration>16</duration></backup>' +
+            `${pedalMark('start')}${staffNote('C', 3, 2)}${staffNote('D', 3, 2)}${staffNote('E', 3, 2)}${staffNote('F', 3, 2)}`,
+            `${staffNote('G', 5, 1)}${staffNote('A', 5, 1)}${staffNote('B', 5, 1)}${staffNote('C', 6, 1)}` +
+            '<backup><duration>16</duration></backup>' +
+            `${pedalMark('stop')}${staffNote('G', 2, 2)}${staffNote('A', 2, 2)}${staffNote('B', 2, 2)}${staffNote('C', 3, 2)}`,
+        );
+        const flags = sustainFlags(twoBar);
+        const bar1 = flags.filter((n) => (n.Note === 72 || n.Note === 48) && n.Time < 2);
+        const bar2 = flags.filter((n) => n.Note === 79 || n.Note === 43);
+        expect(bar1).toHaveLength(2);
+        expect(bar2).toHaveLength(2);
+        expect(bar1.every((n) => n.Sustain)).toBe(true);
+        expect(bar2.every((n) => !n.Sustain)).toBe(true);
     });
 });
 

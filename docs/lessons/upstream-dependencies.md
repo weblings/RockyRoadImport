@@ -119,3 +119,18 @@ made the patch minimal and upstream-plausible instead of inventing new state.
 
 **Fix:** grep the dependency for unread/unwritten fields around the bug first —
 dead state often marks where the maintainer meant the fix to go.
+
+---
+
+## A per-container guard drops spans that end in a later container
+Tags: importer, spans, patch-package
+Applies-when: trusting an importer timeline built from span-ending marks
+
+alphaTab's MusicXML importer kept a pedal `stop` only when its own bar
+already held a marker, so a stop ending a span in a later bar vanished and
+sustain stuck down to the piece end. The bar chain needed for the check only
+exists after `finish()` synthesis, so the patch walks back through
+`previousBar` at parse time instead.
+
+**Fix:** probe a span that crosses containers before trusting any importer
+timeline — same-bar fixtures pass while real multi-bar spans silently stick.

@@ -1,5 +1,5 @@
 diff --git a/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs b/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs
-index b6203da..94de3a4 100644
+index b6203da..5923894 100644
 --- a/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs
 +++ b/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs
 @@ -7143,6 +7143,11 @@ class Beat {
@@ -39,7 +39,28 @@ index b6203da..94de3a4 100644
  					this._score.stylesheet.hideDynamics = false;
  				}
  				break;
-@@ -23821,7 +23826,7 @@ class MusicXmlImporter extends ScoreImporter {
+@@ -23613,8 +23618,18 @@ class MusicXmlImporter extends ScoreImporter {
+ 				const pedal = this._parsePedal(direction);
+ 				if (pedal && bar) {
+ 					pedal.ratioPosition = getRatioPosition();
+-					const canHaveUp = bar.sustainPedals.length > 0 && bar.sustainPedals[bar.sustainPedals.length - 1].pedalType !== SustainPedalMarkerType.Up;
+-					if (pedal.pedalType !== SustainPedalMarkerType.Up || canHaveUp) bar.sustainPedals.push(pedal);
++					const lastInBar = bar.sustainPedals.length > 0 ? bar.sustainPedals[bar.sustainPedals.length - 1] : null;
++					let spanBar = bar.previousBar;
++					let lastInPrev = null;
++					while (spanBar) {
++						if (spanBar.sustainPedals.length > 0) {
++							lastInPrev = spanBar.sustainPedals[spanBar.sustainPedals.length - 1];
++							break;
++						}
++						spanBar = spanBar.previousBar;
++					}
++					const spanOpen = (lastInBar !== null && lastInBar.pedalType !== SustainPedalMarkerType.Up) || (lastInBar === null && lastInPrev !== null && lastInPrev.pedalType !== SustainPedalMarkerType.Up);
++					if (pedal.pedalType !== SustainPedalMarkerType.Up || spanOpen) bar.sustainPedals.push(pedal);
+ 				}
+ 				break;
+ 			case "metronome":
+@@ -23821,7 +23836,7 @@ class MusicXmlImporter extends ScoreImporter {
  				if (this._lastBeat && this._lastBeat.beamingMode === BeatBeamingMode.ForceMergeWithNext && this._lastBeat.voice.bar.staff.index !== staffIndex && voice.beats.length > 0 && voice.beats[voice.beats.length - 1].beamingMode === BeatBeamingMode.ForceMergeWithNext) {
  					const preferredDuration = voice.beats[voice.beats.length - 1].duration;
  					while (gap > 0) {
@@ -48,7 +69,7 @@ index b6203da..94de3a4 100644
  						if (restGap !== null) {
  							this._insertBeatToVoice(restGap, voice);
  							gap -= restGap.playbackDuration;
-@@ -23830,7 +23835,7 @@ class MusicXmlImporter extends ScoreImporter {
+@@ -23830,7 +23845,7 @@ class MusicXmlImporter extends ScoreImporter {
  				}
  				if (gap > 0) {
  					const placeholder = new Beat();
@@ -57,7 +78,7 @@ index b6203da..94de3a4 100644
  					placeholder.isEmpty = true;
  					placeholder.duration = Duration.TwoHundredFiftySixth;
  					placeholder.overrideDisplayDuration = gap;
-@@ -23850,7 +23855,7 @@ class MusicXmlImporter extends ScoreImporter {
+@@ -23850,7 +23865,7 @@ class MusicXmlImporter extends ScoreImporter {
  				this._getStaffContext(staff).isExplicitlyBeamed = true;
  			}
  			newBeat.isEmpty = false;
@@ -66,7 +87,7 @@ index b6203da..94de3a4 100644
  			if (this._isBeatSlash) newBeat.slashed = true;
  			const automations = this._nextBeatAutomations;
  			this._nextBeatAutomations = null;
-@@ -24119,7 +24124,7 @@ class MusicXmlImporter extends ScoreImporter {
+@@ -24119,7 +24134,7 @@ class MusicXmlImporter extends ScoreImporter {
  				break;
  		}
  	}
@@ -75,7 +96,7 @@ index b6203da..94de3a4 100644
  		let preferredDurationTicks = MidiUtils.toTicks(preferredDuration);
  		while (preferredDurationTicks > gap) {
  			if (preferredDuration === Duration.TwoHundredFiftySixth) return null;
-@@ -24127,7 +24132,7 @@ class MusicXmlImporter extends ScoreImporter {
+@@ -24127,7 +24142,7 @@ class MusicXmlImporter extends ScoreImporter {
  			preferredDurationTicks = MidiUtils.toTicks(preferredDuration);
  		}
  		const placeholder = new Beat();
@@ -84,7 +105,7 @@ index b6203da..94de3a4 100644
  		placeholder.isEmpty = false;
  		placeholder.duration = preferredDuration;
  		placeholder.overrideDisplayDuration = preferredDurationTicks;
-@@ -24195,6 +24200,8 @@ class MusicXmlImporter extends ScoreImporter {
+@@ -24195,6 +24210,8 @@ class MusicXmlImporter extends ScoreImporter {
  		const index = this._indexToTrackInfo.get(track.index).getLyricLine(element.getAttribute("number", ""));
  		if (beat.lyrics === null) beat.lyrics = [];
  		while (beat.lyrics.length <= index) beat.lyrics.push("");
@@ -93,7 +114,7 @@ index b6203da..94de3a4 100644
  		for (const c of element.childElements()) switch (c.localName) {
  			case "text":
  				if (beat.lyrics[index]) beat.lyrics[index] += ` ${c.innerText}`;
-@@ -24203,6 +24210,9 @@ class MusicXmlImporter extends ScoreImporter {
+@@ -24203,6 +24220,9 @@ class MusicXmlImporter extends ScoreImporter {
  			case "elision":
  				beat.lyrics[index] += c.innerText;
  				break;
@@ -103,7 +124,7 @@ index b6203da..94de3a4 100644
  		}
  	}
  	_parseNotations(element, note, beat) {
-@@ -24232,7 +24242,7 @@ class MusicXmlImporter extends ScoreImporter {
+@@ -24232,7 +24252,7 @@ class MusicXmlImporter extends ScoreImporter {
  				const dynamics = this._parseDynamics(c);
  				if (dynamics !== null) {
  					beat.dynamics = dynamics;
@@ -112,7 +133,7 @@ index b6203da..94de3a4 100644
  				}
  				break;
  			case "fermata":
-@@ -24352,7 +24362,16 @@ class MusicXmlImporter extends ScoreImporter {
+@@ -24352,7 +24372,16 @@ class MusicXmlImporter extends ScoreImporter {
  				if (note) note.fret = Number.parseInt(c.innerText, 10);
  				break;
  			case "string":

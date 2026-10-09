@@ -624,7 +624,8 @@ musicxmlInput.addEventListener('change', () => {
                     ? ' Hand assigned by fallback (not grand staff); may be wrong where hands cross.'
                     : '';
                 status += ` Piano: ${pianoNames.join(', ')} (${keysCount} notes to keys.json;`
-                    + ` velocity approximates dynamics marks, hairpins ignored; pedal and repeats not yet expanded).${fallback}`;
+                    + ` velocity approximates dynamics marks, hairpins ignored; sustain from pedal marks`
+                    + ` (change reads continuous, damper-pedal not imported); repeats not yet expanded).${fallback}`;
             }
             if (skippedShown.length > 0) status += ` Skipped (not a fretted instrument): ${skippedShown.join(', ')}.`;
             if (lyricTracks.length === 1) status += ` Lyrics: ${lyricTracks[0].trackName}.`;

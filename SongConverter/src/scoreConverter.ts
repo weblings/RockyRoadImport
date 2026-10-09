@@ -281,8 +281,45 @@ export function convertScore(score: alphaTab.model.Score): ScoreConvertResult {
 // maps beat.dynamics (hairpins carry no target level, so beat.crescendo is
 // ignored); cross-staff timelines need the importer patch. Tie chains merge
 // into one note with summed TimeLength (SongKeyboardNote has no Continued
-// flag); rests are skipped. Sections ride the shared structure; merging
+// flag); rests are skipped. SustainActive comes from a part-wide pedal
+// timeline below (ngd.5). Sections ride the shared structure; merging
 // tracks into keys.json and the tab wiring belong to ngd.6.
+
+// Pedal marks land only on their direction's staff bar (usually bass), so
+// every staff's bars feed one part-wide timeline, like the MIDI path's
+// per-channel CC64 state. The importer drops change/resume/discontinue at
+// parse, which reads identically here: a retake stays down on both sides.
+// ratioPosition is a fraction of its bar, clamped - files without
+// <divisions> produce out-of-range values. An unpaired Down holds to the
+// part end, matching the MIDI path's missing-CC64-off behavior.
+function collectPedalMarks(track: alphaTab.model.Track): { tick: number; state: boolean | null }[] {
+    const marks: { tick: number; state: boolean | null }[] = [];
+    for (const staff of track.staves) {
+        for (const bar of staff.bars) {
+            if (bar.sustainPedals.length === 0) continue;
+            let lo = Infinity;
+            let hi = -Infinity;
+            for (const voice of bar.voices) {
+                for (const beat of voice.beats) {
+                    lo = Math.min(lo, beat.absolutePlaybackStart);
+                    hi = Math.max(hi, beat.absolutePlaybackStart + beat.playbackDuration);
+                }
+            }
+            if (lo === Infinity || hi <= lo) continue;
+            for (const marker of bar.sustainPedals) {
+                const ratio = Math.min(1, Math.max(0, marker.ratioPosition));
+                // Hold leaves the state alone (a stray continue with the
+                // pedal up must not turn it on); Down/Up set it outright.
+                const state = marker.pedalType === alphaTab.model.SustainPedalMarkerType.Up ? false
+                    : marker.pedalType === alphaTab.model.SustainPedalMarkerType.Down ? true : null;
+                marks.push({ tick: lo + ratio * (hi - lo), state });
+            }
+        }
+    }
+    marks.sort((a, b) => a.tick - b.tick);
+    return marks;
+}
+
 function convertPianoTrack(
     track: alphaTab.model.Track,
     tempoMap: TempoChange[],
@@ -292,6 +329,7 @@ function convertPianoTrack(
     const staffCount = track.staves.length;
     const usedHandFallback = staffCount !== 2;
     const openByPitch = track.staves.map(() => new Map<number, SongKeyboardNote>());
+    const pedalMarks = collectPedalMarks(track);
 
     track.staves.forEach((staff, staffIndex) => {
         for (const bar of staff.bars) {
@@ -301,6 +339,14 @@ function convertPianoTrack(
 
                     const startTime = ticksToSeconds(beat.absolutePlaybackStart, tempoMap, division);
                     const endTime = ticksToSeconds(beat.absolutePlaybackStart + beat.playbackDuration, tempoMap, division);
+
+                    // Pedal down at the note's start tick (a mark exactly on
+                    // the beat counts - the MIDI path samples CC64 the same way).
+                    let sustain = false;
+                    for (const mark of pedalMarks) {
+                        if (mark.tick > beat.absolutePlaybackStart) break;
+                        if (mark.state !== null) sustain = mark.state;
+                    }
 
                     for (const note of beat.notes) {
                         const pitch = note.realValue;
@@ -316,6 +362,7 @@ function convertPianoTrack(
                             EndTime: endTime,
                             Note: pitch,
                             Velocity: velocityForDynamics(beat.dynamics),
+                            ...(sustain ? { SustainActive: true as const } : {}),
                             Hand: handForScoreNote({
                                 staffCount,
                                 staffIndex,
