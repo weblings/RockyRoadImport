@@ -175,3 +175,17 @@ the live DB, re-export normalizes.
 **Fix:** keep schema/counts consistent by hand (`dependency_count`,
 `dependent_count`, id suffixes checked unique against the file), then
 `bd import && bd export -o .beads/issues.jsonl` and review the `git diff`.
+
+---
+
+## A module shared with a lazily-loaded tab must not import the lazy dependency
+Tags: bundling, lazy-loading, imports
+Applies-when: adding shared code consumed by both an initial-bundle tab and a dynamically-imported one
+
+`main.ts` imports `scoreConverter.ts` dynamically so MIDI-only users never load alphaTab —
+but the shared `songBuilder.ts` is a static import, so anything it pulls in lands in the
+initial bundle. One alphaTab import there would silently defeat the lazy loading with no
+test failing.
+
+**Fix:** keep shared UI helpers dependency-free by construction, and say which import
+they must never gain in a comment at the top of the file.

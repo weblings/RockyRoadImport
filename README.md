@@ -1,7 +1,8 @@
 # RockyRoadImport
 
-- Converts a Rocksmith 2014 (`.psarc`) song, a Guitar Pro (`.gp3`/`.gp4`/`.gp5`) file, or a piano
-  MIDI (`.mid`) file into OpenSongChart format — the chart format
+- Converts a Rocksmith 2014 (`.psarc`) song, a Guitar Pro (`.gp3`/`.gp4`/`.gp5`) file, a piano
+  MIDI (`.mid`) file, or a MusicXML (`.musicxml`/`.xml`/`.mxl`) score (guitar parts plus piano
+  parts merged into `keys.json`) into OpenSongChart format — the chart format
   [RockyRoad](https://github.com/weblings/RockyRoad) reads.
 - Runs entirely in your browser — nothing is uploaded anywhere, your song files never leave your
   computer.
@@ -69,7 +70,8 @@ Repos by [Mike Oliphant](https://github.com/mikeoliphant). Without this amazing 
 - [ChartConverter](https://github.com/mikeoliphant/ChartConverter) is an app for converting other chart formats to OpenSongChart.
 
 **What file types are supported?**
-Rocksmith 2014 `.psarc`, Guitar Pro `.gp3`/`.gp4`/`.gp5`, and piano MIDI (`.mid`) files today. Rock
+Rocksmith 2014 `.psarc`, Guitar Pro `.gp3`/`.gp4`/`.gp5`, piano MIDI (`.mid`), and MusicXML
+(`.musicxml`/`.xml`/`.mxl`, guitar plus piano-to-`keys.json`) files today. Rock
 Band conversion is planned but not yet available.
 
 **What do I do with the converted output?**

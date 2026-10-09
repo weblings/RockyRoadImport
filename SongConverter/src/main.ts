@@ -13,6 +13,7 @@ import type {
 } from 'midi-json-parser-worker';
 import { buildTempoMap, buildSongStructure, type TempoChange } from './tempoMap';
 import { convertPianoMidi } from './pianoConverter';
+import { buildSongInfo as buildSharedSongInfo, mergePianoTracks } from './songBuilder';
 import type { ScoreConvertResult } from './scoreConverter';
 import type { TrackLyrics } from './vocals';
 import type { SongInfo, SongStructure, SongKeyboardNotes, PsarcSongResult } from './songformat';
@@ -268,26 +269,13 @@ function setDownloadsEnabled(enabled: boolean): void {
 }
 
 function buildSongInfo(): SongInfo {
-    const notes = _keyboardNotes!.Notes;
-    const songLengthSeconds = notes.reduce(
-        (max, n) => Math.max(max, n.TimeOffset + n.TimeLength),
-        0,
-    );
-    const difficulty = parseFloat(difficultyInput.value);
-    const info: SongInfo = {
-        SongName: songNameInput.value.trim() || 'Unknown',
-        ArtistName: artistInput.value.trim() || 'Unknown',
-        SongLengthSeconds: songLengthSeconds,
-        InstrumentParts: [{
-            InstrumentName: 'keys',
-            InstrumentType: 'Keys',
-            ...(difficulty > 0 ? { SongDifficulty: difficulty } : {}),
-        }],
-        GeneratedBy: GENERATED_BY,
-    };
-    const album = albumInput.value.trim();
-    if (album) info.AlbumName = album;
-    return info;
+    return buildSharedSongInfo({
+        songName: songNameInput.value,
+        artistName: artistInput.value,
+        albumName: albumInput.value,
+        keysNotes: _keyboardNotes,
+        difficulty: parseFloat(difficultyInput.value),
+    });
 }
 
 downloadAllBtn.addEventListener('click', () => {
@@ -546,18 +534,13 @@ gpInput.addEventListener('change', () => {
 gpDownloadAllBtn.addEventListener('click', () => {
     if (!_gpResult || _gpResult.tracks.length === 0) return;
 
-    const songInfo: SongInfo = {
-        SongName: gpSongNameInput.value.trim() || _gpResult.songName || 'Unknown',
-        ArtistName: gpArtistInput.value.trim() || _gpResult.artistName || 'Unknown',
-        SongLengthSeconds: _gpResult.tracks.reduce(
-            (max, t) => t.notes.Notes.reduce((m, n) => Math.max(m, n.EndTime), max),
-            0,
-        ),
-        InstrumentParts: _gpResult.tracks.map((t) => t.part),
-        GeneratedBy: GENERATED_BY,
-    };
-    const album = gpAlbumInput.value.trim();
-    if (album) songInfo.AlbumName = album;
+    const songInfo: SongInfo = buildSharedSongInfo({
+        songName: gpSongNameInput.value || _gpResult.songName,
+        artistName: gpArtistInput.value || _gpResult.artistName,
+        albumName: gpAlbumInput.value,
+        guitarParts: _gpResult.tracks.map((t) => t.part),
+        guitarNotes: _gpResult.tracks.map((t) => t.notes),
+    });
 
     const files: Record<string, Uint8Array> = {
         'song.json':        strToU8(JSON.stringify(songInfo, null, 2)),
@@ -630,12 +613,19 @@ musicxmlInput.addEventListener('change', () => {
             }
 
             // Lyric-bearing and detected-piano tracks aren't "skipped" - vocals
-            // convert as vocals, piano note mapping follows in a later step.
+            // convert as vocals, piano parts merge into keys.json below.
             const skippedShown = result.skipped.filter((n) => !lyricTracks.some((l) => l.trackName === n) && !pianoNames.includes(n));
             let status = result.tracks.length > 0
                 ? `Converted ${result.tracks.length} track(s): ${result.tracks.map((t) => t.trackName).join(', ')}.`
                 : 'No fretted-instrument tracks found.';
-            if (pianoNames.length > 0) status += ` Piano part(s) detected (not yet converted): ${pianoNames.join(', ')}.`;
+            if (pianoNames.length > 0) {
+                const keysCount = mergePianoTracks(result.pianoTracks).Notes.length;
+                const fallback = result.pianoTracks.some((p) => p.usedHandFallback)
+                    ? ' Hand assigned by fallback (not grand staff); may be wrong where hands cross.'
+                    : '';
+                status += ` Piano: ${pianoNames.join(', ')} (${keysCount} notes to keys.json;`
+                    + ` velocity approximates dynamics marks, hairpins ignored; pedal and repeats not yet expanded).${fallback}`;
+            }
             if (skippedShown.length > 0) status += ` Skipped (not a fretted instrument): ${skippedShown.join(', ')}.`;
             if (lyricTracks.length === 1) status += ` Lyrics: ${lyricTracks[0].trackName}.`;
             if (lyricTracks.length > 1) status += ` Lyrics in ${lyricTracks.length} tracks - choose one.`;
@@ -667,28 +657,23 @@ musicxmlDownloadAllBtn.addEventListener('click', () => {
     const lyrics = pickMusicXmlLyrics(_musicxmlResult);
     if (_musicxmlResult.tracks.length === 0 && !lyrics && _musicxmlResult.pianoTracks.length === 0) return;
 
-    const noteLength = _musicxmlResult.tracks.reduce(
-        (max, t) => t.notes.Notes.reduce((m, n) => Math.max(m, n.EndTime), max),
-        0,
-    );
-    // Vocals carry onsets only, so the length folds in the last vocal onset as an
-    // approximation rather than a true end time.
-    const songLengthSeconds = lyrics
-        ? lyrics.vocals.reduce((m, v) => Math.max(m, v.TimeOffset), noteLength)
-        : noteLength;
+    // All piano parts merge into one keys.json + keys/Keys part (the MIDI
+    // path shape); mixed guitar+piano+vocals files stay one upload.
+    const keysNotes = mergePianoTracks(_musicxmlResult.pianoTracks);
+    const hasKeys = keysNotes.Notes.length > 0;
 
-    const songInfo: SongInfo = {
-        SongName: musicxmlSongNameInput.value.trim() || _musicxmlResult.songName || 'Unknown',
-        ArtistName: musicxmlArtistInput.value.trim() || _musicxmlResult.artistName || 'Unknown',
-        SongLengthSeconds: songLengthSeconds,
-        InstrumentParts: [
-            ..._musicxmlResult.tracks.map((t) => t.part),
-            ...(lyrics ? [{ InstrumentName: 'vocals', InstrumentType: 'Vocals' }] : []),
-        ],
-        GeneratedBy: GENERATED_BY,
-    };
-    const album = musicxmlAlbumInput.value.trim();
-    if (album) songInfo.AlbumName = album;
+    const songInfo: SongInfo = buildSharedSongInfo({
+        songName: musicxmlSongNameInput.value || _musicxmlResult.songName,
+        artistName: musicxmlArtistInput.value || _musicxmlResult.artistName,
+        albumName: musicxmlAlbumInput.value,
+        guitarParts: _musicxmlResult.tracks.map((t) => t.part),
+        guitarNotes: _musicxmlResult.tracks.map((t) => t.notes),
+        keysNotes,
+        vocalOnsets: lyrics ? lyrics.vocals.map((v) => v.TimeOffset) : [],
+    });
+    if (lyrics) {
+        songInfo.InstrumentParts.push({ InstrumentName: 'vocals', InstrumentType: 'Vocals' });
+    }
 
     const files: Record<string, Uint8Array> = {
         'song.json':        strToU8(JSON.stringify(songInfo, null, 2)),
@@ -696,6 +681,9 @@ musicxmlDownloadAllBtn.addEventListener('click', () => {
     };
     for (const track of _musicxmlResult.tracks) {
         files[`${track.part.InstrumentName}.json`] = strToU8(JSON.stringify(track.notes, null, 2));
+    }
+    if (hasKeys) {
+        files['keys.json'] = strToU8(JSON.stringify(keysNotes, null, 2));
     }
     if (lyrics) {
         files['vocals.json'] = strToU8(JSON.stringify(lyrics.vocals, null, 2));
