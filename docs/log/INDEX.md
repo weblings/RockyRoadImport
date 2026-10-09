@@ -20,3 +20,4 @@ stands and what resumes it. Planning docs stay clean: decisions, status, and poi
 | 2026-10-04 | MusicXML piano detection + gate, grand-staff fixture, 52 tests green | RockyRoadImport-ngd.2 |
 | 2026-10-04 | MusicXML piano note mapping implemented + tests written, verification pending (no shell in sandbox); MIDI hand-split follow-up filed | RockyRoadImport-ngd.3, RockyRoadImport-hnd |
 | 2026-10-09 | Piano library survey: 69 .mxl files mapped to ngd.3–ngd.6/3sp attributes, bead notes appended; gaps are pedal-change, damper-pedal sound, 1-/3-staff fixtures | RockyRoadImport-ngd.3, RockyRoadImport-ngd.4, RockyRoadImport-ngd.5, RockyRoadImport-ngd.6, RockyRoadImport-3sp |
+| 2026-10-09 | MusicXML piano note mapping verified on 2 real files, bead closed, ngd.4/ngd.5 unblocked | RockyRoadImport-ngd.3 |
