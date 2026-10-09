@@ -12,20 +12,21 @@ start a new LessonsLearned-style doc elsewhere; if unsure whether one already ex
 
 | File | Scope | Entries | File here when |
 |---|---|---|---|
-| [engineering-hygiene.md](engineering-hygiene.md) | general design principles | 17 | general principle, demonstrated by a real bug here |
+| [engineering-hygiene.md](engineering-hygiene.md) | general design principles | 11 | general principle, demonstrated by a real bug here |
+| [upstream-dependencies.md](upstream-dependencies.md) | dependency behavior, patching, upstream process | 7 | bug/fix lives in a third-party package, its importer, a patch, or the upstream filing process |
 
-Counts as of 2026-10-04 — bump the count when adding entries
-(`grep -c '^## '` per file). At 17 entries this file is past the split
-threshold; next capture should do the topic-file split.
+Counts as of 2026-10-09 — bump the count when adding entries
+(`grep -c '^## '` per file).
 
 ## Where a new lesson goes
 
 1. About *my own* verification/reliability habits, not code/design? → persistent memory
    (`feedback_*`), not the repo.
-2. General software-design principle, demonstrated by a real bug here? → `engineering-hygiene.md`.
-3. Everything else, for now — this repo is small enough that one file covers it. Split into
-   topic-specific sibling files (mirroring RockyRoad's `docs/lessons/` shape) once
-   `engineering-hygiene.md` gets too long to skim (rough proxy: 15+ entries).
+2. About a third-party package, its importer/parser internals, a `patch-package`
+   patch, the fork workflow, or the upstream issue/PR process? → `upstream-dependencies.md`.
+3. General software-design principle, demonstrated by a real bug here? → `engineering-hygiene.md`.
+4. New topics get their own sibling file once an existing file's scope gets muddy —
+   query vocabulary (Tags) decides, not entry count.
 
 Tied to now-removed code? Keep the principle if it still applies, drop the dead specifics, and say
 the origin is historical.

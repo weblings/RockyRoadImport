@@ -1,5 +1,5 @@
 diff --git a/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs b/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs
-index b6203da..5e82b5c 100644
+index b6203da..94de3a4 100644
 --- a/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs
 +++ b/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs
 @@ -7143,6 +7143,11 @@ class Beat {
@@ -22,7 +22,69 @@ index b6203da..5e82b5c 100644
  		clone.pop = original.pop;
  		clone.slap = original.slap;
  		clone.tap = original.tap;
-@@ -24195,6 +24201,8 @@ class MusicXmlImporter extends ScoreImporter {
+@@ -22290,7 +22296,6 @@ class MusicXmlImporter extends ScoreImporter {
+ 	_currentBarNumberDisplayPart;
+ 	_currentBarNumberDisplayBar;
+ 	_divisionsPerQuarterNote = 1;
+-	_currentDynamics = DynamicValue.F;
+ 	get name() {
+ 		return "MusicXML";
+ 	}
+@@ -23593,7 +23598,7 @@ class MusicXmlImporter extends ScoreImporter {
+ 			case "dynamics":
+ 				const newDynamics = this._parseDynamics(direction);
+ 				if (newDynamics !== null) {
+-					this._currentDynamics = newDynamics;
++					if (staff) this._getStaffContext(staff).currentDynamics = newDynamics;
+ 					this._score.stylesheet.hideDynamics = false;
+ 				}
+ 				break;
+@@ -23821,7 +23826,7 @@ class MusicXmlImporter extends ScoreImporter {
+ 				if (this._lastBeat && this._lastBeat.beamingMode === BeatBeamingMode.ForceMergeWithNext && this._lastBeat.voice.bar.staff.index !== staffIndex && voice.beats.length > 0 && voice.beats[voice.beats.length - 1].beamingMode === BeatBeamingMode.ForceMergeWithNext) {
+ 					const preferredDuration = voice.beats[voice.beats.length - 1].duration;
+ 					while (gap > 0) {
+-						const restGap = this._createRestForGap(gap, preferredDuration);
++						const restGap = this._createRestForGap(gap, preferredDuration, staff);
+ 						if (restGap !== null) {
+ 							this._insertBeatToVoice(restGap, voice);
+ 							gap -= restGap.playbackDuration;
+@@ -23830,7 +23835,7 @@ class MusicXmlImporter extends ScoreImporter {
+ 				}
+ 				if (gap > 0) {
+ 					const placeholder = new Beat();
+-					placeholder.dynamics = this._currentDynamics;
++					placeholder.dynamics = this._getStaffContext(staff).currentDynamics;
+ 					placeholder.isEmpty = true;
+ 					placeholder.duration = Duration.TwoHundredFiftySixth;
+ 					placeholder.overrideDisplayDuration = gap;
+@@ -23850,7 +23855,7 @@ class MusicXmlImporter extends ScoreImporter {
+ 				this._getStaffContext(staff).isExplicitlyBeamed = true;
+ 			}
+ 			newBeat.isEmpty = false;
+-			newBeat.dynamics = this._currentDynamics;
++			newBeat.dynamics = this._getStaffContext(staff).currentDynamics;
+ 			if (this._isBeatSlash) newBeat.slashed = true;
+ 			const automations = this._nextBeatAutomations;
+ 			this._nextBeatAutomations = null;
+@@ -24119,7 +24124,7 @@ class MusicXmlImporter extends ScoreImporter {
+ 				break;
+ 		}
+ 	}
+-	_createRestForGap(gap, preferredDuration) {
++	_createRestForGap(gap, preferredDuration, staff) {
+ 		let preferredDurationTicks = MidiUtils.toTicks(preferredDuration);
+ 		while (preferredDurationTicks > gap) {
+ 			if (preferredDuration === Duration.TwoHundredFiftySixth) return null;
+@@ -24127,7 +24132,7 @@ class MusicXmlImporter extends ScoreImporter {
+ 			preferredDurationTicks = MidiUtils.toTicks(preferredDuration);
+ 		}
+ 		const placeholder = new Beat();
+-		placeholder.dynamics = this._currentDynamics;
++		placeholder.dynamics = this._getStaffContext(staff).currentDynamics;
+ 		placeholder.isEmpty = false;
+ 		placeholder.duration = preferredDuration;
+ 		placeholder.overrideDisplayDuration = preferredDurationTicks;
+@@ -24195,6 +24200,8 @@ class MusicXmlImporter extends ScoreImporter {
  		const index = this._indexToTrackInfo.get(track.index).getLyricLine(element.getAttribute("number", ""));
  		if (beat.lyrics === null) beat.lyrics = [];
  		while (beat.lyrics.length <= index) beat.lyrics.push("");
@@ -31,7 +93,7 @@ index b6203da..5e82b5c 100644
  		for (const c of element.childElements()) switch (c.localName) {
  			case "text":
  				if (beat.lyrics[index]) beat.lyrics[index] += ` ${c.innerText}`;
-@@ -24203,6 +24211,9 @@ class MusicXmlImporter extends ScoreImporter {
+@@ -24203,6 +24210,9 @@ class MusicXmlImporter extends ScoreImporter {
  			case "elision":
  				beat.lyrics[index] += c.innerText;
  				break;
@@ -41,7 +103,16 @@ index b6203da..5e82b5c 100644
  		}
  	}
  	_parseNotations(element, note, beat) {
-@@ -24352,7 +24363,16 @@ class MusicXmlImporter extends ScoreImporter {
+@@ -24232,7 +24242,7 @@ class MusicXmlImporter extends ScoreImporter {
+ 				const dynamics = this._parseDynamics(c);
+ 				if (dynamics !== null) {
+ 					beat.dynamics = dynamics;
+-					this._currentDynamics = dynamics;
++					this._getStaffContext(beat.voice.bar.staff).currentDynamics = dynamics;
+ 				}
+ 				break;
+ 			case "fermata":
+@@ -24352,7 +24362,16 @@ class MusicXmlImporter extends ScoreImporter {
  				if (note) note.fret = Number.parseInt(c.innerText, 10);
  				break;
  			case "string":

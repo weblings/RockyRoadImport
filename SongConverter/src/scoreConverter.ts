@@ -14,6 +14,7 @@ import type {
     CentsOffset,
 } from './songformat';
 import { handForScoreNote } from './hands';
+import { velocityForDynamics } from './pianoDynamics';
 
 // alphaTab Score (Guitar Pro, MusicXML, ...) → OpenSongChart conversion. alphaTab does the
 // parsing; this file maps its Score/Track/Bar/Beat/Note model onto the same shape the psarc
@@ -274,15 +275,14 @@ export function convertScore(score: alphaTab.model.Score): ScoreConvertResult {
     };
 }
 
-// Provisional until ngd.4 maps beat dynamics (whose no-mark default is F).
-const PIANO_PLACEHOLDER_VELOCITY = 96;
-
 // Score beats -> SongKeyboardNote (ngd.3). Pitch is note.realValue (ottava
 // already applied); timing reuses the guitar path's tick math; Hand comes
-// from the staff index on grand-staff parts via handForScoreNote. Tie chains
-// merge into one note with summed TimeLength (SongKeyboardNote has no
-// Continued flag); rests are skipped. Sections ride the shared structure;
-// merging tracks into keys.json and the tab wiring belong to ngd.6.
+// from the staff index on grand-staff parts via handForScoreNote. Velocity
+// maps beat.dynamics (hairpins carry no target level, so beat.crescendo is
+// ignored); cross-staff timelines need the importer patch. Tie chains merge
+// into one note with summed TimeLength (SongKeyboardNote has no Continued
+// flag); rests are skipped. Sections ride the shared structure; merging
+// tracks into keys.json and the tab wiring belong to ngd.6.
 function convertPianoTrack(
     track: alphaTab.model.Track,
     tempoMap: TempoChange[],
@@ -315,7 +315,7 @@ function convertPianoTrack(
                             TimeLength: endTime - startTime,
                             EndTime: endTime,
                             Note: pitch,
-                            Velocity: PIANO_PLACEHOLDER_VELOCITY,
+                            Velocity: velocityForDynamics(beat.dynamics),
                             Hand: handForScoreNote({
                                 staffCount,
                                 staffIndex,

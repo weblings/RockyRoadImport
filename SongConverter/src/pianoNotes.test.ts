@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as alphaTab from '@coderline/alphatab';
 import pianoFixtureXml from './fixtures/piano-grand-staff.musicxml?raw';
+import leakFixtureXml from './fixtures/piano-dynamics-cross-staff.musicxml?raw';
 import { convertMusicXml } from './scoreConverter';
 import { handForScoreNote, pitchFallbackHand } from './hands';
 
@@ -33,6 +34,16 @@ function pitched(step: string, octave: number, tie: 'start' | 'stop' | null = nu
     return `<note><pitch><step>${step}</step><octave>${octave}</octave></pitch><duration>4</duration><type>quarter</type>${tieXml}</note>`;
 }
 
+// A <direction> dynamics mark or hairpin wedge between notes. The dynamics
+// tag is the lowercase MusicXML name (p, f, fp, sfz, ...).
+function dynamicMark(mark: string): string {
+    return `<direction><direction-type><dynamics><${mark}/></dynamics></direction-type></direction>`;
+}
+
+function wedge(type: 'crescendo' | 'diminuendo' | 'stop'): string {
+    return `<direction><direction-type><wedge type="${type}"/></direction-type></direction>`;
+}
+
 const encode = (s: string) => new TextEncoder().encode(s);
 
 describe('piano note mapping', () => {
@@ -46,9 +57,43 @@ describe('piano note mapping', () => {
         );
         for (const n of piano.notes) {
             expect(n.EndTime).toBe(n.TimeOffset + n.TimeLength);
-            // Provisional until ngd.4 maps dynamics (no-mark default F).
-            expect(n.Velocity).toBe(96);
+            // No dynamics marks; the importer default F maps to 95.
+            expect(n.Velocity).toBe(95);
         }
+    });
+
+    it('maps <direction> dynamics to velocity (p persists, f replaces)', () => {
+        const xml = pianoPart(
+            `${dynamicMark('p')}${pitched('C', 4)}${pitched('D', 4)}${dynamicMark('f')}${pitched('E', 4)}`,
+        );
+        const [piano] = convertMusicXml(encode(xml)).pianoTracks;
+        expect(piano.notes.map((n) => n.Velocity)).toEqual([47, 47, 95]);
+    });
+
+    it('covers accent-type dynamics (fp, sfz)', () => {
+        const xml = pianoPart(
+            `${dynamicMark('fp')}${pitched('C', 4)}${dynamicMark('sfz')}${pitched('D', 4)}`,
+        );
+        const [piano] = convertMusicXml(encode(xml)).pianoTracks;
+        expect(piano.notes.map((n) => n.Velocity)).toEqual([95, 111]);
+    });
+
+    it('ignores hairpins (beat.crescendo carries no target level)', () => {
+        const xml = pianoPart(
+            `${dynamicMark('p')}${wedge('crescendo')}${pitched('C', 4)}${pitched('D', 4)}` +
+            `${wedge('stop')}${dynamicMark('f')}${pitched('E', 4)}`,
+        );
+        const [piano] = convertMusicXml(encode(xml)).pianoTracks;
+        expect(piano.notes.map((n) => n.Velocity)).toEqual([47, 47, 95]);
+    });
+
+    it('keeps per-staff dynamics timelines apart (cross-staff leak)', () => {
+        // Treble p must not reach the m.1 bass note; bass ff must not reach
+        // the m.2 treble note. Fails while alphaTab's part-wide
+        // _currentDynamics leaks across the <backup> interleave.
+        const [piano] = convertMusicXml(encode(leakFixtureXml)).pianoTracks;
+        expect(piano.notes.filter((n) => n.Hand === 'right').map((n) => n.Velocity)).toEqual([95, 47, 47]);
+        expect(piano.notes.filter((n) => n.Hand === 'left').map((n) => n.Velocity)).toEqual([95, 111, 111]);
     });
 
     it('merges tie chains, skips rests, and lets clef beat pitch', () => {
