@@ -23,3 +23,4 @@ stands and what resumes it. Planning docs stay clean: decisions, status, and poi
 | 2026-10-09 | MusicXML piano note mapping verified on 2 real files, bead closed, ngd.4/ngd.5 unblocked | RockyRoadImport-ngd.3 |
 | 2026-10-09 | MusicXML piano dynamics: velocity table + cross-staff patch, 64 tests green, bead started; lessons split | RockyRoadImport-ngd.4 |
 | 2026-10-09 | MusicXML piano output: keys.json merge + shared song.json builder, 69 tests green, 1 lesson; bead uncommitted, still blocked on ngd.4/ngd.5 | RockyRoadImport-ngd.6 |
+| 2026-10-09 | MusicXML piano dynamics bead closed: per-mark split verified on moonlight 3rd (throwaway 6/6), ngd.6 wiring landed | RockyRoadImport-ngd.4 |
