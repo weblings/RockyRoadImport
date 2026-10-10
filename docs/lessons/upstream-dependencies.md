@@ -134,3 +134,19 @@ exists after `finish()` synthesis, so the patch walks back through
 
 **Fix:** probe a span that crosses containers before trusting any importer
 timeline — same-bar fixtures pass while real multi-bar spans silently stick.
+
+---
+
+## An internal playback walk ports cleanly when the model fields are public
+Tags: upstream, repeats, porting
+Applies-when: reusing dependency playback semantics without touching internals
+
+alphaTab plays repeats through an internal `MidiPlaybackController` (not in
+the public typings), but every field its walk reads (`repeatGroup`,
+`alternateEndings`, `repeatCount`, `start`, `calculateDuration()`) is public.
+Porting the ~50-line normal-repeat path beat reaching into internals, and the
+port's output matched the generator's own tick math exactly.
+
+**Fix:** before casting into internals or vendoring a bundles file, check
+whether the internal walk's inputs are all public — a port stays typed and
+survives upgrades.

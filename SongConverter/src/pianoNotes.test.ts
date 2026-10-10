@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest';
 import * as alphaTab from '@coderline/alphatab';
 import pianoFixtureXml from './fixtures/piano-grand-staff.musicxml?raw';
 import leakFixtureXml from './fixtures/piano-dynamics-cross-staff.musicxml?raw';
-import { convertMusicXml } from './scoreConverter';
+import repeatFixtureXml from './fixtures/piano-repeat-volta.musicxml?raw';
+import { buildPlaybackOrder, convertMusicXml } from './scoreConverter';
 import { handForScoreNote, pitchFallbackHand } from './hands';
 
 // Hand-authored MusicXML (a few notes, not real songs): single-staff 'Piano'
@@ -168,6 +169,29 @@ describe('piano note mapping', () => {
         const [piano] = convertMusicXml(encode(xml)).pianoTracks;
         expect(piano.notes.map((n) => n.Note)).toEqual([60, 60]);
         expect(piano.notes.map((n) => n.Hand)).toEqual(['right', 'left']);
+    });
+});
+
+describe('piano repeats and endings', () => {
+    // Five bars (intro, 2x repeat of bars 2-3, first/second endings) play as
+    // seven: 1,2,3,4,2,3,5. Whole-note bars at 120 BPM start 2s apart.
+    it('walks the repeat section and both endings in playback order', () => {
+        const score = alphaTab.importer.ScoreLoader.loadScoreFromBytes(encode(repeatFixtureXml));
+        expect(buildPlaybackOrder(score).map((o) => o.barIndex)).toEqual([0, 1, 2, 3, 1, 2, 4]);
+    });
+
+    it('expands repeated bars into re-timed notes (volta endings selected per pass)', () => {
+        const result = convertMusicXml(encode(repeatFixtureXml));
+        const [piano] = result.pianoTracks;
+        const treble = piano.notes.filter((n) => n.Hand === 'right');
+        const bass = piano.notes.filter((n) => n.Hand === 'left');
+        expect(piano.notes).toHaveLength(14);
+        expect(treble.map((n) => n.Note)).toEqual([64, 67, 69, 71, 67, 69, 72]);
+        expect(bass.map((n) => n.Note)).toEqual([48, 50, 52, 53, 50, 52, 55]);
+        for (const hand of [treble, bass]) {
+            expect(hand.map((n) => n.TimeOffset)).toEqual([0, 2, 4, 6, 8, 10, 12]);
+        }
+        expect(result.structure.Beats).toHaveLength(28);
     });
 });
 

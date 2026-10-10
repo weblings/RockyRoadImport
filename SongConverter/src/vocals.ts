@@ -107,13 +107,15 @@ export function formatVocals(vocals: SongVocal[]): SongVocal[] {
 // Lyric beats for one track at the given verse line. Scans every staff since
 // a vocal part may sit anywhere; (tick, text) dedupe keeps multi-staff
 // notation+tab doubles from emitting twice. Rest/empty beats and empty
-// entries are skipped, mirroring applyLyrics' own walk.
+// entries are skipped, mirroring applyLyrics' own walk. Repeated bars emit
+// per occurrence (re-timed), so the dedupe key uses playback ticks.
 export function extractTrackLyrics(
     track: alphaTab.model.Track,
     trackName: string,
     tempoMap: TempoChange[],
     division: number,
     verse = 0,
+    occurrences?: { barIndex: number; tickShift: number }[],
 ): TrackLyrics {
     const seen = new Set<string>();
     const entries: LyricEntry[] = [];
@@ -121,7 +123,10 @@ export function extractTrackLyrics(
     let syllabic = false;
 
     for (const staff of track.staves) {
-        for (const bar of staff.bars) {
+        const barOrder = occurrences ?? staff.bars.map((_, barIndex) => ({ barIndex, tickShift: 0 }));
+        for (const { barIndex, tickShift } of barOrder) {
+            const bar = staff.bars[barIndex];
+            if (!bar) continue;
             for (const voice of bar.voices) {
                 for (const beat of voice.beats) {
                     if (beat.isRest || beat.isEmpty || !beat.lyrics) continue;
@@ -129,7 +134,7 @@ export function extractTrackLyrics(
                     if (Array.isArray(beat.lyricsSyllabic)) syllabic = true;
                     const text = beat.lyrics[verse] ?? '';
                     if (!text) continue;
-                    const tick = beat.absolutePlaybackStart;
+                    const tick = beat.absolutePlaybackStart + tickShift;
                     const key = `${tick} ${text}`;
                     if (seen.has(key)) continue;
                     seen.add(key);

@@ -44,6 +44,90 @@ export interface ScoreConvertResult {
     structure: SongStructure; // shared across all tracks - RockyRoad requires arrangement.json
 }
 
+// One played bar in performance order. Beats carry linear score ticks, so a
+// repeated bar's notes re-time via tickShift (playbackTick = scoreTick +
+// tickShift); without repeats every bar plays once with shift 0.
+export interface BarOccurrence {
+    barIndex: number; // master-bar index
+    tickShift: number;
+    occurrence: number; // 0-based replay count of this bar
+    isFirstOccurrence: boolean;
+}
+
+// Performance-order bar walk with repeats and alternate endings played out.
+// Ports alphaTab's internal MidiPlaybackController normal-repeat path (that
+// class isn't public API, so it's reimplemented here rather than reused);
+// D.C./D.S. jumps are out of scope and play straight through. Every backward
+// jump consumes a bounded iteration count, so the walk always terminates;
+// the cap below is purely defensive.
+export function buildPlaybackOrder(score: alphaTab.model.Score): BarOccurrence[] {
+    interface RepeatState {
+        group: alphaTab.model.RepeatGroup;
+        opening: alphaTab.model.MasterBar;
+        closings: alphaTab.model.MasterBar[];
+        iterations: number[];
+        closingIndex: number;
+    }
+    const occurrences: BarOccurrence[] = [];
+    const playCounts = new Map<number, number>();
+    const stack: RepeatState[] = [];
+    const onStack = new Set<alphaTab.model.RepeatGroup>();
+    let previousEndings = 0;
+    let tick = 0;
+    let index = 0;
+    const bars = score.masterBars;
+    const maxSteps = bars.length * 1024 + 64;
+    let steps = 0;
+
+    while (index < bars.length && steps++ < maxSteps) {
+        const bar = bars[index];
+        let endings = bar.alternateEndings || previousEndings;
+        if (bar === bar.repeatGroup.opening && bar.repeatGroup.isClosed) {
+            if (!onStack.has(bar.repeatGroup)) {
+                const closings = [...bar.repeatGroup.closings].sort((a, b) => a.index - b.index);
+                stack.push({ group: bar.repeatGroup, opening: bar, closings, iterations: closings.map(() => 0), closingIndex: 0 });
+                onStack.add(bar.repeatGroup);
+                previousEndings = 0;
+                endings = bar.alternateEndings;
+            }
+        }
+        let shouldPlay = true;
+        if (stack.length > 0 && endings !== 0) {
+            const repeat = stack[stack.length - 1];
+            const iteration = repeat.iterations[repeat.closingIndex];
+            previousEndings = endings;
+            shouldPlay = (endings & (1 << iteration)) !== 0;
+        }
+        if (shouldPlay) {
+            const occurrence = playCounts.get(index) ?? 0;
+            playCounts.set(index, occurrence + 1);
+            occurrences.push({ barIndex: index, tickShift: tick - bar.start, occurrence, isFirstOccurrence: occurrence === 0 });
+            tick += bar.calculateDuration();
+        }
+        const repeatCount = bars[index].repeatCount - 1;
+        if (stack.length > 0 && repeatCount > 0) {
+            const repeat = stack[stack.length - 1];
+            if (repeat.iterations[repeat.closingIndex] < repeatCount) {
+                index = repeat.opening.index;
+                repeat.iterations[repeat.closingIndex]++;
+                for (let i = 0; i < repeat.closingIndex; i++) repeat.iterations[i] = 0;
+                repeat.closingIndex = 0;
+                previousEndings = 0;
+            } else if (repeat.closingIndex < repeat.closings.length - 1) {
+                repeat.closingIndex++;
+                index++;
+            } else {
+                stack.pop();
+                onStack.delete(repeat.group);
+                index++;
+            }
+        } else {
+            index++;
+        }
+    }
+    return occurrences;
+}
+
 // ESongNoteTechnique bit flags - mirrors Dependencies/OpenSongChart/SongFormat/SongFormat.cs.
 // Kept as plain numbers (not a TS enum) since the only thing written out is the comma-joined
 // flag-name string psarc's Techniques field already uses.
@@ -172,20 +256,24 @@ function buildTempoMap(score: alphaTab.model.Score): { tempoMap: TempoChange[]; 
 // Shared across every track (RockyRoad's ActiveSceneScreen.ts requires this file to exist),
 // built from whichever staff has bars since bar/beat timing is the same for every track.
 // Mirrors tempoMap.ts's buildSongStructure, but from a real Beat's absolutePlaybackStart.
-function buildStructure(score: alphaTab.model.Score, tempoMap: TempoChange[], division: number): SongStructure {
+// Repeated bars emit their beats per occurrence (re-timed); sections stay
+// first-occurrence-only so a repeated section doesn't duplicate its marker.
+function buildStructure(score: alphaTab.model.Score, tempoMap: TempoChange[], division: number, occurrences: BarOccurrence[]): SongStructure {
     const staff = score.tracks.map((t) => t.staves[0]).find((s) => s && s.bars.length > 0);
     if (!staff) return { Sections: [], Beats: [] };
 
     const sections: SongSection[] = [];
     const beats: SongBeat[] = [];
 
-    for (const bar of staff.bars) {
+    for (const occurrence of occurrences) {
+        const bar = staff.bars[occurrence.barIndex];
+        if (!bar) continue;
         const firstBeat = bar.voices[0]?.beats[0];
         if (!firstBeat) continue;
-        const barStart = firstBeat.absolutePlaybackStart;
+        const barStart = firstBeat.absolutePlaybackStart + occurrence.tickShift;
         const masterBar = bar.masterBar;
 
-        if (masterBar.section) {
+        if (masterBar.section && occurrence.isFirstOccurrence) {
             sections.push({
                 Name: masterBar.section.text || masterBar.section.marker,
                 StartTime: ticksToSeconds(barStart, tempoMap, division),
@@ -234,6 +322,7 @@ function isPianoTrack(track: alphaTab.model.Track): boolean {
 // (ScoreLoader.loadAlphaTex) instead of needing binary .gp3/.gp4/.gp5 fixture files.
 export function convertScore(score: alphaTab.model.Score): ScoreConvertResult {
     const { tempoMap, division } = buildTempoMap(score);
+    const occurrences = buildPlaybackOrder(score);
 
     const tracks: ScoreTrackResult[] = [];
     const skipped: string[] = [];
@@ -243,7 +332,7 @@ export function convertScore(score: alphaTab.model.Score): ScoreConvertResult {
 
     for (const track of score.tracks) {
         const trackName = track.name || `Track ${track.index + 1}`;
-        const trackLyrics = extractTrackLyrics(track, trackName, tempoMap, division);
+        const trackLyrics = extractTrackLyrics(track, trackName, tempoMap, division, 0, occurrences);
         if (trackLyrics.vocals.length > 0) lyrics.push(trackLyrics);
         // Fretted gate runs first: a guitar part with notation+tab staves (2 staves,
         // program 0 with no <midi-program>) must never be mistaken for piano.
@@ -254,11 +343,11 @@ export function convertScore(score: alphaTab.model.Score): ScoreConvertResult {
         if (staff) {
             const tuning = [...staff.tuning].reverse();
             const role = determineRole(track, tuning, nameCounts, tracks.length === 0);
-            tracks.push(convertTrack(staff, trackName, tuning, role, tempoMap, division));
+            tracks.push(convertTrack(staff, trackName, tuning, role, tempoMap, division, occurrences));
             continue;
         }
         if (isPianoTrack(track)) {
-            pianoTracks.push({ trackName, ...convertPianoTrack(track, tempoMap, division) });
+            pianoTracks.push({ trackName, ...convertPianoTrack(track, tempoMap, division, occurrences) });
             continue;
         }
         skipped.push(trackName);
@@ -271,7 +360,7 @@ export function convertScore(score: alphaTab.model.Score): ScoreConvertResult {
         skipped,
         lyrics,
         pianoTracks,
-        structure: buildStructure(score, tempoMap, division),
+        structure: buildStructure(score, tempoMap, division, occurrences),
     };
 }
 
@@ -292,11 +381,12 @@ export function convertScore(score: alphaTab.model.Score): ScoreConvertResult {
 // ratioPosition is a fraction of its bar, clamped - files without
 // <divisions> produce out-of-range values. An unpaired Down holds to the
 // part end, matching the MIDI path's missing-CC64-off behavior.
-function collectPedalMarks(track: alphaTab.model.Track): { tick: number; state: boolean | null }[] {
+function collectPedalMarks(track: alphaTab.model.Track, occurrences: BarOccurrence[]): { tick: number; state: boolean | null }[] {
     const marks: { tick: number; state: boolean | null }[] = [];
-    for (const staff of track.staves) {
-        for (const bar of staff.bars) {
-            if (bar.sustainPedals.length === 0) continue;
+    for (const occurrence of occurrences) {
+        for (const staff of track.staves) {
+            const bar = staff.bars[occurrence.barIndex];
+            if (!bar || bar.sustainPedals.length === 0) continue;
             let lo = Infinity;
             let hi = -Infinity;
             for (const voice of bar.voices) {
@@ -312,7 +402,7 @@ function collectPedalMarks(track: alphaTab.model.Track): { tick: number; state: 
                 // pedal up must not turn it on); Down/Up set it outright.
                 const state = marker.pedalType === alphaTab.model.SustainPedalMarkerType.Up ? false
                     : marker.pedalType === alphaTab.model.SustainPedalMarkerType.Down ? true : null;
-                marks.push({ tick: lo + ratio * (hi - lo), state });
+                marks.push({ tick: lo + ratio * (hi - lo) + occurrence.tickShift, state });
             }
         }
     }
@@ -324,27 +414,31 @@ function convertPianoTrack(
     track: alphaTab.model.Track,
     tempoMap: TempoChange[],
     division: number,
+    occurrences: BarOccurrence[],
 ): { notes: SongKeyboardNote[]; usedHandFallback: boolean } {
     const notes: SongKeyboardNote[] = [];
     const staffCount = track.staves.length;
     const usedHandFallback = staffCount !== 2;
     const openByPitch = track.staves.map(() => new Map<number, SongKeyboardNote>());
-    const pedalMarks = collectPedalMarks(track);
+    const pedalMarks = collectPedalMarks(track, occurrences);
 
     track.staves.forEach((staff, staffIndex) => {
-        for (const bar of staff.bars) {
+        for (const occurrence of occurrences) {
+            const bar = staff.bars[occurrence.barIndex];
+            if (!bar) continue;
             for (const voice of bar.voices) {
                 for (const beat of voice.beats) {
                     if (beat.isRest || beat.notes.length === 0) continue;
 
-                    const startTime = ticksToSeconds(beat.absolutePlaybackStart, tempoMap, division);
-                    const endTime = ticksToSeconds(beat.absolutePlaybackStart + beat.playbackDuration, tempoMap, division);
+                    const playStart = beat.absolutePlaybackStart + occurrence.tickShift;
+                    const startTime = ticksToSeconds(playStart, tempoMap, division);
+                    const endTime = ticksToSeconds(playStart + beat.playbackDuration, tempoMap, division);
 
                     // Pedal down at the note's start tick (a mark exactly on
                     // the beat counts - the MIDI path samples CC64 the same way).
                     let sustain = false;
                     for (const mark of pedalMarks) {
-                        if (mark.tick > beat.absolutePlaybackStart) break;
+                        if (mark.tick > playStart) break;
                         if (mark.state !== null) sustain = mark.state;
                     }
 
@@ -391,6 +485,7 @@ function convertTrack(
     role: Role,
     tempoMap: TempoChange[],
     division: number,
+    occurrences: BarOccurrence[],
 ): ScoreTrackResult {
     const sections: SongSection[] = [];
     const notes: SongNote[] = [];
@@ -403,14 +498,16 @@ function convertTrack(
     // an undefined value produces NaN geometry (confirmed via a real conversion).
     let currentHandFret = 0;
 
-    for (const bar of staff.bars) {
+    for (const occurrence of occurrences) {
+        const bar = staff.bars[occurrence.barIndex];
+        if (!bar) continue;
         const masterBar = bar.masterBar;
-        if (masterBar.section) {
+        if (masterBar.section && occurrence.isFirstOccurrence) {
             const firstBeat = bar.voices[0]?.beats[0];
             if (firstBeat) {
                 sections.push({
                     Name: masterBar.section.text || masterBar.section.marker,
-                    StartTime: ticksToSeconds(firstBeat.absolutePlaybackStart, tempoMap, division),
+                    StartTime: ticksToSeconds(firstBeat.absolutePlaybackStart + occurrence.tickShift, tempoMap, division),
                 });
             }
         }
@@ -419,8 +516,9 @@ function convertTrack(
             for (const beat of voice.beats) {
                 if (beat.isRest || beat.notes.length === 0) continue;
 
-                const startTime = ticksToSeconds(beat.absolutePlaybackStart, tempoMap, division);
-                const endTime = ticksToSeconds(beat.absolutePlaybackStart + beat.playbackDuration, tempoMap, division);
+                const playStart = beat.absolutePlaybackStart + occurrence.tickShift;
+                const startTime = ticksToSeconds(playStart, tempoMap, division);
+                const endTime = ticksToSeconds(playStart + beat.playbackDuration, tempoMap, division);
 
                 // A multi-note beat isn't necessarily a named GP chord (beat.chordId) - most are
                 // incidental. buildNote() tags the first note Chord regardless, so without a

@@ -13,7 +13,7 @@ start a new LessonsLearned-style doc elsewhere; if unsure whether one already ex
 | File | Scope | Entries | File here when |
 |---|---|---|---|
 | [engineering-hygiene.md](engineering-hygiene.md) | general design principles | 12 | general principle, demonstrated by a real bug here |
-| [upstream-dependencies.md](upstream-dependencies.md) | dependency behavior, patching, upstream process | 8 | bug/fix lives in a third-party package, its importer, a patch, or the upstream filing process |
+| [upstream-dependencies.md](upstream-dependencies.md) | dependency behavior, patching, upstream process | 9 | bug/fix lives in a third-party package, its importer, a patch, or the upstream filing process |
 
 Counts as of 2026-10-09 — bump the count when adding entries
 (`grep -c '^## '` per file).

@@ -625,7 +625,7 @@ musicxmlInput.addEventListener('change', () => {
                     : '';
                 status += ` Piano: ${pianoNames.join(', ')} (${keysCount} notes to keys.json;`
                     + ` velocity approximates dynamics marks, hairpins ignored; sustain from pedal marks`
-                    + ` (change reads continuous, damper-pedal not imported); repeats not yet expanded).${fallback}`;
+                    + ` (change reads continuous, damper-pedal not imported); repeats and endings played out).${fallback}`;
             }
             if (skippedShown.length > 0) status += ` Skipped (not a fretted instrument): ${skippedShown.join(', ')}.`;
             if (lyricTracks.length === 1) status += ` Lyrics: ${lyricTracks[0].trackName}.`;

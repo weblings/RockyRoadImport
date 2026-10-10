@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as alphaTab from '@coderline/alphatab';
-import { convertScore } from './scoreConverter';
+import { buildPlaybackOrder, convertScore } from './scoreConverter';
 
 // Builds a Score via alphaTab's own alphaTex importer rather than needing binary .gp3/.gp4/.gp5
 // fixture files - loadAlphaTex feeds the same Score model convertScore consumes either way.
@@ -116,5 +116,14 @@ describe('convertScore', () => {
         const { structure } = convertScore(score);
         expect(structure.Beats.length).toBeGreaterThan(0);
         expect(structure.Beats.filter((b) => b.IsMeasure)).toHaveLength(2);
+    });
+
+    it('plays a 2x repeat section twice (guitar notes and playback order)', () => {
+        const score = scoreFrom('.\n:4 0.6 | \\ro :4 2.5 | \\rc 2 :4 3.4 |');
+        expect(buildPlaybackOrder(score).map((o) => o.barIndex)).toEqual([0, 1, 2, 1, 2]);
+        const [track] = convertScore(score).tracks;
+        expect(track.notes.Notes.map((n) => n.Fret)).toEqual([0, 2, 3, 2, 3]);
+        const times = track.notes.Notes.map((n) => n.TimeOffset);
+        for (let i = 1; i < times.length; i++) expect(times[i]).toBeGreaterThan(times[i - 1]);
     });
 });
