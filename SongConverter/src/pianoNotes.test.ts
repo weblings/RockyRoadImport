@@ -193,6 +193,20 @@ describe('piano repeats and endings', () => {
         }
         expect(result.structure.Beats).toHaveLength(28);
     });
+
+    it('re-strikes a tie-stop on replay instead of stretching a stale same-pitch note', () => {
+        // m.1 C4 tied into the repeat start; m.2 also re-strikes C4; m.3 D4. Order 1,2,3,2,3.
+        const n = (step: string, dur: number, type: string, tie: 'start' | 'stop' | null = null) =>
+            `<note><pitch><step>${step}</step><octave>4</octave></pitch><duration>${dur}</duration><type>${type}</type>`
+            + (tie ? `<tie type="${tie}"/><notations><tied type="${tie}"/></notations>` : '') + '</note>';
+        const xml = pianoPart(n('C', 16, 'whole', 'start')).replace('</part>',
+            `<measure number="2"><barline location="left"><repeat direction="forward"/></barline>${n('C', 8, 'half', 'stop')}${n('C', 8, 'half')}</measure>`
+            + `<measure number="3">${n('D', 16, 'whole')}<barline location="right"><repeat direction="backward"/></barline></measure></part>`);
+        const [piano] = convertMusicXml(encode(xml)).pianoTracks;
+        expect(piano.notes.map((x) => [x.Note, x.TimeOffset, x.EndTime])).toEqual([
+            [60, 0, 3], [60, 3, 4], [62, 4, 6], [60, 6, 7], [60, 7, 8], [62, 8, 10],
+        ]);
+    });
 });
 
 describe('piano pedal to SustainActive', () => {

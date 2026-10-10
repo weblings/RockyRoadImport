@@ -18,9 +18,8 @@ import { velocityForDynamics } from './pianoDynamics';
 
 // alphaTab Score (Guitar Pro, MusicXML, ...) → OpenSongChart conversion. alphaTab does the
 // parsing; this file maps its Score/Track/Bar/Beat/Note model onto the same shape the psarc
-// (Rocksmith) path produces, reusing tempoMap.ts's tick math for timing. v1 covers fretted
-// instruments only; a future piano path gets its own mapping (mirroring pianoConverter.ts)
-// rather than extending this one.
+// (Rocksmith) path produces, reusing tempoMap.ts's tick math for timing. Fretted tracks map
+// via convertTrack; detected piano parts get their own mapping (convertPianoTrack) to keys notes.
 
 export interface ScoreTrackResult {
     trackName: string;
@@ -371,8 +370,8 @@ export function convertScore(score: alphaTab.model.Score): ScoreConvertResult {
 // ignored); cross-staff timelines need the importer patch. Tie chains merge
 // into one note with summed TimeLength (SongKeyboardNote has no Continued
 // flag); rests are skipped. SustainActive comes from a part-wide pedal
-// timeline below (ngd.5). Sections ride the shared structure; merging
-// tracks into keys.json and the tab wiring belong to ngd.6.
+// timeline below (ngd.5). Sections ride the shared structure; songBuilder.ts
+// merges every piano part into one keys.json.
 
 // Pedal marks land only on their direction's staff bar (usually bass), so
 // every staff's bars feed one part-wide timeline, like the MIDI path's
@@ -444,8 +443,10 @@ function convertPianoTrack(
 
                     for (const note of beat.notes) {
                         const pitch = note.realValue;
+                        // Merge only into a note ending right here: a repeat replay
+                        // revisits a tie-stop whose last same-pitch note is stale.
                         const open = openByPitch[staffIndex].get(pitch);
-                        if (note.isTieDestination && open) {
+                        if (note.isTieDestination && open && Math.abs(open.TimeOffset + open.TimeLength - startTime) < 1e-6) {
                             open.EndTime = endTime;
                             open.TimeLength = endTime - open.TimeOffset;
                             continue;

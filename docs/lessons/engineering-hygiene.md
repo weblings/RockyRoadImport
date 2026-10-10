@@ -189,3 +189,16 @@ test failing.
 
 **Fix:** keep shared UI helpers dependency-free by construction, and say which import
 they must never gain in a comment at the top of the file.
+
+---
+
+## State keyed for a linear walk goes stale once the walk replays
+Tags: repeats, ties, lookup-state
+Applies-when: adding a replay/reorder pass in front of code that carries state between items
+
+The piano tie merge kept "last note per pitch" and extended it on any tie-stop. Once repeats
+played out, a replayed tie-stop found an older same-pitch note and stretched it across bars;
+the tie fixtures never crossed a repeat, so nothing failed.
+
+**Fix:** validate carried state against the current position (here: merge only into a note
+ending exactly at this onset), and add one fixture where the state crosses the replay seam.

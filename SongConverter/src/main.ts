@@ -506,10 +506,12 @@ gpInput.addEventListener('change', () => {
         .then(async (buffer) => {
             const { convertGuitarPro } = await import('./scoreConverter');
             const result = convertGuitarPro(new Uint8Array(buffer));
+            // The GP tab ships no keys.json, so detected piano parts count as skipped here.
+            const skipped = [...result.skipped, ...result.pianoTracks.map((p) => p.trackName)];
 
             if (result.tracks.length === 0) {
-                gpStatus.textContent = result.skipped.length > 0
-                    ? `No fretted-instrument tracks found. Skipped: ${result.skipped.join(', ')}.`
+                gpStatus.textContent = skipped.length > 0
+                    ? `No fretted-instrument tracks found. Skipped: ${skipped.join(', ')}.`
                     : 'No tracks found in this file.';
                 return;
             }
@@ -521,7 +523,7 @@ gpInput.addEventListener('change', () => {
             gpMetadataForm.style.display = 'block';
 
             let status = `Converted ${result.tracks.length} track(s): ${result.tracks.map((t) => t.trackName).join(', ')}.`;
-            if (result.skipped.length > 0) status += ` Skipped (not a fretted instrument): ${result.skipped.join(', ')}.`;
+            if (skipped.length > 0) status += ` Skipped (not a fretted instrument): ${skipped.join(', ')}.`;
             gpStatus.textContent = status;
 
             gpDownloadAllBtn.disabled = false;
@@ -563,8 +565,8 @@ gpDownloadAllBtn.addEventListener('click', () => {
 
 // --- MusicXML (.musicxml/.xml/.mxl) import ---
 // Same shape as the GP tab above; only the entry point differs. Content-sniffing lives in
-// ScoreLoader, so .mxl needs no special handling here. IDs stay format-scoped (musicxml-*,
-// not guitar-*) so a future piano path can add its own tab without colliding.
+// ScoreLoader, so .mxl needs no special handling here. Guitar, piano (keys.json), and
+// vocals from one file all ship in a single download.
 
 let _musicxmlResult: ScoreConvertResult | null = null;
 
@@ -583,10 +585,13 @@ musicxmlInput.addEventListener('change', () => {
             const result = convertMusicXml(new Uint8Array(buffer));
             const lyricTracks = result.lyrics.filter((l) => l.vocals.length > 0);
             const pianoNames = result.pianoTracks.map((p) => p.trackName);
+            const keysCount = mergePianoTracks(result.pianoTracks).Notes.length;
 
-            if (result.tracks.length === 0 && lyricTracks.length === 0 && result.pianoTracks.length === 0) {
-                musicxmlStatus.textContent = result.skipped.length > 0
-                    ? `No fretted-instrument tracks found. Skipped: ${result.skipped.join(', ')}.`
+            // A detected piano part with no notes ships nothing, so it can't open the download.
+            if (result.tracks.length === 0 && lyricTracks.length === 0 && keysCount === 0) {
+                const skipped = [...result.skipped, ...pianoNames];
+                musicxmlStatus.textContent = skipped.length > 0
+                    ? `No convertible notes found. Skipped: ${skipped.join(', ')}.`
                     : 'No tracks found in this file.';
                 return;
             }
@@ -619,7 +624,6 @@ musicxmlInput.addEventListener('change', () => {
                 ? `Converted ${result.tracks.length} track(s): ${result.tracks.map((t) => t.trackName).join(', ')}.`
                 : 'No fretted-instrument tracks found.';
             if (pianoNames.length > 0) {
-                const keysCount = mergePianoTracks(result.pianoTracks).Notes.length;
                 const fallback = result.pianoTracks.some((p) => p.usedHandFallback)
                     ? ' Hand assigned by fallback (not grand staff); may be wrong where hands cross.'
                     : '';
@@ -656,12 +660,12 @@ function pickMusicXmlLyrics(result: ScoreConvertResult): TrackLyrics | null {
 musicxmlDownloadAllBtn.addEventListener('click', () => {
     if (!_musicxmlResult) return;
     const lyrics = pickMusicXmlLyrics(_musicxmlResult);
-    if (_musicxmlResult.tracks.length === 0 && !lyrics && _musicxmlResult.pianoTracks.length === 0) return;
 
     // All piano parts merge into one keys.json + keys/Keys part (the MIDI
     // path shape); mixed guitar+piano+vocals files stay one upload.
     const keysNotes = mergePianoTracks(_musicxmlResult.pianoTracks);
     const hasKeys = keysNotes.Notes.length > 0;
+    if (_musicxmlResult.tracks.length === 0 && !lyrics && !hasKeys) return;
 
     const songInfo: SongInfo = buildSharedSongInfo({
         songName: musicxmlSongNameInput.value || _musicxmlResult.songName,

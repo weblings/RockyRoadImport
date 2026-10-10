@@ -11,7 +11,7 @@
 
 ## Quick Start
 
-### General Setup (MIDI + Guitar Pro)
+### General Setup (MIDI + Guitar Pro + MusicXML)
 
 1. **Install [Node.js](https://nodejs.org/)** (version 20 or newer). This gives you the `node` and `npm` commands used below.
    - **Windows:** `winget install OpenJS.NodeJS.LTS` (winget ships with Windows 10/11 already)
@@ -57,6 +57,14 @@ The **Rocksmith 2014** tab needs one extra setup step beyond Quick Start, becaus
 - [TuxGuitar](https://www.tuxguitar.app/) (free) is a good way to notate tabs — export as `.gp5`. It can also export
 audio, but as a `.wav`. If you convert that audio to an `.ogg` you can add it to the `Song Audio` field
 - This feature is probably closer to beta. It was tested on the `Loch Lomond` sample, which doesn't include hammer-ons, or bends.
+
+**MusicXML tab: a part is skipped or converts oddly**
+- Guitar/bass parts need a tab staff (string tuning) in the export — notation-only guitar parts
+  are skipped. MuseScore and TuxGuitar both include it when the part has a tab staff.
+- Piano parts are detected from the instrument (MIDI program), a two-staff grand staff, or a name
+  like "Piano"/"Keys". All piano parts merge into one `keys.json`.
+- Not imported: slap, pop, and harmonic detail (guitar); hairpin crescendos and D.C./D.S. jumps.
+  Repeats and first/second endings are played out.
 
 ## FAQ
 

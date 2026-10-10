@@ -1,6 +1,6 @@
 # MusicXML → OpenSongChart: License & Library Findings
 
-Status: active (guitar v1 + vocals built; Phase 7 docs and piano scope open, tracked as beads)
+Status: active (guitar v1, vocals, piano, Phase 7 docs built; upstream alphaTab filing open, tracked as beads)
 Id: musicxml-support
 
 This document captures findings from an exploratory look at adding MusicXML conversion support: whether it has license impacts, and whether an existing MusicXML library is worth using vs. hand-rolling a parser.
@@ -179,8 +179,10 @@ Slap, pop, and harmonic type are a different story: no working path surfaced for
 
 Update [SongConverter](../../SongConverter)'s README (if one documents the supported input formats) once the tab exists, and add a lessons-learned entry per [docs/lessons/README.md](../lessons/README.md) if Phase 1 or Phase 5 turns up a non-obvious gotcha (e.g. a specific export tool producing MusicXML alphaTab mis-parses).
 
-**Open questions:**
-- None specific — flagged mainly as a reminder per this repo's own convention (`Analysis/lessons/` is the only lessons-learned location repo-wide; project instructions call out checking for stale README claims in the same pass as any lessons capture).
+**Resolved 2026-10-10 (RockyRoadImport-tak):** SongConverter has no README of its own, so format
+support lives in the root README (file-type list, Quick Start, a MusicXML troubleshooting entry for
+skipped parts and known limits). Phase 1/5 gotchas were already filed in `docs/lessons/` as they
+surfaced; the audit pass added one more (tie-merge state across repeat replays).
 
 ### Phase 8 — Piano path
 
