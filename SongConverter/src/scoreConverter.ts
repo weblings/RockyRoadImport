@@ -366,8 +366,8 @@ export function convertScore(score: alphaTab.model.Score): ScoreConvertResult {
 // Score beats -> SongKeyboardNote (ngd.3). Pitch is note.realValue (ottava
 // already applied); timing reuses the guitar path's tick math; Hand comes
 // from the staff index on grand-staff parts via handForScoreNote. Velocity
-// maps beat.dynamics (hairpins carry no target level, so beat.crescendo is
-// ignored); cross-staff timelines need the importer patch. Tie chains merge
+// comes from the dynamics-mark timeline below (hairpins carry no target level,
+// so beat.crescendo is ignored). Tie chains merge
 // into one note with summed TimeLength (SongKeyboardNote has no Continued
 // flag); rests are skipped. SustainActive comes from a part-wide pedal
 // timeline below (ngd.5). Sections ride the shared structure; songBuilder.ts
@@ -409,6 +409,50 @@ function collectPedalMarks(track: alphaTab.model.Track, occurrences: BarOccurren
     return marks;
 }
 
+// Dynamics marks per staff as change points in score order (the importer keeps
+// dynamics per staff). A staff with no mark of its own yet borrows the latest
+// earlier mark from any staff: scores often mark once (on the treble) for both
+// hands. A start-of-staff f equals the default, so it can't be told apart.
+type DynamicsMark = { tick: number; dynamics: alphaTab.model.DynamicValue };
+
+function collectDynamicsMarks(track: alphaTab.model.Track): DynamicsMark[][] {
+    return track.staves.map((staff) => {
+        const marks: DynamicsMark[] = [];
+        const lastByVoice = new Map<number, alphaTab.model.DynamicValue>();
+        for (const bar of staff.bars) {
+            for (const voice of bar.voices) {
+                for (const beat of voice.beats) {
+                    // Empty filler beats in unused voices carry the default F, not a mark.
+                    if (beat.isEmpty) continue;
+                    const prior = lastByVoice.get(voice.index) ?? alphaTab.model.DynamicValue.F;
+                    if (beat.dynamics !== prior) marks.push({ tick: beat.absolutePlaybackStart, dynamics: beat.dynamics });
+                    lastByVoice.set(voice.index, beat.dynamics);
+                }
+            }
+        }
+        return marks.sort((a, b) => a.tick - b.tick);
+    });
+}
+
+function dynamicsAt(marksByStaff: DynamicsMark[][], staffIndex: number, tick: number): alphaTab.model.DynamicValue {
+    const latest = (marks: DynamicsMark[]) => {
+        let found: DynamicsMark | undefined;
+        for (const mark of marks) {
+            if (mark.tick > tick) break;
+            found = mark;
+        }
+        return found;
+    };
+    const own = latest(marksByStaff[staffIndex]);
+    if (own) return own.dynamics;
+    let shared: DynamicsMark | undefined;
+    for (const marks of marksByStaff) {
+        const m = latest(marks);
+        if (m && (!shared || m.tick > shared.tick)) shared = m;
+    }
+    return shared?.dynamics ?? alphaTab.model.DynamicValue.F;
+}
+
 function convertPianoTrack(
     track: alphaTab.model.Track,
     tempoMap: TempoChange[],
@@ -420,6 +464,7 @@ function convertPianoTrack(
     const usedHandFallback = staffCount !== 2;
     const openByPitch = track.staves.map(() => new Map<number, SongKeyboardNote>());
     const pedalMarks = collectPedalMarks(track, occurrences);
+    const dynamicsMarks = collectDynamicsMarks(track);
 
     track.staves.forEach((staff, staffIndex) => {
         for (const occurrence of occurrences) {
@@ -456,7 +501,7 @@ function convertPianoTrack(
                             TimeLength: endTime - startTime,
                             EndTime: endTime,
                             Note: pitch,
-                            Velocity: velocityForDynamics(beat.dynamics),
+                            Velocity: velocityForDynamics(dynamicsAt(dynamicsMarks, staffIndex, beat.absolutePlaybackStart)),
                             ...(sustain ? { SustainActive: true as const } : {}),
                             Hand: handForScoreNote({
                                 staffCount,

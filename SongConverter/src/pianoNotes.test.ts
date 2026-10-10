@@ -136,6 +136,35 @@ describe('piano note mapping', () => {
         expect(piano.notes.filter((n) => n.Hand === 'left').map((n) => n.Velocity)).toEqual([95, 111, 111]);
     });
 
+    it('lets an unmarked staff borrow the other staff\'s marks, never a later one', () => {
+        // Treble-only marks (common: one mark between the staves): pp at beat 1, f at beat 3.
+        // Bass has none, so it follows the treble from each mark's time on - beat 1-2 pp, 3-4 f.
+        const mark = (m: string) =>
+            `<direction><direction-type><dynamics><${m}/></dynamics></direction-type><staff>1</staff></direction>`;
+        const xml = pedalPart(
+            mark('pp') + staffNote('C', 5, 1) + staffNote('D', 5, 1) + mark('f') + staffNote('E', 5, 1) + staffNote('F', 5, 1)
+            + '<backup><duration>16</duration></backup>'
+            + staffNote('C', 3, 2) + staffNote('D', 3, 2) + staffNote('E', 3, 2) + staffNote('F', 3, 2),
+        );
+        const [piano] = convertMusicXml(encode(xml)).pianoTracks;
+        expect(piano.notes.filter((n) => n.Hand === 'right').map((n) => n.Velocity)).toEqual([31, 31, 95, 95]);
+        expect(piano.notes.filter((n) => n.Hand === 'left').map((n) => n.Velocity)).toEqual([31, 31, 95, 95]);
+    });
+
+    it('keeps a staff on its own marks once it has one', () => {
+        // Bass marks p at beat 2; the later treble ff must not override it.
+        const mark = (m: string, staff: 1 | 2) =>
+            `<direction><direction-type><dynamics><${m}/></dynamics></direction-type><staff>${staff}</staff></direction>`;
+        const xml = pedalPart(
+            staffNote('C', 5, 1) + staffNote('D', 5, 1) + mark('ff', 1) + staffNote('E', 5, 1) + staffNote('F', 5, 1)
+            + '<backup><duration>16</duration></backup>'
+            + staffNote('C', 3, 2) + mark('p', 2) + staffNote('D', 3, 2) + staffNote('E', 3, 2) + staffNote('F', 3, 2),
+        );
+        const [piano] = convertMusicXml(encode(xml)).pianoTracks;
+        expect(piano.notes.filter((n) => n.Hand === 'left').map((n) => n.Velocity)).toEqual([95, 47, 47, 47]);
+        expect(piano.notes.filter((n) => n.Hand === 'right').map((n) => n.Velocity)).toEqual([95, 47, 111, 111]);
+    });
+
     it('merges tie chains, skips rests, and lets clef beat pitch', () => {
         const xml = pianoPart(
             `${pitched('A', 2, 'start')}${pitched('A', 2, 'stop')}` +

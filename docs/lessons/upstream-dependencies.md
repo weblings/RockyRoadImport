@@ -150,3 +150,15 @@ port's output matched the generator's own tick math exactly.
 **Fix:** before casting into internals or vendoring a bundles file, check
 whether the internal walk's inputs are all public — a port stays typed and
 survives upgrades.
+
+---
+
+## alphaTab fills unused voices with empty beats that carry default state
+Tags: alphatab, voices, model-defaults
+Applies-when: deriving change points or "last value" state from a Bar's voices
+
+A bar with six voices may have real notes in one; the rest hold `isEmpty` filler beats whose
+`dynamics` is the default F. Reading them as data turned every mark into a same-tick "back to F",
+flattening real scores (69-file sweep caught it; hand-authored fixtures have no filler voices).
+
+**Fix:** skip `beat.isEmpty` before treating any per-beat field as authored content.
