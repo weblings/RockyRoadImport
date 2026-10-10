@@ -116,7 +116,7 @@ app.innerHTML = `
     </div>
 
     <div id="tab-musicxml" class="tab-panel" style="display:none;">
-        <h2>MusicXML Importer</h2>
+        <h2>MusicXML Importer (Piano and Guitar)</h2>
         <input type="file" id="musicxml-input" accept=".musicxml,.xml,.mxl" />
         <div id="musicxml-status" style="margin-top:4px;"></div>
 
@@ -620,27 +620,16 @@ musicxmlInput.addEventListener('change', () => {
             // Lyric-bearing and detected-piano tracks aren't "skipped" - vocals
             // convert as vocals, piano parts merge into keys.json below.
             const skippedShown = result.skipped.filter((n) => !lyricTracks.some((l) => l.trackName === n) && !pianoNames.includes(n));
-            let status = result.tracks.length > 0
-                ? `Converted ${result.tracks.length} track(s): ${result.tracks.map((t) => t.trackName).join(', ')}.`
-                : 'No fretted-instrument tracks found.';
-            if (pianoNames.length > 0) {
-                const fallback = result.pianoTracks.some((p) => p.usedHandFallback)
-                    ? ' Hand assigned by fallback (not grand staff); may be wrong where hands cross.'
-                    : '';
-                status += ` Piano: ${pianoNames.join(', ')} (${keysCount} notes to keys.json;`
-                    + ` velocity approximates dynamics marks, hairpins ignored; sustain from pedal marks`
-                    + ` (change reads continuous, damper-pedal not imported); repeats and endings played out).${fallback}`;
+
+            // Only surface things that need attention; a clean parse leaves this blank
+            // (the enabled download button is the success signal).
+            const notes: string[] = [];
+            if (skippedShown.length > 0) notes.push(`Skipped (not a fretted instrument): ${skippedShown.join(', ')}.`);
+            if (result.pianoTracks.some((p) => p.usedHandFallback)) {
+                notes.push('Piano hand assigned by fallback (not grand staff); may be wrong where hands cross.');
             }
-            if (skippedShown.length > 0) status += ` Skipped (not a fretted instrument): ${skippedShown.join(', ')}.`;
-            if (lyricTracks.length === 1) status += ` Lyrics: ${lyricTracks[0].trackName}.`;
-            if (lyricTracks.length > 1) status += ` Lyrics in ${lyricTracks.length} tracks - choose one.`;
-            // Static per-format truth, not per-file detection: the importer leaves these
-            // techniques unpopulated, so flag the omission rather than silently dropping it.
-            // Without syllabic data (unpatched alphaTab) multi-syllable words also split.
-            status += lyricTracks.some((l) => !l.syllabic)
-                ? ' Known MusicXML limits: slap, pop, harmonic detail, and multi-syllable word-joining are not imported.'
-                : ' Known MusicXML limits: slap, pop, and harmonic detail are not imported.';
-            musicxmlStatus.textContent = status;
+            if (lyricTracks.length > 1) notes.push(`Lyrics in ${lyricTracks.length} tracks — choose one.`);
+            musicxmlStatus.textContent = notes.join(' ');
 
             musicxmlDownloadAllBtn.disabled = false;
         })

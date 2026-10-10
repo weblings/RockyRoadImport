@@ -34,6 +34,7 @@ redirect
 # Sync state (local-only, per-machine)
 # These files are machine-specific and should not be shared across clones
 .sync.lock
+.auto-import-issues.jsonl
 
 # Workspace operation gate (internal/workspacegate): physical-root gate
 # files live beside the guarded root inside .beads (e.g. dolt.gate.lock)

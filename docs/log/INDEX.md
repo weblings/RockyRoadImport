@@ -30,3 +30,4 @@ stands and what resumes it. Planning docs stay clean: decisions, status, and poi
 | 2026-10-10 | MusicXML piano umbrella closed: all 6 children done, audit fixes landed in 4074aa9 | RockyRoadImport-ngd |
 | 2026-10-10 | MusicXML piano shared dynamics marks across staves, 79 tests green, 69-file sweep, 1 lesson | RockyRoadImport-dej |
 | 2026-10-10 | alphaTab upstream recheck: ic6/pedal fixed on develop, 2 issues left (dynamics bug, syllabic feature), issue-first process | RockyRoadImport-aio |
+| 2026-10-10 | MusicXML tab status trimmed to only actionable info (blank on clean parse); README format list stopped singling out MusicXML's keys.json detail; alphaTab's MusicXML slap/pop/harmonic gap reconfirmed unpatched | RockyRoadImport-we6 |

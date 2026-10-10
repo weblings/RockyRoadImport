@@ -201,3 +201,19 @@ spec-literal (per staff); the "one mark covers both hands" guess lives in our co
 
 **Fix:** when the source can't distinguish two intents, patch the dependency to the spec and
 put the interpretation in this repo's code, where it can be tuned without upstream buy-in.
+
+---
+
+## A UI caveat about a dependency gap needs rechecking against source, not just against memory
+Tags: importer, verification, stale-claims
+Applies-when: a status message or doc claims a dependency never populates some field
+
+A MusicXML-tab status line claimed slap/pop/harmonic techniques aren't imported - true when
+written, but unverified since. Grepping the installed alphaTab bundle's `MusicXmlImporter`
+class range for `.slap`/`.pop`/`.tap`/`harmonicType` assignments (zero matches, vs. real
+hits in the GP and AlphaTex importers) confirmed it was still accurate before trimming the
+message, rather than assuming either way.
+
+**Fix:** before editing or removing a limitation claim about a dependency, grep that
+dependency's actual (possibly bundled/minified) source for the relevant assignment - a stale
+claim and a still-true one look identical from the call site.
