@@ -13,15 +13,15 @@ start a new LessonsLearned-style doc elsewhere; if unsure whether one already ex
 | File | Scope | Entries | File here when |
 |---|---|---|---|
 | [engineering-hygiene.md](engineering-hygiene.md) | general design principles | 13 | general principle, demonstrated by a real bug here |
-| [upstream-dependencies.md](upstream-dependencies.md) | dependency behavior, patching, upstream process | 10 | bug/fix lives in a third-party package, its importer, a patch, or the upstream filing process |
+| [upstream-dependencies.md](upstream-dependencies.md) | dependency behavior, patching, upstream process | 13 | bug/fix lives in a third-party package, its importer, a patch, or the upstream filing process |
 
 Counts as of 2026-10-10 — bump the count when adding entries
 (`grep -c '^## '` per file).
 
 ## Where a new lesson goes
 
-1. About *my own* verification/reliability habits, not code/design? → persistent memory
-   (`feedback_*`), not the repo.
+1. About *my own* verification/reliability habits, not code/design? → `bd remember --key <slug>`
+   (loaded by `bd prime`), not the repo and not MEMORY.md-style memory files.
 2. About a third-party package, its importer/parser internals, a `patch-package`
    patch, the fork workflow, or the upstream issue/PR process? → `upstream-dependencies.md`.
 3. General software-design principle, demonstrated by a real bug here? → `engineering-hygiene.md`.

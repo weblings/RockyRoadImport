@@ -162,3 +162,42 @@ A bar with six voices may have real notes in one; the rest hold `isEmpty` filler
 flattening real scores (69-file sweep caught it; hand-authored fixtures have no filler voices).
 
 **Fix:** skip `beat.isEmpty` before treating any per-beat field as authored content.
+
+---
+
+## Run the dependency's own test suite against a local patch
+Tags: patch-package, verification, upstream
+Applies-when: a local patch to a dependency passes this repo's tests and you're about to trust it
+
+The per-staff dynamics patch passed every test here plus a real-file sweep. Porting it to
+alphaTab broke 11 of alphaTab's visual references - one (a shared `pp` on Ave Maria) exposed
+that our own patch had regressed real scores. Our fixtures only covered the case we fixed.
+
+**Fix:** before calling a dependency patch verified, run the dependency's suite with it applied;
+its corpus covers semantics our fixtures never will.
+
+---
+
+## Re-fetch upstream before porting a local patch
+Tags: upstream, porting, patch-package
+Applies-when: turning a local dependency patch into an upstream branch or issue
+
+Between branching and porting (9 days), upstream fixed two of our four patch fixes on `develop`
+in different forms (hammer-on re-index, pedal stop). Porting from the old base would have
+re-done shipped work and filed duplicates.
+
+**Fix:** fetch upstream first and write a failing test on the fresh base; only port what
+still fails there.
+
+---
+
+## Same encoding, different intent: keep the guess in the consumer
+Tags: importer, semantics, upstream
+Applies-when: a dependency fix needs a heuristic to match "what the author meant"
+
+Ave Maria's both-hands `pp` and the MusicXML suite's treble-only `ffff` are encoded identically
+(`placement="below"`, `<staff>1</staff>`), so no importer rule fits both. The importer stays
+spec-literal (per staff); the "one mark covers both hands" guess lives in our converter.
+
+**Fix:** when the source can't distinguish two intents, patch the dependency to the spec and
+put the interpretation in this repo's code, where it can be tuned without upstream buy-in.
