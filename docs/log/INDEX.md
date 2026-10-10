@@ -27,3 +27,4 @@ stands and what resumes it. Planning docs stay clean: decisions, status, and poi
 | 2026-10-09 | MusicXML piano pedal: SustainActive timeline, cross-bar stop patch, 4 tests green, 1 lesson; bead left open | RockyRoadImport-ngd.5 |
 | 2026-10-10 | Score repeats/voltas played out in performance order, 76 tests green, 1 lesson, 69-file sweep clean | RockyRoadImport-3sp |
 | 2026-10-10 | MusicXML docs pass + ngd piano audit: tie-across-repeat fix, GP/MusicXML status gates, 77 tests green, 1 lesson | RockyRoadImport-tak |
+| 2026-10-10 | MusicXML piano umbrella closed: all 6 children done, audit fixes landed in 4074aa9 | RockyRoadImport-ngd |
