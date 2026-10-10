@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "PsarcChartCore.Wasm",
   "resources": {
-    "hash": "sha256-d/8+wq6HpzJXv6CX/S+CN16G/UMId1c5korlgIf49AQ=",
+    "hash": "sha256-voNXEFPSc6JNyptFMs25fkSqoHJz5YicCnUm8Kxu2H8=",
     "jsModuleNative": {
       "dotnet.native.8.0.29.1zmzoioxp0.js": "sha256-JTswf4CBcNmmrTGm6DppxYNII8GVEmbA3iXD3bU1fcA="
     },
@@ -192,18 +192,18 @@
       "mscorlib.wasm": "sha256-xeIDrsSwymknFihcL/StdwpaVK+g6J8aGdX6I/w8nks=",
       "netstandard.wasm": "sha256-2YXcctv/4R+ape8ngskTBda7MoSFPsNz3L5yF1BhhYs=",
       "System.Private.CoreLib.wasm": "sha256-LctFzHt8SfvxyxBhDh4AeH6+opncXt0QQ0mP1GxgLW8=",
-      "BnkExtractor.wasm": "sha256-fb7BVznYMzBiTIcrKjxcYasqFqn7talK7pZYilnz3cE=",
-      "PsarcChartCore.wasm": "sha256-271BllP6RrP2KGekny5g9ZjHpGuJC7UtmlSExYaZg2E=",
-      "PsarcUtil.wasm": "sha256-LxoHJaSZlGrLt9+k2Ge0VcS/iia9eo72KFeb2R8YDDI=",
+      "BnkExtractor.wasm": "sha256-KFB39xhj7368QrBVOgDv3J+wgLRSP8zbc1eOn4iN8U8=",
+      "PsarcChartCore.wasm": "sha256-TTHcB5kleTFUEkuJlEHBh7uK5pI+kZnT57u/JGEsdIo=",
+      "PsarcUtil.wasm": "sha256-/+KSRRc/DYZJ4BaTGdizgocyhxuEYRzSWqQWGI5lBgw=",
       "Rocksmith2014PsarcLib.wasm": "sha256-3mZSHVx8CRjja3HJKRtP8Wy/Tf7UefVJvHBJEGd6Pr8=",
-      "PsarcChartCore.Wasm.wasm": "sha256-mWO1/mgf4gBWe7QamWClUvDkcTBfa/eXsJA6Xs6HFM4="
+      "PsarcChartCore.Wasm.wasm": "sha256-SCDCv+Q14XoOL/Jq2AItLv0SoWa9IoI3aPJ46dDJYQA="
     },
     "pdb": {
-      "PsarcChartCore.pdb": "sha256-6xZWjaRKCRgREHMpM+6Otwt6qhPdQreNiJ2Hc7gXIr4=",
-      "PsarcUtil.pdb": "sha256-Q7TWedQom2FvU8iF8y0ZVn/NW2lfMiJh4q6Nbv5iDtI=",
-      "BnkExtractor.pdb": "sha256-omY0/Whr5HQzd3SlmbrDShkQYiiauHGdYSTmsLFdGr0=",
+      "PsarcChartCore.pdb": "sha256-hh8R51umJ0Z60GwvOyuu6y9LXS8Ra+IotmujXUiapi4=",
+      "PsarcUtil.pdb": "sha256-1oPImtDc/N+L8nYhhZAN0aCkOHCBzztwj973S8eR0jI=",
+      "BnkExtractor.pdb": "sha256-rFBWeUTv592aq/WPQyQiJi9BjqjACyGA1a1hAJEwHCE=",
       "Rocksmith2014PsarcLib.pdb": "sha256-aNuiA8m4Ipoxqd0yB0kj6qTpoMt+PQkco5Om+iLGer0=",
-      "PsarcChartCore.Wasm.pdb": "sha256-eMU2TdjH2P+FAx6agHWJxyA1x0YVLriz2TMay6xhWjI="
+      "PsarcChartCore.Wasm.pdb": "sha256-NYfTkdjBpxoh/L6oGykLtia0QRPA0toACcCdmuwQkbo="
     }
   },
   "cacheBootResources": true,
