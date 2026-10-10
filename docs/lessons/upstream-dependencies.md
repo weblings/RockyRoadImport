@@ -217,3 +217,17 @@ message, rather than assuming either way.
 **Fix:** before editing or removing a limitation claim about a dependency, grep that
 dependency's actual (possibly bundled/minified) source for the relevant assignment - a stale
 claim and a still-true one look identical from the call site.
+
+---
+
+## A stale `node_modules` silently skips newly-added `patch-package` patches
+Tags: patch-package, install, stale-node_modules
+Applies-when: a release build fails on a type/field a `patch-package` patch is supposed to add
+
+A release build failed on `Beat.lyricsSyllabic` not existing, even though the patch adding it was
+committed. `node_modules` predated the commit that added `patch-package` as a devDependency, so
+it was never installed and its `postinstall` hook never ran - every other dependency matched
+`package.json` exactly, only the newly-added one was missing.
+
+**Fix:** re-run `npm install` (not just trust an existing `node_modules`) after pulling commits
+that touch `package.json`, especially before a release build.
