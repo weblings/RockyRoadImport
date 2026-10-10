@@ -1,3 +1,7 @@
+v0.1.2
+- Added MusicXML parsing support
+- Dev - Adopted Aurora's docs and beads for tasks setup
+
 v0.1.1
 - Added GuitarPro parsing support
 - Dev - Replicated lessons learned architecture from RockyRoad
