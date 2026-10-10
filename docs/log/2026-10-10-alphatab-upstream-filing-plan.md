@@ -21,7 +21,7 @@ Ave Maria's shared `pp` and 43e's staff-only `ffff` are encoded identically, so 
 importer rule fits both; the "mark covers both hands" guess stays in our converter
 (RockyRoadImport-dej), not upstream.
 
-**Process (alphaTab `AGENTS.md`):** no PR without an accepted issue; issue bodies
+**Process (alphaTab AGENTS rules):** no PR without an accepted issue; issue bodies
 describe symptoms only (no diffs, file/line pointers, or links to our branches); real
 values in their template; mandatory `alphatab-ai-authored-v1` disclosure block. Fix
 branches in `../alphaTab` (`fix/musicxml-staff-dynamics` 8a989f9b,
