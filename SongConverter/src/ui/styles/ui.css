@@ -50,4 +50,26 @@
   .ui-file-trigger[data-layout="inline"] > .ui-field-label {
     position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%);
   }
+  .ui-select-trigger {
+    justify-self: start; display: flex; align-items: center; gap: var(--size-space-md);
+    padding: 9px 12px; border: none; border-radius: var(--size-radius-sm);
+    background: var(--color-control-bg); color: var(--color-text-default);
+    font-size: var(--size-font-sm); font-family: inherit; cursor: pointer;
+  }
+  .ui-select-trigger[data-hovered] { background: var(--color-control-bg-hover); }
+  .ui-select-trigger[data-focus-visible] {
+    outline: var(--size-focus-ring-width) solid var(--color-focus-ring);
+    outline-offset: var(--size-focus-ring-offset);
+  }
+  .ui-popover {
+    min-width: var(--trigger-width); border-radius: var(--size-radius-sm);
+    background: var(--color-control-bg); border: 1px solid var(--color-border-subtle);
+  }
+  .ui-listbox { outline: none; padding: 4px 0; max-height: 240px; overflow: auto; }
+  .ui-option {
+    padding: 6px 12px; cursor: pointer; outline: none;
+    color: var(--color-text-default); font-size: var(--size-font-sm);
+  }
+  .ui-option[data-focused] { background: var(--color-control-bg-hover); }
+  .ui-option[data-selected] { font-weight: var(--font-weight-semibold); }
 }

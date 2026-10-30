@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'vitest-axe';
-import { Button, FieldList, FieldNote, FileTrigger, TextField } from './index';
+import { Button, FieldList, FieldNote, FileTrigger, Select, TextField } from './index';
+
+afterEach(cleanup);
 
 async function expectNoViolations(container: HTMLElement) {
     const results = await axe(container);
@@ -65,6 +67,32 @@ describe('FileTrigger', () => {
                 <FieldNote>*Audio must be .ogg format.</FieldNote>
             </FieldList>,
         );
+        await expectNoViolations(container);
+    });
+});
+
+describe('Select', () => {
+    const options = ['Vocals', 'Backing', 'Harmony'];
+
+    it('fires onChange once when an option is picked from the open list', async () => {
+        const onChange = vi.fn();
+        render(<Select label="Lyrics from" options={options} value="Vocals" onChange={onChange} />);
+        await userEvent.click(screen.getByRole('button', { name: /Lyrics from/ }));
+        await userEvent.click(screen.getByRole('option', { name: 'Backing' }));
+        expect(onChange).toHaveBeenCalledTimes(1);
+        expect(onChange).toHaveBeenCalledWith('Backing');
+    });
+
+    it('does not fire onChange for arrow keys on the closed trigger', async () => {
+        const onChange = vi.fn();
+        render(<Select label="Lyrics from" options={options} value="Vocals" onChange={onChange} />);
+        screen.getByRole('button', { name: /Lyrics from/ }).focus();
+        await userEvent.keyboard('{ArrowRight}{ArrowRight}{ArrowLeft}');
+        expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it('has no axe violations', async () => {
+        const { container } = render(<FieldList><Select label="Lyrics from" options={options} value="Vocals" onChange={() => {}} /></FieldList>);
         await expectNoViolations(container);
     });
 });

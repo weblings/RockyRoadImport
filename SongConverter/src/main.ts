@@ -15,6 +15,7 @@ import { fetchAlbumArtPng, loadPsarcWasm, isPsarcWasmLoaded } from './stores/psa
 import { createElement } from 'react';
 import { mountIsland } from './ui';
 import { GpPanel } from './GpPanel';
+import { MusicXmlPanel } from './MusicXmlPanel';
 import { zipFilenameFor, type AttachmentKind } from './stores/fileIo';
 import type { ZipFiles } from './zipFiles';
 
@@ -92,30 +93,7 @@ app.innerHTML = `
 
     <div id="tab-gp" class="tab-panel is-hidden"><div id="gp-island"></div></div>
 
-    <div id="tab-musicxml" class="tab-panel is-hidden">
-        <h2>MusicXML Importer (Piano and Guitar)</h2>
-        <input type="file" id="musicxml-input" accept=".musicxml,.xml,.mxl" />
-        <div id="musicxml-status" class="field-status"></div>
-
-        <div id="musicxml-metadata-form" class="meta-form is-hidden">
-            <h3>Song Metadata</h3>
-            <table>
-                <tr><td>Song Name</td><td><input type="text" id="musicxml-song-name" size="40" /></td></tr>
-                <tr><td>Artist</td><td><input type="text" id="musicxml-artist" size="40" /></td></tr>
-                <tr><td>Album</td><td><input type="text" id="musicxml-album" size="40" /></td></tr>
-                <tr><td>Album Art (optional)</td><td><input type="file" id="musicxml-album-art" accept="image/*" /></td></tr>
-                <tr><td>Song Audio (optional)</td><td><input type="file" id="musicxml-audio" accept=".ogg,audio/ogg" /></td></tr>
-                <tr id="musicxml-lyrics-row" class="is-hidden"><td>Lyrics from</td><td><select id="musicxml-lyrics-select"></select></td></tr>
-                <tr>
-                    <td></td>
-                    <td><span class="field-note">*Audio must be .ogg format.</span></td>
-                </tr>
-            </table>
-        </div>
-
-        <br>
-        <button id="musicxml-download-all" class="btn-primary" disabled>Download</button>
-    </div>
+    <div id="tab-musicxml" class="tab-panel is-hidden"><div id="musicxml-island"></div></div>
 `;
 
 // Tabs: only one panel visible at a time.
@@ -242,31 +220,7 @@ psarc.subscribe(() => {
 mountIsland($('gp-island'), createElement(GpPanel, { store: gp, onDownload: downloadFrom }));
 
 // --- MusicXML ---
-const xmlSongName = bindText('musicxml-song-name', (v) => musicxml.setMeta({ songName: v }));
-const xmlArtist   = bindText('musicxml-artist',    (v) => musicxml.setMeta({ artistName: v }));
-const xmlAlbum    = bindText('musicxml-album',     (v) => musicxml.setMeta({ albumName: v }));
-const xmlLyrics = $<HTMLSelectElement>('musicxml-lyrics-select');
-xmlLyrics.addEventListener('change', () => musicxml.setMeta({ lyricsTrack: xmlLyrics.value }));
-bindAttachment(musicxml, 'musicxml-album-art', 'albumArt');
-bindAttachment(musicxml, 'musicxml-audio', 'audio');
-bindLoadAndDownload(musicxml, 'musicxml-input', 'musicxml-download-all');
-
-let renderedLyricsOptions: string[] | null = null;
-musicxml.subscribe(() => {
-    const s = musicxml.get();
-    setValue(xmlSongName, s.meta.songName);
-    setValue(xmlArtist, s.meta.artistName);
-    setValue(xmlAlbum, s.meta.albumName);
-    if (s.lyricsOptions !== renderedLyricsOptions) {
-        renderedLyricsOptions = s.lyricsOptions;
-        xmlLyrics.replaceChildren(...s.lyricsOptions.map((name) => new Option(name, name)));
-    }
-    setValue(xmlLyrics, s.meta.lyricsTrack);
-    show($('musicxml-lyrics-row'), s.lyricsOptions.length > 0, '');
-    show($('musicxml-metadata-form'), s.formVisible);
-    $('musicxml-status').textContent = s.status;
-    $<HTMLButtonElement>('musicxml-download-all').disabled = s.phase !== 'ready';
-});
+mountIsland($('musicxml-island'), createElement(MusicXmlPanel, { store: musicxml, onDownload: downloadFrom }));
 
 if (import.meta.env.VITE_DEMO_MODE === 'true') {
     const ribbon = document.createElement('div');

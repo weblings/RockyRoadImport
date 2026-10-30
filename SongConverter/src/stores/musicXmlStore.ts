@@ -8,6 +8,7 @@ export interface MusicXmlState {
     phase: Phase;
     status: string;
     formVisible: boolean;
+    fileName: string | null;
     meta: { songName: string; artistName: string; albumName: string; lyricsTrack: string };
     // Only populated when several tracks carry lyrics, which is when the picker shows.
     lyricsOptions: string[];
@@ -19,6 +20,7 @@ export function createMusicXmlStore() {
         phase: 'idle',
         status: '',
         formVisible: false,
+        fileName: null,
         meta: { songName: '', artistName: '', albumName: '', lyricsTrack: '' },
         lyricsOptions: [],
         attachments: { albumArt: null, audio: null },
@@ -33,7 +35,7 @@ export function createMusicXmlStore() {
         async loadFile(file: File): Promise<void> {
             const id = ++requestId;
             result = null;
-            store.set({ phase: 'parsing', status: 'Parsing…', formVisible: false });
+            store.set({ phase: 'parsing', status: 'Parsing…', formVisible: false, fileName: file.name });
             try {
                 const buffer = await file.arrayBuffer();
                 const { convertMusicXml } = await import('../scoreConverter');

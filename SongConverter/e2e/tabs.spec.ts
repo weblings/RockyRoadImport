@@ -9,7 +9,7 @@ const fixture = (name: string) => fileURLToPath(new URL(`../src/fixtures/${name}
 const tabs = [
     { id: 'midi', input: '#midi-input', file: 'piano-three-notes.mid', ready: '#download-all' },
     { id: 'gp', input: '#gp-island input[type="file"]', file: 'guitar-three-notes.musicxml', ready: '#gp-download-all' },
-    { id: 'musicxml', input: '#musicxml-input', file: 'piano-grand-staff.musicxml', ready: '#musicxml-download-all' },
+    { id: 'musicxml', input: '#musicxml-island input[type="file"]', file: 'piano-grand-staff.musicxml', ready: '#musicxml-download-all' },
     { id: 'psarc', input: null, file: null, ready: null },
 ] as const;
 
@@ -32,3 +32,52 @@ for (const t of tabs) {
         await expect(page).toHaveScreenshot(`${t.id}-loaded.png`);
     });
 }
+
+test.describe('musicxml lyrics picker', () => {
+    async function load(page: Page) {
+        await openTab(page, 'musicxml');
+        await page.setInputFiles('#musicxml-island input[type="file"]', fixture('multi-lyrics.musicxml'));
+        const trigger = page.getByRole('button', { name: /Lyrics from/ });
+        await expect(trigger).toBeVisible();
+        return trigger;
+    }
+
+    test('open list', async ({ page }) => {
+        const trigger = await load(page);
+        await trigger.click();
+        await expect(page.getByRole('option', { name: 'Harmony' })).toBeVisible();
+        await expect(page).toHaveScreenshot('musicxml-lyrics-open.png');
+    });
+
+    test('click commits the choice', async ({ page }) => {
+        const trigger = await load(page);
+        await trigger.click();
+        await page.getByRole('option', { name: 'Harmony' }).click();
+        await expect(trigger).toContainText('Harmony');
+    });
+
+    test('arrows on the closed trigger leave the value alone', async ({ page }) => {
+        const trigger = await load(page);
+        await expect(trigger).toContainText('Lead Vocals');
+        await trigger.focus();
+        await page.keyboard.press('ArrowRight');
+        await page.keyboard.press('ArrowRight');
+        await expect(trigger).toContainText('Lead Vocals');
+    });
+
+    test('keyboard commit with Enter, Escape cancels, focus returns', async ({ page }) => {
+        const trigger = await load(page);
+        await trigger.focus();
+        await page.keyboard.press('Enter');
+        await page.keyboard.press('ArrowDown');
+        await page.keyboard.press('Escape');
+        await expect(trigger).toBeFocused();
+        await expect(trigger).toContainText('Lead Vocals');
+
+        await page.keyboard.press('Enter');
+        await page.keyboard.press('ArrowDown');
+        await page.keyboard.press('Enter');
+        await expect(trigger).toBeFocused();
+        await expect(trigger).toContainText('Backing Vocals');
+    });
+});
