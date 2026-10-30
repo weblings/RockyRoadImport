@@ -111,7 +111,7 @@ export interface SongVocal {
 }
 
 // The full SongInfo/InstrumentParts shape used by song.json - separate from the
-// lighter-weight SongInfo above (which the MIDI path builds directly in main.ts).
+// lighter-weight SongInfo above (which the MIDI path builds directly in the MIDI store).
 export interface SongData {
     SongName: string;
     SongYear?: number;

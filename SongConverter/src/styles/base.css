@@ -36,5 +36,3 @@ h3 {
   margin-bottom: var(--size-space-sm);
 }
 
-/* main.ts sets an inline display to reveal an element. */
-.is-hidden { display: none; }

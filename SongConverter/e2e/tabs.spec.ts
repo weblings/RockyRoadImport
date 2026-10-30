@@ -7,15 +7,17 @@ import { fileURLToPath } from 'node:url';
 const fixture = (name: string) => fileURLToPath(new URL(`../src/fixtures/${name}`, import.meta.url));
 
 const tabs = [
-    { id: 'midi', input: '#midi-island input[type="file"]', file: 'piano-three-notes.mid', ready: '#midi-download-all' },
-    { id: 'gp', input: '#gp-island input[type="file"]', file: 'guitar-three-notes.musicxml', ready: '#gp-download-all' },
-    { id: 'musicxml', input: '#musicxml-island input[type="file"]', file: 'piano-grand-staff.musicxml', ready: '#musicxml-download-all' },
+    { id: 'midi', input: 'input[type="file"]', file: 'piano-three-notes.mid', ready: '#midi-download-all' },
+    { id: 'gp', input: 'input[type="file"]', file: 'guitar-three-notes.musicxml', ready: '#gp-download-all' },
+    { id: 'musicxml', input: 'input[type="file"]', file: 'piano-grand-staff.musicxml', ready: '#musicxml-download-all' },
     { id: 'psarc', input: null, file: null, ready: null },
 ] as const;
 
+const tabNames: Record<string, string> = { midi: 'Piano MIDI', psarc: 'Rocksmith 2014', gp: 'Guitar Pro', musicxml: 'MusicXML' };
+
 async function openTab(page: Page, id: string) {
     await page.goto('/');
-    await page.click(`.tab-btn[data-tab="${id}"]`);
+    await page.getByRole('tab', { name: tabNames[id] }).click();
 }
 
 for (const t of tabs) {
@@ -27,7 +29,7 @@ for (const t of tabs) {
     if (!t.input) continue;
     test(`${t.id} loaded`, async ({ page }) => {
         await openTab(page, t.id);
-        await page.setInputFiles(t.input, fixture(t.file));
+        await page.getByRole('tabpanel').locator(t.input).setInputFiles(fixture(t.file));
         await expect(page.locator(t.ready)).toBeEnabled();
         await expect(page).toHaveScreenshot(`${t.id}-loaded.png`);
     });
@@ -36,7 +38,7 @@ for (const t of tabs) {
 test.describe('musicxml lyrics picker', () => {
     async function load(page: Page) {
         await openTab(page, 'musicxml');
-        await page.setInputFiles('#musicxml-island input[type="file"]', fixture('multi-lyrics.musicxml'));
+        await page.getByRole('tabpanel').locator('input[type="file"]').setInputFiles(fixture('multi-lyrics.musicxml'));
         const trigger = page.getByRole('button', { name: /Lyrics from/ });
         await expect(trigger).toBeVisible();
         return trigger;
@@ -79,5 +81,16 @@ test.describe('musicxml lyrics picker', () => {
         await page.keyboard.press('Enter');
         await expect(trigger).toBeFocused();
         await expect(trigger).toContainText('Backing Vocals');
+    });
+});
+
+test.describe('tab keyboard', () => {
+    test('arrows move tabs and Tab lands inside the active panel', async ({ page }) => {
+        await page.goto('/');
+        await page.getByRole('tab', { name: 'Piano MIDI' }).focus();
+        await page.keyboard.press('ArrowRight');
+        await expect(page.getByRole('tab', { name: 'Rocksmith 2014' })).toBeFocused();
+        await page.keyboard.press('Tab');
+        await expect(page.getByRole('tabpanel').locator(':focus')).toHaveCount(1);
     });
 });
