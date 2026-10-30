@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'vitest-axe';
-import { Button, FieldList, FieldNote, FileTrigger, Select, TextField } from './index';
+import { Button, Callout, Disclosure, FieldList, FieldNote, FileTrigger, Select, Slider, TextField } from './index';
 
 afterEach(cleanup);
 
@@ -93,6 +93,50 @@ describe('Select', () => {
 
     it('has no axe violations', async () => {
         const { container } = render(<FieldList><Select label="Lyrics from" options={options} value="Vocals" onChange={() => {}} /></FieldList>);
+        await expectNoViolations(container);
+    });
+});
+
+describe('Slider', () => {
+    it('steps with arrow keys and reports numeric values', async () => {
+        const onChange = vi.fn();
+        render(<Slider label="Difficulty" min={0} max={5} step={0.5} value={1} onChange={onChange} />);
+        screen.getByRole('slider').focus();
+        await userEvent.keyboard('{ArrowRight}');
+        expect(onChange).toHaveBeenCalledWith(1.5);
+    });
+
+    it('has no axe violations', async () => {
+        const { container } = render(<FieldList><Slider label="Difficulty" min={0} max={5} step={0.5} value={1} onChange={() => {}} /></FieldList>);
+        await expectNoViolations(container);
+    });
+});
+
+describe('Disclosure', () => {
+    it('toggles its panel from the trigger', async () => {
+        render(<Disclosure title="Show log"><p>log text</p></Disclosure>);
+        const trigger = screen.getByRole('button', { name: 'Show log' });
+        expect(trigger.getAttribute('aria-expanded')).toBe('false');
+        await userEvent.click(trigger);
+        expect(trigger.getAttribute('aria-expanded')).toBe('true');
+        expect(screen.getByText('log text')).toBeTruthy();
+    });
+
+    it('has no axe violations', async () => {
+        const { container } = render(<Disclosure title="Show log"><p>log text</p></Disclosure>);
+        await expectNoViolations(container);
+    });
+});
+
+describe('Callout', () => {
+    it('renders as a note with its title and body', () => {
+        render(<Callout title="Heads up"><p>details</p></Callout>);
+        expect(screen.getByRole('note').textContent).toContain('Heads up');
+        expect(screen.getByText('details')).toBeTruthy();
+    });
+
+    it('has no axe violations', async () => {
+        const { container } = render(<Callout title="Heads up"><p>details</p></Callout>);
         await expectNoViolations(container);
     });
 });

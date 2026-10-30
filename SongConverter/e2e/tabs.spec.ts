@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const fixture = (name: string) => fileURLToPath(new URL(`../src/fixtures/${name}`, import.meta.url));
 
 const tabs = [
-    { id: 'midi', input: '#midi-input', file: 'piano-three-notes.mid', ready: '#download-all' },
+    { id: 'midi', input: '#midi-island input[type="file"]', file: 'piano-three-notes.mid', ready: '#midi-download-all' },
     { id: 'gp', input: '#gp-island input[type="file"]', file: 'guitar-three-notes.musicxml', ready: '#gp-download-all' },
     { id: 'musicxml', input: '#musicxml-island input[type="file"]', file: 'piano-grand-staff.musicxml', ready: '#musicxml-download-all' },
     { id: 'psarc', input: null, file: null, ready: null },

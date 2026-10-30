@@ -13,6 +13,7 @@ export interface MidiState {
     // Debug log or the latest parse/convert message.
     status: string;
     formVisible: boolean;
+    fileName: string | null;
     handFallback: boolean;
     meta: { songName: string; artistName: string; albumName: string; difficulty: number };
     attachments: AttachmentFiles;
@@ -28,6 +29,7 @@ export function createMidiStore(deps: MidiDeps) {
         phase: 'idle',
         status: '',
         formVisible: false,
+        fileName: null,
         handFallback: false,
         meta: { songName: '', artistName: '', albumName: '', difficulty: 0 },
         attachments: { albumArt: null, audio: null },
@@ -68,7 +70,7 @@ export function createMidiStore(deps: MidiDeps) {
             const id = ++requestId;
             structure = null;
             keyboardNotes = null;
-            store.set({ phase: 'parsing', status: 'Parsing…' });
+            store.set({ phase: 'parsing', status: 'Parsing…', fileName: file.name });
             try {
                 const midi = await deps.parse(await file.arrayBuffer());
                 if (id !== requestId) return;

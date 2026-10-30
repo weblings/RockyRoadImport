@@ -14,9 +14,10 @@ import { createMusicXmlStore } from './stores/musicXmlStore';
 import { fetchAlbumArtPng, loadPsarcWasm, isPsarcWasmLoaded } from './stores/psarcWasm';
 import { createElement } from 'react';
 import { mountIsland } from './ui';
+import { MidiPanel } from './MidiPanel';
 import { GpPanel } from './GpPanel';
 import { MusicXmlPanel } from './MusicXmlPanel';
-import { zipFilenameFor, type AttachmentKind } from './stores/fileIo';
+import { zipFilenameFor } from './stores/fileIo';
 import type { ZipFiles } from './zipFiles';
 
 const app = document.getElementById('app')!;
@@ -28,50 +29,7 @@ app.innerHTML = `
         <button class="tab-btn" data-tab="musicxml">MusicXML</button>
     </div>
 
-    <div id="tab-midi" class="tab-panel active">
-        <h2>Piano MIDI Converter</h2>
-        <input type="file" id="midi-input" accept=".mid,.midi" />
-
-        <div id="metadata-form" class="meta-form is-hidden">
-            <h3>Song Metadata</h3>
-            <table>
-                <tr><td>Song Name</td><td><input type="text" id="meta-song-name" size="40" /></td></tr>
-                <tr><td>Artist</td><td><input type="text" id="meta-artist" size="40" /></td></tr>
-                <tr><td>Album</td><td><input type="text" id="meta-album" size="40" /></td></tr>
-                <tr><td>Album Art (optional)</td><td><input type="file" id="meta-album-art" accept="image/*" /></td></tr>
-                <tr><td>Song Audio (optional)</td><td><input type="file" id="meta-audio" accept=".ogg,audio/ogg" /></td></tr>
-                <tr>
-                    <td></td>
-                    <td>
-                        <span class="field-note">*Audio must be .ogg format.
-                            <a href="https://www.freeconvert.com/midi-to-ogg/download" target="_blank" rel="noopener noreferrer">MIDI to OGG converter</a>
-                        </span>
-                    </td>
-                </tr>
-                <tr>
-                    <td>Difficulty (0–5)</td>
-                    <td>
-                        <input type="range" id="meta-difficulty" min="0" max="5" step="0.5" value="0" />
-                        <span id="meta-difficulty-value">0</span>
-                    </td>
-                </tr>
-            </table>
-        </div>
-
-        <br>
-        <div id="hand-disclaimer" class="is-hidden">
-            <strong>&#9888; Hand Fallback Used</strong>
-            <ul>
-                <li><strong>No "Left Hand" / "Right Hand" track names detected</strong> — rename MIDI tracks to include these for accurate results.</li>
-                <li><strong>Hand assigned by pitch</strong> — below middle C (MIDI 60) → left, above → right. May be wrong where hands cross.</li>
-            </ul>
-        </div>
-        <button id="download-all" class="btn-primary" disabled>Download</button>
-        <details class="debug-log">
-            <summary>Show debug log</summary>
-            <pre id="output"></pre>
-        </details>
-    </div>
+    <div id="tab-midi" class="tab-panel active"><div id="midi-island"></div></div>
 
     <div id="tab-psarc" class="tab-panel is-hidden">
         <h2>Rocksmith .psarc Importer</h2>
@@ -165,12 +123,6 @@ function bindLoadAndDownload(store: TabStore, inputId: string, downloadId: strin
     $<HTMLButtonElement>(downloadId).addEventListener('click', () => downloadFrom(store));
 }
 
-function bindAttachment(store: { setAttachment(k: AttachmentKind, f: File | null): void }, id: string, kind: AttachmentKind): void {
-    $<HTMLInputElement>(id).addEventListener('change', (e) => {
-        store.setAttachment(kind, (e.target as HTMLInputElement).files?.[0] ?? null);
-    });
-}
-
 function bindText(id: string, onInput: (value: string) => void): HTMLInputElement {
     const el = $<HTMLInputElement>(id);
     el.addEventListener('input', () => onInput(el.value));
@@ -178,27 +130,7 @@ function bindText(id: string, onInput: (value: string) => void): HTMLInputElemen
 }
 
 // --- Piano MIDI ---
-const midiSongName = bindText('meta-song-name', (v) => midi.setMeta({ songName: v }));
-const midiArtist   = bindText('meta-artist',    (v) => midi.setMeta({ artistName: v }));
-const midiAlbum    = bindText('meta-album',     (v) => midi.setMeta({ albumName: v }));
-const midiDifficulty = $<HTMLInputElement>('meta-difficulty');
-midiDifficulty.addEventListener('input', () => midi.setMeta({ difficulty: parseFloat(midiDifficulty.value) }));
-bindAttachment(midi, 'meta-album-art', 'albumArt');
-bindAttachment(midi, 'meta-audio', 'audio');
-bindLoadAndDownload(midi, 'midi-input', 'download-all');
-
-midi.subscribe(() => {
-    const s = midi.get();
-    setValue(midiSongName, s.meta.songName);
-    setValue(midiArtist, s.meta.artistName);
-    setValue(midiAlbum, s.meta.albumName);
-    setValue(midiDifficulty, String(s.meta.difficulty));
-    $('meta-difficulty-value').textContent = String(s.meta.difficulty);
-    show($('metadata-form'), s.formVisible);
-    show($('hand-disclaimer'), s.handFallback);
-    $('output').textContent = s.status;
-    $<HTMLButtonElement>('download-all').disabled = s.phase !== 'ready';
-});
+mountIsland($('midi-island'), createElement(MidiPanel, { store: midi, onDownload: downloadFrom }));
 
 // --- Rocksmith .psarc ---
 const psarcSongName = bindText('psarc-song-name', (v) => psarc.setMeta({ songName: v }));

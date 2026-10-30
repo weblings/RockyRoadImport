@@ -56,7 +56,6 @@ input[type="file"]::file-selector-button {
 input[type="file"]::file-selector-button:hover { background: var(--color-control-bg-hover); }
 
 input[type="range"] { accent-color: var(--color-control-accent); cursor: pointer; }
-#meta-difficulty-value { font-size: var(--size-font-xs); color: var(--color-text-secondary); }
 
 /* Metadata forms are label/value table rows. */
 table { width: 100%; border-collapse: collapse; }
@@ -89,20 +88,7 @@ table td:first-child {
 .btn-primary:disabled { background: var(--color-control-bg); color: var(--color-text-disabled); cursor: not-allowed; }
 .btn-primary:disabled:hover { background: var(--color-control-bg); }
 
-/* Inline warning card with an amber accent on the heading only. */
-#hand-disclaimer {
-  background: var(--color-surface-raised); border: 1px solid var(--color-border-default);
-  border-radius: var(--size-radius-md); padding: 12px var(--size-space-md);
-  margin: var(--size-space-md) 0; font-size: var(--size-font-sm);
-}
-#hand-disclaimer > strong { display: block; margin-bottom: 6px; color: var(--color-text-warning); }
-#hand-disclaimer ul { color: var(--color-text-secondary); padding-left: 20px; }
-#hand-disclaimer li { margin-bottom: var(--size-space-xs); }
-#hand-disclaimer li strong { color: var(--color-text-emphasis); }
-
-.debug-log { margin-top: 12px; }
-.debug-log summary { cursor: pointer; font-size: var(--size-font-sm); color: var(--color-text-muted); }
-.debug-log pre { font-size: var(--size-font-xs); max-height: 60vh; overflow: auto; }
+.debug-log { font-size: var(--size-font-xs); max-height: 60vh; overflow: auto; }
 
 .panel-actions { margin-top: calc(1lh + var(--size-space-md)); }
 }
