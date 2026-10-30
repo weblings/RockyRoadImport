@@ -1,22 +1,12 @@
 import { parseArrayBuffer } from 'midi-json-parser';
 import { zipSync } from 'fflate';
-import type {
-    IMidiFile,
-    IMidiSetTempoEvent,
-    IMidiTrackNameEvent,
-    IMidiTextEvent,
-    IMidiNoteOnEvent,
-    IMidiNoteOffEvent,
-    IMidiControlChangeEvent,
-    IMidiProgramChangeEvent,
-    TMidiEvent,
-} from 'midi-json-parser-worker';
-import { buildTempoMap, buildSongStructure, type TempoChange } from './tempoMap';
-import { convertPianoMidi } from './pianoConverter';
-import { buildSongInfo as buildSharedSongInfo, mergePianoTracks } from './songBuilder';
-import { buildMidiFiles, buildPsarcFiles, buildGpFiles, buildMusicXmlFiles } from './zipFiles';
-import type { ScoreConvertResult } from './scoreConverter';
-import type { SongInfo, SongStructure, SongKeyboardNotes, PsarcSongResult } from './songformat';
+import { createMidiStore } from './stores/midiStore';
+import { createPsarcStore } from './stores/psarcStore';
+import { createGpStore } from './stores/gpStore';
+import { createMusicXmlStore } from './stores/musicXmlStore';
+import { fetchAlbumArtPng, loadPsarcWasm, isPsarcWasmLoaded } from './stores/psarcWasm';
+import { zipFilenameFor, type AttachmentKind } from './stores/fileIo';
+import type { ZipFiles } from './zipFiles';
 
 const app = document.getElementById('app')!;
 app.innerHTML = `
@@ -140,9 +130,7 @@ app.innerHTML = `
     </div>
 `;
 
-// Tabs: only one panel visible at a time, matches this file's existing
-// inline style.display convention (e.g. metadataForm below) rather than
-// introducing a stylesheet-driven .active rule ahead of the styling pass.
+// Tabs: only one panel visible at a time.
 const tabButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.tab-btn'));
 const tabPanels: Record<string, HTMLElement> = {
     midi:  document.getElementById('tab-midi')!,
@@ -161,484 +149,24 @@ tabButtons.forEach((btn) => {
     });
 });
 
-const input           = document.getElementById('midi-input')          as HTMLInputElement;
-const output          = document.getElementById('output')              as HTMLPreElement;
-const metadataForm    = document.getElementById('metadata-form')       as HTMLElement;
-const handDisclaimer  = document.getElementById('hand-disclaimer')     as HTMLElement;
-const songNameInput   = document.getElementById('meta-song-name')      as HTMLInputElement;
-const artistInput     = document.getElementById('meta-artist')         as HTMLInputElement;
-const albumInput      = document.getElementById('meta-album')          as HTMLInputElement;
-const albumArtInput   = document.getElementById('meta-album-art')      as HTMLInputElement;
-const audioInput      = document.getElementById('meta-audio')          as HTMLInputElement;
-const difficultyInput = document.getElementById('meta-difficulty')     as HTMLInputElement;
-const difficultyLabel = document.getElementById('meta-difficulty-value') as HTMLSpanElement;
-const downloadAllBtn  = document.getElementById('download-all')        as HTMLButtonElement;
+// Converter state lives in the stores. Everything below only binds DOM to them.
+const midi = createMidiStore({ parse: parseArrayBuffer });
+const psarc = createPsarcStore({ loadWasm: loadPsarcWasm, fetchAlbumArt: fetchAlbumArtPng, isWasmLoaded: isPsarcWasmLoaded });
+const gp = createGpStore();
+const musicxml = createMusicXmlStore();
 
-const psarcInput            = document.getElementById('psarc-input')             as HTMLInputElement;
-const psarcStatus           = document.getElementById('psarc-status')            as HTMLElement;
-const psarcMetadataForm     = document.getElementById('psarc-metadata-form')     as HTMLElement;
-const psarcSongNameInput    = document.getElementById('psarc-song-name')         as HTMLInputElement;
-const psarcArtistInput      = document.getElementById('psarc-artist')            as HTMLInputElement;
-const psarcAlbumInput       = document.getElementById('psarc-album')             as HTMLInputElement;
-const psarcDownloadAllBtn   = document.getElementById('psarc-download-all')      as HTMLButtonElement;
+const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
-const gpInput            = document.getElementById('gp-input')             as HTMLInputElement;
-const gpStatus           = document.getElementById('gp-status')            as HTMLElement;
-const gpMetadataForm     = document.getElementById('gp-metadata-form')     as HTMLElement;
-const gpSongNameInput    = document.getElementById('gp-song-name')         as HTMLInputElement;
-const gpArtistInput      = document.getElementById('gp-artist')            as HTMLInputElement;
-const gpAlbumInput       = document.getElementById('gp-album')             as HTMLInputElement;
-const gpAlbumArtInput    = document.getElementById('gp-album-art')         as HTMLInputElement;
-const gpAudioInput       = document.getElementById('gp-audio')             as HTMLInputElement;
-const gpDownloadAllBtn   = document.getElementById('gp-download-all')      as HTMLButtonElement;
-
-const musicxmlInput            = document.getElementById('musicxml-input')             as HTMLInputElement;
-const musicxmlStatus           = document.getElementById('musicxml-status')            as HTMLElement;
-const musicxmlMetadataForm     = document.getElementById('musicxml-metadata-form')     as HTMLElement;
-const musicxmlSongNameInput    = document.getElementById('musicxml-song-name')         as HTMLInputElement;
-const musicxmlArtistInput      = document.getElementById('musicxml-artist')            as HTMLInputElement;
-const musicxmlAlbumInput       = document.getElementById('musicxml-album')             as HTMLInputElement;
-const musicxmlAlbumArtInput    = document.getElementById('musicxml-album-art')         as HTMLInputElement;
-const musicxmlAudioInput       = document.getElementById('musicxml-audio')             as HTMLInputElement;
-const musicxmlDownloadAllBtn   = document.getElementById('musicxml-download-all')      as HTMLButtonElement;
-const musicxmlLyricsRow        = document.getElementById('musicxml-lyrics-row')        as HTMLElement;
-const musicxmlLyricsSelect     = document.getElementById('musicxml-lyrics-select')     as HTMLSelectElement;
-
-difficultyInput.addEventListener('input', () => {
-    difficultyLabel.textContent = difficultyInput.value;
-});
-
-let _midi: IMidiFile | null = null;
-let _midiFilename = '';
-let _structure: SongStructure | null = null;
-let _keyboardNotes: SongKeyboardNotes | null = null;
-
-input.addEventListener('change', () => {
-    const file = input.files?.[0];
-    if (!file) return;
-    output.textContent = 'Parsing…';
-    setDownloadsEnabled(false);
-    file.arrayBuffer()
-        .then((buffer) => parseArrayBuffer(buffer))
-        .then((midi: IMidiFile) => {
-            _midi = midi;
-            _midiFilename = file.name;
-
-            const meta = extractMetadata(midi.tracks);
-            songNameInput.value = meta.songName;
-            artistInput.value   = meta.artist;
-            albumInput.value    = '';
-            difficultyInput.value = '0';
-            difficultyLabel.textContent = '0';
-            metadataForm.style.display = 'block';
-
-            runConversion();
-        })
-        .catch((err: unknown) => {
-            output.textContent = `Error parsing MIDI file: ${err instanceof Error ? err.message : String(err)}`;
-        });
-});
-
-function runConversion(): void {
-    if (!_midi) return;
-    try {
-        const tempoMap = buildTempoMap(_midi.tracks);
-        _structure = buildSongStructure(_midi.tracks, tempoMap, _midi.division);
-        const result = convertPianoMidi(_midi.tracks, tempoMap, _midi.division, 0);
-        _keyboardNotes = result.keyboardNotes;
-
-        if (_keyboardNotes.Notes.length === 0) {
-            output.textContent = 'Warning: No piano notes found. Check that the MIDI file contains note data on a piano/keys track.';
-            handDisclaimer.style.display = 'none';
-            setDownloadsEnabled(false);
-            return;
-        }
-
-        handDisclaimer.style.display = result.usedHandFallback ? 'block' : 'none';
-        logMidi(_midiFilename, _midi, tempoMap, _keyboardNotes.Notes.length);
-        setDownloadsEnabled(true);
-    } catch (err: unknown) {
-        output.textContent = `Conversion error: ${err instanceof Error ? err.message : String(err)}`;
-        setDownloadsEnabled(false);
-    }
+// Skips redundant writes so re-rendering never disturbs a field being typed in.
+function setValue(el: HTMLInputElement | HTMLSelectElement, value: string): void {
+    if (el.value !== value) el.value = value;
 }
 
-function setDownloadsEnabled(enabled: boolean): void {
-    downloadAllBtn.disabled = !enabled;
+function show(el: HTMLElement, visible: boolean, display = 'block'): void {
+    el.style.display = visible ? display : 'none';
 }
 
-function buildSongInfo(): SongInfo {
-    return buildSharedSongInfo({
-        songName: songNameInput.value,
-        artistName: artistInput.value,
-        albumName: albumInput.value,
-        keysNotes: _keyboardNotes,
-        difficulty: parseFloat(difficultyInput.value),
-    });
-}
-
-downloadAllBtn.addEventListener('click', () => {
-    if (!_structure || !_keyboardNotes) return;
-
-    const songInfo = buildSongInfo();
-    const structure = _structure;
-    const keyboardNotes = _keyboardNotes;
-    const zipName = zipFilenameFor(songNameInput.value);
-
-    // Album art and audio are both optional and read async — read whichever are present, then
-    // zip once both settle. A read failure drops that one file rather than blocking the download,
-    // same as album art's previous behavior.
-    Promise.all([
-        readOptionalFile(albumArtInput),
-        readOptionalFile(audioInput),
-    ]).then(([artBuf, audioBuf]) => {
-        triggerZipDownload(buildMidiFiles({
-            songInfo, structure, keyboardNotes,
-            albumArt: artBuf && new Uint8Array(artBuf),
-            audio: audioBuf && new Uint8Array(audioBuf),
-        }), zipName);
-    });
-});
-
-// --- .psarc (Rocksmith) import ---
-// Conversion logic lives entirely in the reused C# (PsarcChartCore, compiled to wasm) -
-// this just drives the wasm module and reuses the same downloadJson/triggerZipDownload
-// helpers the MIDI path already uses. Loaded lazily so MIDI-only users never pay for it.
-
-let _psarcExports: any = null;
-let _psarcResult: PsarcSongResult | null = null;
-let _psarcAlbumArt: Uint8Array | null = null;
-let _psarcOggAudio: Uint8Array | null = null;
-
-declare global {
-    interface Window {
-        __psarcDotnet?: any;
-    }
-}
-
-// Vite's dev server routes every import() inside Vite-transformed source through its own
-// module pipeline, which refuses to serve .js files living under public/ that way (by
-// design - its own error message says so). The documented workaround is to load it via a
-// real <script type="module"> tag instead: that's a separate module graph root the
-// browser resolves natively over plain HTTP, bypassing Vite's dev-time transform entirely.
-function loadDotnetViaScriptTag(): Promise<any> {
-    return new Promise((resolve, reject) => {
-        if (window.__psarcDotnet) {
-            resolve(window.__psarcDotnet);
-            return;
-        }
-
-        // Raw string, so Vite won't rewrite it — prefix with BASE_URL ourselves.
-        const base = import.meta.env.BASE_URL;
-        const script = document.createElement('script');
-        script.type = 'module';
-        script.textContent = `
-            import { dotnet } from '${base}psarc-wasm/dotnet.js';
-            window.__psarcDotnet = dotnet;
-            window.dispatchEvent(new Event('psarc-dotnet-ready'));
-        `;
-        window.addEventListener('psarc-dotnet-ready', () => resolve(window.__psarcDotnet), { once: true });
-        script.onerror = () => reject(new Error(`Failed to load ${base}psarc-wasm/dotnet.js`));
-        document.head.appendChild(script);
-    });
-}
-
-async function loadPsarcWasm(): Promise<any> {
-    if (_psarcExports) return _psarcExports;
-
-    psarcStatus.textContent = 'Loading wasm module (first use only)…';
-    const dotnet = await loadDotnetViaScriptTag();
-    const { getAssemblyExports, getConfig } = await dotnet.create();
-    const config = getConfig();
-    _psarcExports = await getAssemblyExports(config.mainAssemblyName);
-    return _psarcExports;
-}
-
-// GetAlbumArt hands back raw decoded pixels ([width][height][RGBA8...]) rather than a PNG -
-// DDS decoding stays in C# (reuses Pfim's block decompression, already proven against the
-// desktop tool), but PNG encoding happens here via OffscreenCanvas so the wasm build doesn't
-// need System.Drawing, which has no browser-wasm support.
-async function fetchAlbumArtPng(exports: any, psarcBytes: Uint8Array, songKey: string): Promise<Uint8Array | null> {
-    const raw: Uint8Array = exports.PsarcInterop.GetAlbumArt(psarcBytes, songKey, 256);
-    if (!raw || raw.length === 0) return null;
-
-    const view = new DataView(raw.buffer, raw.byteOffset, raw.byteLength);
-    const width = view.getInt32(0, true);
-    const height = view.getInt32(4, true);
-    const rgba = new Uint8ClampedArray(raw.buffer as ArrayBuffer, raw.byteOffset + 8, width * height * 4);
-
-    const canvas = new OffscreenCanvas(width, height);
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return null;
-    ctx.putImageData(new ImageData(rgba, width, height), 0, 0);
-
-    const blob = await canvas.convertToBlob({ type: 'image/png' });
-    return new Uint8Array(await blob.arrayBuffer());
-}
-
-psarcInput.addEventListener('change', () => {
-    const file = psarcInput.files?.[0];
-    if (!file) return;
-
-    psarcStatus.textContent = 'Parsing…';
-    psarcMetadataForm.style.display = 'none';
-    psarcDownloadAllBtn.disabled = true;
-    _psarcResult = null;
-    _psarcAlbumArt = null;
-    _psarcOggAudio = null;
-
-    file.arrayBuffer()
-        .then(async (buffer) => {
-            const psarcBytes = new Uint8Array(buffer);
-            const exports = await loadPsarcWasm();
-
-            const resultJson = exports.PsarcInterop.ConvertAllPsarc(psarcBytes);
-            const songs: PsarcSongResult[] = JSON.parse(resultJson);
-
-            if (songs.length === 0 || songs[0].Parts.length === 0) {
-                psarcStatus.textContent = 'No arrangements found in this .psarc file.';
-                return;
-            }
-
-            // A .psarc almost always holds exactly one song; if it holds more (a
-            // compilation archive), only the first is imported.
-            _psarcResult = songs[0];
-
-            psarcSongNameInput.value = _psarcResult.SongData?.SongName ?? '';
-            psarcArtistInput.value = _psarcResult.SongData?.ArtistName ?? '';
-            psarcAlbumInput.value = _psarcResult.SongData?.AlbumName ?? '';
-            psarcMetadataForm.style.display = 'block';
-
-            const succeeded = _psarcResult.Parts.filter((p) => p.Part != null);
-            const failed = _psarcResult.Parts.filter((p) => p.Part == null);
-
-            if (succeeded.length === 0) {
-                psarcStatus.textContent = `All ${failed.length} arrangement(s) failed to convert.`;
-                return;
-            }
-
-            let status = `Converted ${succeeded.length}/${_psarcResult.Parts.length} part(s): ${succeeded.map((p) => p.Name).join(', ')}.`;
-            if (songs.length > 1) status += ` (${songs.length - 1} additional song(s) in this file were ignored.)`;
-            if (failed.length > 0) status += ` Failed: ${failed.map((p) => `${p.Name} (${p.Error})`).join('; ')}`;
-            psarcStatus.textContent = status;
-
-            psarcDownloadAllBtn.disabled = false;
-
-            // Non-fatal, same as the desktop tool's try/catch-and-skip around album art -
-            // doesn't block chart data if it fails or the song has none.
-            fetchAlbumArtPng(exports, psarcBytes, _psarcResult.SongKey)
-                .then((png) => { _psarcAlbumArt = png; })
-                .catch((err: unknown) => {
-                    console.warn('Album art extraction failed:', err);
-                });
-
-            // GetOggAudio already returns the final .ogg bytes - no client-side encoding
-            // needed, unlike album art. Also non-fatal.
-            const oggBytes: Uint8Array = exports.PsarcInterop.GetOggAudio(psarcBytes, _psarcResult.SongKey);
-            _psarcOggAudio = oggBytes.length > 0 ? oggBytes : null;
-        })
-        .catch((err: unknown) => {
-            psarcStatus.textContent = `Error parsing .psarc file: ${err instanceof Error ? err.message : String(err)}`;
-        });
-});
-
-psarcDownloadAllBtn.addEventListener('click', () => {
-    if (!_psarcResult) return;
-
-    const files = buildPsarcFiles({
-        result: _psarcResult,
-        songName: psarcSongNameInput.value,
-        artistName: psarcArtistInput.value,
-        albumName: psarcAlbumInput.value,
-    }, { albumArt: _psarcAlbumArt, audio: _psarcOggAudio });
-    if (!files) return;
-
-    triggerZipDownload(files, zipFilenameFor(psarcSongNameInput.value));
-});
-
-// --- Guitar Pro (.gp3/.gp4/.gp5) import ---
-// Parsing is entirely alphaTab's job (scoreConverter.ts) - no wasm/C# involved, unlike the .psarc
-// path above. Still dynamically imported so MIDI-only users never pay to load it.
-
-let _gpResult: ScoreConvertResult | null = null;
-
-gpInput.addEventListener('change', () => {
-    const file = gpInput.files?.[0];
-    if (!file) return;
-
-    gpStatus.textContent = 'Parsing…';
-    gpMetadataForm.style.display = 'none';
-    gpDownloadAllBtn.disabled = true;
-    _gpResult = null;
-
-    file.arrayBuffer()
-        .then(async (buffer) => {
-            const { convertGuitarPro } = await import('./scoreConverter');
-            const result = convertGuitarPro(new Uint8Array(buffer));
-            // The GP tab ships no keys.json, so detected piano parts count as skipped here.
-            const skipped = [...result.skipped, ...result.pianoTracks.map((p) => p.trackName)];
-
-            if (result.tracks.length === 0) {
-                gpStatus.textContent = skipped.length > 0
-                    ? `No fretted-instrument tracks found. Skipped: ${skipped.join(', ')}.`
-                    : 'No tracks found in this file.';
-                return;
-            }
-
-            _gpResult = result;
-            gpSongNameInput.value = result.songName;
-            gpArtistInput.value = result.artistName;
-            gpAlbumInput.value = '';
-            gpMetadataForm.style.display = 'block';
-
-            let status = `Converted ${result.tracks.length} track(s): ${result.tracks.map((t) => t.trackName).join(', ')}.`;
-            if (skipped.length > 0) status += ` Skipped (not a fretted instrument): ${skipped.join(', ')}.`;
-            gpStatus.textContent = status;
-
-            gpDownloadAllBtn.disabled = false;
-        })
-        .catch((err: unknown) => {
-            gpStatus.textContent = `Error parsing Guitar Pro file: ${err instanceof Error ? err.message : String(err)}`;
-        });
-});
-
-gpDownloadAllBtn.addEventListener('click', () => {
-    if (!_gpResult || _gpResult.tracks.length === 0) return;
-
-    const result = _gpResult;
-    const meta = {
-        songName: gpSongNameInput.value,
-        artistName: gpArtistInput.value,
-        albumName: gpAlbumInput.value,
-    };
-    const zipName = zipFilenameFor(gpSongNameInput.value);
-    Promise.all([
-        readOptionalFile(gpAlbumArtInput),
-        readOptionalFile(gpAudioInput),
-    ]).then(([artBuf, audioBuf]) => {
-        const files = buildGpFiles({ result, ...meta }, {
-            albumArt: artBuf && new Uint8Array(artBuf),
-            audio: audioBuf && new Uint8Array(audioBuf),
-        });
-        if (files) triggerZipDownload(files, zipName);
-    });
-});
-
-// --- MusicXML (.musicxml/.xml/.mxl) import ---
-// Same shape as the GP tab above; only the entry point differs. Content-sniffing lives in
-// ScoreLoader, so .mxl needs no special handling here. Guitar, piano (keys.json), and
-// vocals from one file all ship in a single download.
-
-let _musicxmlResult: ScoreConvertResult | null = null;
-
-musicxmlInput.addEventListener('change', () => {
-    const file = musicxmlInput.files?.[0];
-    if (!file) return;
-
-    musicxmlStatus.textContent = 'Parsing…';
-    musicxmlMetadataForm.style.display = 'none';
-    musicxmlDownloadAllBtn.disabled = true;
-    _musicxmlResult = null;
-
-    file.arrayBuffer()
-        .then(async (buffer) => {
-            const { convertMusicXml } = await import('./scoreConverter');
-            const result = convertMusicXml(new Uint8Array(buffer));
-            const lyricTracks = result.lyrics.filter((l) => l.vocals.length > 0);
-            const pianoNames = result.pianoTracks.map((p) => p.trackName);
-            const keysCount = mergePianoTracks(result.pianoTracks).Notes.length;
-
-            // A detected piano part with no notes ships nothing, so it can't open the download.
-            if (result.tracks.length === 0 && lyricTracks.length === 0 && keysCount === 0) {
-                const skipped = [...result.skipped, ...pianoNames];
-                musicxmlStatus.textContent = skipped.length > 0
-                    ? `No convertible notes found. Skipped: ${skipped.join(', ')}.`
-                    : 'No tracks found in this file.';
-                return;
-            }
-
-            _musicxmlResult = result;
-            musicxmlSongNameInput.value = result.songName;
-            musicxmlArtistInput.value = result.artistName;
-            musicxmlAlbumInput.value = '';
-            musicxmlMetadataForm.style.display = 'block';
-
-            // One lyric part is auto-picked (the common case, no UI shown); several
-            // get a <select> defaulting to the first rather than a naming guess.
-            musicxmlLyricsSelect.replaceChildren();
-            if (lyricTracks.length > 1) {
-                for (const l of lyricTracks) {
-                    const opt = document.createElement('option');
-                    opt.value = l.trackName;
-                    opt.textContent = l.trackName;
-                    musicxmlLyricsSelect.appendChild(opt);
-                }
-                musicxmlLyricsRow.style.display = '';
-            } else {
-                musicxmlLyricsRow.style.display = 'none';
-            }
-
-            // Lyric-bearing and detected-piano tracks aren't "skipped" - vocals
-            // convert as vocals, piano parts merge into keys.json below.
-            const skippedShown = result.skipped.filter((n) => !lyricTracks.some((l) => l.trackName === n) && !pianoNames.includes(n));
-
-            // Only surface things that need attention; a clean parse leaves this blank
-            // (the enabled download button is the success signal).
-            const notes: string[] = [];
-            if (skippedShown.length > 0) notes.push(`Skipped (not a fretted instrument): ${skippedShown.join(', ')}.`);
-            if (result.pianoTracks.some((p) => p.usedHandFallback)) {
-                notes.push('Piano hand assigned by fallback (not grand staff); may be wrong where hands cross.');
-            }
-            if (lyricTracks.length > 1) notes.push(`Lyrics in ${lyricTracks.length} tracks — choose one.`);
-            musicxmlStatus.textContent = notes.join(' ');
-
-            musicxmlDownloadAllBtn.disabled = false;
-        })
-        .catch((err: unknown) => {
-            musicxmlStatus.textContent = `Error parsing MusicXML file: ${err instanceof Error ? err.message : String(err)}`;
-        });
-});
-
-musicxmlDownloadAllBtn.addEventListener('click', () => {
-    if (!_musicxmlResult) return;
-
-    const result = _musicxmlResult;
-    const meta = {
-        songName: musicxmlSongNameInput.value,
-        artistName: musicxmlArtistInput.value,
-        albumName: musicxmlAlbumInput.value,
-        lyricsTrack: musicxmlLyricsSelect.value,
-    };
-    const zipName = zipFilenameFor(musicxmlSongNameInput.value);
-    Promise.all([
-        readOptionalFile(musicxmlAlbumArtInput),
-        readOptionalFile(musicxmlAudioInput),
-    ]).then(([artBuf, audioBuf]) => {
-        const files = buildMusicXmlFiles({ result, ...meta }, {
-            albumArt: artBuf && new Uint8Array(artBuf),
-            audio: audioBuf && new Uint8Array(audioBuf),
-        });
-        if (files) triggerZipDownload(files, zipName);
-    });
-});
-
-// strip whitespace and filesystem-unsafe
-// characters from the song name; falls back to "song.zip" when there's no name to use.
-function zipFilenameFor(songName: string): string {
-    const safeName = songName.trim().replace(/\s+/g, '').replace(/[<>:"/\\|?*]/g, '');
-    return `${safeName || 'song'}.zip`;
-}
-
-// Reads an optional <input type="file"> - no file selected or a read failure both resolve to
-// null rather than rejecting, so callers can Promise.all several of these without one missing
-// file blocking the rest of the download.
-function readOptionalFile(input: HTMLInputElement): Promise<ArrayBuffer | null> {
-    const file = input.files?.[0];
-    if (!file) return Promise.resolve(null);
-    return file.arrayBuffer().catch(() => null);
-}
-
-function triggerZipDownload(files: Record<string, Uint8Array>, zipName: string): void {
+function triggerZipDownload(files: ZipFiles, zipName: string): void {
     const zip = zipSync(files);
     const blob = new Blob([new Uint8Array(zip)], { type: 'application/zip' });
     const url = URL.createObjectURL(blob);
@@ -649,125 +177,121 @@ function triggerZipDownload(files: Record<string, Uint8Array>, zipName: string):
     URL.revokeObjectURL(url);
 }
 
-function extractMetadata(tracks: TMidiEvent[][]): { songName: string; artist: string } {
-    const candidates: string[] = [];
-
-    for (const track of tracks) {
-        for (const event of track) {
-            if ('trackName' in event) {
-                const v = (event as IMidiTrackNameEvent).trackName.trim();
-                if (v) candidates.push(v);
-            } else if ('text' in event) {
-                const v = (event as IMidiTextEvent).text.trim();
-                if (v) candidates.push(v);
-            }
-            if (candidates.length >= 2) break;
-        }
-        if (candidates.length >= 2) break;
-    }
-
-    return { songName: candidates[0] ?? '', artist: candidates[1] ?? '' };
+interface TabStore {
+    loadFile(file: File): Promise<void>;
+    buildFiles(): Promise<ZipFiles | null>;
+    get(): { meta: { songName: string } };
 }
 
-function logMidi(filename: string, midi: IMidiFile, tempoMap: TempoChange[], noteCount: number): void {
-    const lines: string[] = [];
-
-    lines.push(`File: ${filename}`);
-    lines.push(`Format: ${midi.format}  |  Division: ${midi.division} ticks/quarter  |  Tracks: ${midi.tracks.length}  |  Piano notes extracted: ${noteCount}`);
-    lines.push('');
-
-    // Tempo map summary
-    lines.push('── Tempo map');
-    for (const entry of tempoMap) {
-        const bpm = Math.round(60_000_000 / entry.microsecondsPerQuarter);
-        lines.push(`   tick=${entry.tick}  ${entry.microsecondsPerQuarter} µs/quarter (${bpm} BPM)`);
-    }
-    lines.push('');
-
-    midi.tracks.forEach((track, trackIndex) => {
-        const trackName = getTrackName(track);
-        lines.push(`── Track ${trackIndex}${trackName ? `: "${trackName}"` : ''} (${track.length} events)`);
-
-        let tempoCount = 0;
-        let noteOnCount = 0;
-        let noteOffCount = 0;
-        let cc64Count = 0;
-        let programChanges: number[] = [];
-        const textEvents: string[] = [];
-
-        for (const event of track) {
-            if ('setTempo' in event) {
-                const e = event as IMidiSetTempoEvent;
-                const bpm = Math.round(60_000_000 / e.setTempo.microsecondsPerQuarter);
-                lines.push(`   setTempo     δ=${e.delta}  ${e.setTempo.microsecondsPerQuarter} µs/quarter (${bpm} BPM)`);
-                tempoCount++;
-            } else if ('trackName' in event) {
-                const e = event as IMidiTrackNameEvent;
-                lines.push(`   trackName    δ=${e.delta}  "${e.trackName}"`);
-            } else if ('text' in event) {
-                const e = event as IMidiTextEvent;
-                textEvents.push(e.text);
-            } else if ('noteOn' in event) {
-                // NOTE: The C# MidiFile.cs (line 120-126) treats noteOn velocity=0 as a noteOff.
-                // midi-json-parser normalizes these — verify by checking if noteOff count matches noteOn count.
-                const e = event as IMidiNoteOnEvent;
-                if (noteOnCount < 5) {
-                    lines.push(`   noteOn       δ=${e.delta}  ch=${e.channel}  note=${e.noteOn.noteNumber}  vel=${e.noteOn.velocity}`);
-                } else if (noteOnCount === 5) {
-                    lines.push(`   noteOn       ... (showing first 5 only)`);
-                }
-                noteOnCount++;
-            } else if ('noteOff' in event) {
-                // The C# MidiFile.cs (line 128-131) handles NoteOff as a distinct command.
-                // Confirmed: library surfaces these separately from noteOn velocity=0.
-                const e = event as IMidiNoteOffEvent;
-                if (noteOffCount < 5) {
-                    lines.push(`   noteOff      δ=${e.delta}  ch=${e.channel}  note=${e.noteOff.noteNumber}  vel=${e.noteOff.velocity}`);
-                } else if (noteOffCount === 5) {
-                    lines.push(`   noteOff      ... (showing first 5 only)`);
-                }
-                noteOffCount++;
-            } else if ('controlChange' in event) {
-                const e = event as IMidiControlChangeEvent;
-                if (e.controlChange.type === 64) {
-                    lines.push(`   CC64 sustain δ=${e.delta}  ch=${e.channel}  val=${e.controlChange.value}`);
-                    cc64Count++;
-                }
-            } else if ('programChange' in event) {
-                // GM patch: 0-7 = acoustic/electric piano family — used for track detection in Phase 4
-                const e = event as IMidiProgramChangeEvent;
-                programChanges.push(e.programChange.programNumber);
-                lines.push(`   programChange δ=${e.delta}  ch=${e.channel}  program=${e.programChange.programNumber}${e.programChange.programNumber <= 7 ? ' (piano family)' : ''}`);
-            }
-        }
-
-        if (textEvents.length > 0) {
-            lines.push(`   text events: ${textEvents.map((t) => `"${t}"`).join(', ')}`);
-        }
-
-        lines.push(`   Summary: ${tempoCount} tempo | ${noteOnCount} noteOn | ${noteOffCount} noteOff | ${cc64Count} CC64 sustain | programs: [${programChanges.join(', ')}]`);
-
-        // Warn if noteOn/noteOff counts don't match — indicates unpaired notes that will affect Phase 4 duration calculation
-        if (noteOnCount > 0 && noteOnCount !== noteOffCount) {
-            lines.push(`   ⚠ noteOn/noteOff mismatch (${noteOnCount} on, ${noteOffCount} off) — pairing will rely on noteOn vel=0 normalization`);
-        }
-
-        lines.push('');
+// Wires the main file picker and Download button shared by every tab.
+function bindLoadAndDownload(store: TabStore, inputId: string, downloadId: string): void {
+    $<HTMLInputElement>(inputId).addEventListener('change', (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (file) void store.loadFile(file);
     });
-
-    const text = lines.join('\n');
-    output.textContent = text;
-    console.log(text);
+    $<HTMLButtonElement>(downloadId).addEventListener('click', () => {
+        const zipName = zipFilenameFor(store.get().meta.songName);
+        void store.buildFiles().then((files) => {
+            if (files) triggerZipDownload(files, zipName);
+        });
+    });
 }
 
-function getTrackName(track: TMidiEvent[]): string | null {
-    for (const event of track) {
-        if ('trackName' in event) {
-            return (event as IMidiTrackNameEvent).trackName;
-        }
+function bindAttachment(store: { setAttachment(k: AttachmentKind, f: File | null): void }, id: string, kind: AttachmentKind): void {
+    $<HTMLInputElement>(id).addEventListener('change', (e) => {
+        store.setAttachment(kind, (e.target as HTMLInputElement).files?.[0] ?? null);
+    });
+}
+
+function bindText(id: string, onInput: (value: string) => void): HTMLInputElement {
+    const el = $<HTMLInputElement>(id);
+    el.addEventListener('input', () => onInput(el.value));
+    return el;
+}
+
+// --- Piano MIDI ---
+const midiSongName = bindText('meta-song-name', (v) => midi.setMeta({ songName: v }));
+const midiArtist   = bindText('meta-artist',    (v) => midi.setMeta({ artistName: v }));
+const midiAlbum    = bindText('meta-album',     (v) => midi.setMeta({ albumName: v }));
+const midiDifficulty = $<HTMLInputElement>('meta-difficulty');
+midiDifficulty.addEventListener('input', () => midi.setMeta({ difficulty: parseFloat(midiDifficulty.value) }));
+bindAttachment(midi, 'meta-album-art', 'albumArt');
+bindAttachment(midi, 'meta-audio', 'audio');
+bindLoadAndDownload(midi, 'midi-input', 'download-all');
+
+midi.subscribe(() => {
+    const s = midi.get();
+    setValue(midiSongName, s.meta.songName);
+    setValue(midiArtist, s.meta.artistName);
+    setValue(midiAlbum, s.meta.albumName);
+    setValue(midiDifficulty, String(s.meta.difficulty));
+    $('meta-difficulty-value').textContent = String(s.meta.difficulty);
+    show($('metadata-form'), s.formVisible);
+    show($('hand-disclaimer'), s.handFallback);
+    $('output').textContent = s.status;
+    $<HTMLButtonElement>('download-all').disabled = s.phase !== 'ready';
+});
+
+// --- Rocksmith .psarc ---
+const psarcSongName = bindText('psarc-song-name', (v) => psarc.setMeta({ songName: v }));
+const psarcArtist   = bindText('psarc-artist',    (v) => psarc.setMeta({ artistName: v }));
+const psarcAlbum    = bindText('psarc-album',     (v) => psarc.setMeta({ albumName: v }));
+bindLoadAndDownload(psarc, 'psarc-input', 'psarc-download-all');
+
+psarc.subscribe(() => {
+    const s = psarc.get();
+    setValue(psarcSongName, s.meta.songName);
+    setValue(psarcArtist, s.meta.artistName);
+    setValue(psarcAlbum, s.meta.albumName);
+    show($('psarc-metadata-form'), s.formVisible);
+    $('psarc-status').textContent = s.status;
+    $<HTMLButtonElement>('psarc-download-all').disabled = s.phase !== 'ready';
+});
+
+// --- Guitar Pro ---
+const gpSongName = bindText('gp-song-name', (v) => gp.setMeta({ songName: v }));
+const gpArtist   = bindText('gp-artist',    (v) => gp.setMeta({ artistName: v }));
+const gpAlbum    = bindText('gp-album',     (v) => gp.setMeta({ albumName: v }));
+bindAttachment(gp, 'gp-album-art', 'albumArt');
+bindAttachment(gp, 'gp-audio', 'audio');
+bindLoadAndDownload(gp, 'gp-input', 'gp-download-all');
+
+gp.subscribe(() => {
+    const s = gp.get();
+    setValue(gpSongName, s.meta.songName);
+    setValue(gpArtist, s.meta.artistName);
+    setValue(gpAlbum, s.meta.albumName);
+    show($('gp-metadata-form'), s.formVisible);
+    $('gp-status').textContent = s.status;
+    $<HTMLButtonElement>('gp-download-all').disabled = s.phase !== 'ready';
+});
+
+// --- MusicXML ---
+const xmlSongName = bindText('musicxml-song-name', (v) => musicxml.setMeta({ songName: v }));
+const xmlArtist   = bindText('musicxml-artist',    (v) => musicxml.setMeta({ artistName: v }));
+const xmlAlbum    = bindText('musicxml-album',     (v) => musicxml.setMeta({ albumName: v }));
+const xmlLyrics = $<HTMLSelectElement>('musicxml-lyrics-select');
+xmlLyrics.addEventListener('change', () => musicxml.setMeta({ lyricsTrack: xmlLyrics.value }));
+bindAttachment(musicxml, 'musicxml-album-art', 'albumArt');
+bindAttachment(musicxml, 'musicxml-audio', 'audio');
+bindLoadAndDownload(musicxml, 'musicxml-input', 'musicxml-download-all');
+
+let renderedLyricsOptions: string[] | null = null;
+musicxml.subscribe(() => {
+    const s = musicxml.get();
+    setValue(xmlSongName, s.meta.songName);
+    setValue(xmlArtist, s.meta.artistName);
+    setValue(xmlAlbum, s.meta.albumName);
+    if (s.lyricsOptions !== renderedLyricsOptions) {
+        renderedLyricsOptions = s.lyricsOptions;
+        xmlLyrics.replaceChildren(...s.lyricsOptions.map((name) => new Option(name, name)));
     }
-    return null;
-}
+    setValue(xmlLyrics, s.meta.lyricsTrack);
+    show($('musicxml-lyrics-row'), s.lyricsOptions.length > 0, '');
+    show($('musicxml-metadata-form'), s.formVisible);
+    $('musicxml-status').textContent = s.status;
+    $<HTMLButtonElement>('musicxml-download-all').disabled = s.phase !== 'ready';
+});
 
 if (import.meta.env.VITE_DEMO_MODE === 'true') {
     const ribbon = document.createElement('div');
