@@ -18,7 +18,8 @@
     "build:wasm": "dotnet build wasm/PsarcChartCore.Wasm -c Release && node scripts/copy-wasm.mjs",
     "deploy": "npm run build:demo && gh-pages -d dist",
     "prebuild": "npm run build:tokens",
-    "lint:css": "stylelint \"src/**/*.css\""
+    "lint:css": "stylelint \"src/**/*.css\"",
+    "lint:ui-boundary": "node scripts/check-ui-boundary.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",

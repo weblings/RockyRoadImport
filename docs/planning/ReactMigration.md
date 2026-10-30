@@ -97,6 +97,10 @@ coexistence pattern Aurora needs.
 - After 3b (MusicXML island, `Select`): 1,598.87 kB, 418.85 kB gzip.
 - After 3c (MIDI island, `Slider`, `Disclosure`, `Callout`): 1,617.65 kB, 423.90 kB gzip.
 - After 3d (`.psarc` island, live status region): 1,617.25 kB, 423.53 kB gzip.
+- After 4 and 5 (Tabs shell, playground excluded from build): 1,624.69 kB, 424.62 kB gzip.
+  Total vs Phase 0: +428.44 kB, +133.06 kB gzip.
+- Boundary: `npm run lint:ui-boundary` allows only `react`, `react-dom`, `react-aria-components` in `src/ui`.
+  Playground: `npm run dev`, then `/playground.html` (dev only).
 - Goldens: `src/zipFiles.test.ts` (`npm test`). `.psarc` is pinned from a hand-built result, so the
   wasm parse path needs a manual check: `node wasm/PsarcChartCore.Wasm/test-node.mjs <file.psarc>`.
 - Screenshots: `npm run test:e2e`. Baselines are win32 only. `.psarc` has no loaded state (no fixture).
