@@ -7,6 +7,7 @@ export interface PsarcState {
     phase: Phase;
     status: string;
     formVisible: boolean;
+    fileName: string | null;
     meta: { songName: string; artistName: string; albumName: string };
 }
 
@@ -22,6 +23,7 @@ export function createPsarcStore(deps: PsarcDeps) {
         phase: 'idle',
         status: '',
         formVisible: false,
+        fileName: null,
         meta: { songName: '', artistName: '', albumName: '' },
     });
     let requestId = 0;

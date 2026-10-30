@@ -15,6 +15,7 @@ import { fetchAlbumArtPng, loadPsarcWasm, isPsarcWasmLoaded } from './stores/psa
 import { createElement } from 'react';
 import { mountIsland } from './ui';
 import { MidiPanel } from './MidiPanel';
+import { PsarcPanel } from './PsarcPanel';
 import { GpPanel } from './GpPanel';
 import { MusicXmlPanel } from './MusicXmlPanel';
 import { zipFilenameFor } from './stores/fileIo';
@@ -31,23 +32,7 @@ app.innerHTML = `
 
     <div id="tab-midi" class="tab-panel active"><div id="midi-island"></div></div>
 
-    <div id="tab-psarc" class="tab-panel is-hidden">
-        <h2>Rocksmith .psarc Importer</h2>
-        <input type="file" id="psarc-input" accept=".psarc" />
-        <div id="psarc-status" class="field-status"></div>
-
-        <div id="psarc-metadata-form" class="meta-form is-hidden">
-            <h3>Song Metadata</h3>
-            <table>
-                <tr><td>Song Name</td><td><input type="text" id="psarc-song-name" size="40" /></td></tr>
-                <tr><td>Artist</td><td><input type="text" id="psarc-artist" size="40" /></td></tr>
-                <tr><td>Album</td><td><input type="text" id="psarc-album" size="40" /></td></tr>
-            </table>
-        </div>
-
-        <br>
-        <button id="psarc-download-all" class="btn-primary" disabled>Download</button>
-    </div>
+    <div id="tab-psarc" class="tab-panel is-hidden"><div id="psarc-island"></div></div>
 
     <div id="tab-gp" class="tab-panel is-hidden"><div id="gp-island"></div></div>
 
@@ -81,15 +66,6 @@ const musicxml = createMusicXmlStore();
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
-// Skips redundant writes so re-rendering never disturbs a field being typed in.
-function setValue(el: HTMLInputElement | HTMLSelectElement, value: string): void {
-    if (el.value !== value) el.value = value;
-}
-
-function show(el: HTMLElement, visible: boolean, display = 'block'): void {
-    el.style.display = visible ? display : 'none';
-}
-
 function triggerZipDownload(files: ZipFiles, zipName: string): void {
     const zip = zipSync(files);
     const blob = new Blob([new Uint8Array(zip)], { type: 'application/zip' });
@@ -114,39 +90,11 @@ function downloadFrom(store: TabStore): void {
     });
 }
 
-// Wires the main file picker and Download button shared by every tab.
-function bindLoadAndDownload(store: TabStore, inputId: string, downloadId: string): void {
-    $<HTMLInputElement>(inputId).addEventListener('change', (e) => {
-        const file = (e.target as HTMLInputElement).files?.[0];
-        if (file) void store.loadFile(file);
-    });
-    $<HTMLButtonElement>(downloadId).addEventListener('click', () => downloadFrom(store));
-}
-
-function bindText(id: string, onInput: (value: string) => void): HTMLInputElement {
-    const el = $<HTMLInputElement>(id);
-    el.addEventListener('input', () => onInput(el.value));
-    return el;
-}
-
 // --- Piano MIDI ---
 mountIsland($('midi-island'), createElement(MidiPanel, { store: midi, onDownload: downloadFrom }));
 
 // --- Rocksmith .psarc ---
-const psarcSongName = bindText('psarc-song-name', (v) => psarc.setMeta({ songName: v }));
-const psarcArtist   = bindText('psarc-artist',    (v) => psarc.setMeta({ artistName: v }));
-const psarcAlbum    = bindText('psarc-album',     (v) => psarc.setMeta({ albumName: v }));
-bindLoadAndDownload(psarc, 'psarc-input', 'psarc-download-all');
-
-psarc.subscribe(() => {
-    const s = psarc.get();
-    setValue(psarcSongName, s.meta.songName);
-    setValue(psarcArtist, s.meta.artistName);
-    setValue(psarcAlbum, s.meta.albumName);
-    show($('psarc-metadata-form'), s.formVisible);
-    $('psarc-status').textContent = s.status;
-    $<HTMLButtonElement>('psarc-download-all').disabled = s.phase !== 'ready';
-});
+mountIsland($('psarc-island'), createElement(PsarcPanel, { store: psarc, onDownload: downloadFrom }));
 
 // --- Guitar Pro ---
 mountIsland($('gp-island'), createElement(GpPanel, { store: gp, onDownload: downloadFrom }));
