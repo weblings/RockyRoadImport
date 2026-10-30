@@ -1,0 +1,104 @@
+/* Tabs: same pill shape and colors as Library's instrument-filter chips. */
+.tabs {
+  display: flex;
+  justify-content: center;
+  gap: var(--size-space-sm);
+  margin-bottom: var(--size-space-lg);
+}
+
+/* The divider extends to #app's outer edge, past the narrower fields below it. */
+.tab-panel {
+  position: relative;
+  padding-top: var(--size-space-lg);
+}
+.tab-panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: calc(-1 * var(--size-space-lg));
+  right: calc(-1 * var(--size-space-lg));
+  height: 3px;
+  background: var(--color-surface-raised);
+}
+.tab-btn {
+  padding: var(--size-space-sm) 20px; border: none; border-radius: var(--size-radius-pill);
+  font-size: var(--size-font-md); font-weight: var(--font-weight-regular); cursor: pointer; font-family: inherit;
+  background: var(--color-control-bg); color: var(--color-text-default);
+}
+.tab-btn:hover { background: var(--color-control-bg-hover); }
+.tab-btn:active { background: var(--color-control-bg-active); }
+.tab-btn.active { background: var(--color-primary-bg); color: var(--color-text-on-primary); }
+.tab-btn.active:hover { background: var(--color-primary-bg-hover); }
+.tab-btn.active:active { background: var(--color-primary-bg-active); }
+
+/* Text/number inputs: same treatment as Library's search field. */
+input[type="text"],
+input[type="number"] {
+  background: var(--color-control-bg); border: none; border-radius: var(--size-radius-sm);
+  color: var(--color-text-default); font-size: var(--size-font-sm); font-family: inherit;
+  padding: 9px 12px;
+}
+input[type="text"]:hover,
+input[type="number"]:hover { background: var(--color-control-bg-hover); }
+input[type="text"]:focus,
+input[type="number"]:focus { outline: none; }
+
+/* Only the file button is stylable, so match the secondary-button look. */
+input[type="file"] {
+  color: var(--color-text-secondary); font-size: var(--size-font-sm); font-family: inherit;
+}
+input[type="file"]::file-selector-button {
+  padding: var(--size-space-sm) 14px; margin-right: 10px;
+  background: var(--color-control-bg); border: none; border-radius: var(--size-radius-sm);
+  color: var(--color-text-default); font-size: var(--size-font-sm); font-family: inherit; cursor: pointer;
+}
+input[type="file"]::file-selector-button:hover { background: var(--color-control-bg-hover); }
+
+input[type="range"] { accent-color: var(--color-control-accent); cursor: pointer; }
+#meta-difficulty-value { font-size: var(--size-font-xs); color: var(--color-text-secondary); }
+
+/* Metadata forms are label/value table rows. */
+table { width: 100%; border-collapse: collapse; }
+table tr { border-bottom: 1px solid var(--color-border-subtle); }
+table tr:last-child { border-bottom: none; }
+table td { padding: 10px 0; vertical-align: middle; }
+table td:first-child {
+  color: var(--color-text-secondary); font-size: var(--size-font-sm);
+  padding-right: var(--size-space-md); white-space: nowrap;
+}
+
+.meta-form { margin-top: var(--size-space-md); }
+
+.field-note {
+  display: block; color: var(--color-text-muted); font-size: var(--size-font-xs); line-height: 1.5;
+}
+.field-note a { color: var(--color-text-link); text-decoration: underline; }
+.field-note a:hover { color: var(--color-text-link-hover); }
+
+.field-status { margin-top: var(--size-space-xs); }
+#psarc-status { color: var(--color-text-muted); font-size: var(--size-font-sm); }
+
+.btn-primary {
+  padding: 10px var(--size-space-lg); margin-top: var(--size-space-md);
+  background: var(--color-primary-bg); border: none; border-radius: var(--size-radius-md);
+  color: var(--color-text-on-primary); font-size: var(--size-font-lg);
+  font-weight: var(--font-weight-semibold); cursor: pointer; font-family: inherit;
+}
+.btn-primary:hover { background: var(--color-primary-bg-hover); }
+.btn-primary:disabled { background: var(--color-control-bg); color: var(--color-text-disabled); cursor: not-allowed; }
+.btn-primary:disabled:hover { background: var(--color-control-bg); }
+
+/* Inline warning card with an amber accent on the heading only. */
+#hand-disclaimer {
+  background: var(--color-surface-raised); border: 1px solid var(--color-border-default);
+  border-radius: var(--size-radius-md); padding: 12px var(--size-space-md);
+  margin: var(--size-space-md) 0; font-size: var(--size-font-sm);
+}
+#hand-disclaimer > strong { display: block; margin-bottom: 6px; color: var(--color-text-warning); }
+#hand-disclaimer ul { color: var(--color-text-secondary); padding-left: 20px; }
+#hand-disclaimer li { margin-bottom: var(--size-space-xs); }
+#hand-disclaimer li strong { color: var(--color-text-emphasis); }
+
+.debug-log { margin-top: 12px; }
+.debug-log summary { cursor: pointer; font-size: var(--size-font-sm); color: var(--color-text-muted); }
+.debug-log pre { font-size: var(--size-font-xs); max-height: 60vh; overflow: auto; }

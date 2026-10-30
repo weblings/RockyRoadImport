@@ -1,3 +1,10 @@
+import '@fontsource/inter/latin-400.css';
+import '@fontsource/inter/latin-600.css';
+import '@fontsource/inter/latin-700.css';
+import './ui/tokens/generated/tokens.css';
+import './styles/base.css';
+import './styles/components.css';
+import './styles/ribbon.css';
 import { parseArrayBuffer } from 'midi-json-parser';
 import { zipSync } from 'fflate';
 import { createMidiStore } from './stores/midiStore';
@@ -21,9 +28,9 @@ app.innerHTML = `
         <h2>Piano MIDI Converter</h2>
         <input type="file" id="midi-input" accept=".mid,.midi" />
 
-        <div id="metadata-form" style="display:none; margin-top:16px;">
-            <h3 style="margin:0 0 8px 0;">Song Metadata</h3>
-            <table style="border-spacing:4px 6px;">
+        <div id="metadata-form" class="meta-form is-hidden">
+            <h3>Song Metadata</h3>
+            <table>
                 <tr><td>Song Name</td><td><input type="text" id="meta-song-name" size="40" /></td></tr>
                 <tr><td>Artist</td><td><input type="text" id="meta-artist" size="40" /></td></tr>
                 <tr><td>Album</td><td><input type="text" id="meta-album" size="40" /></td></tr>
@@ -48,7 +55,7 @@ app.innerHTML = `
         </div>
 
         <br>
-        <div id="hand-disclaimer" style="display:none;">
+        <div id="hand-disclaimer" class="is-hidden">
             <strong>&#9888; Hand Fallback Used</strong>
             <ul>
                 <li><strong>No "Left Hand" / "Right Hand" track names detected</strong> — rename MIDI tracks to include these for accurate results.</li>
@@ -56,20 +63,20 @@ app.innerHTML = `
             </ul>
         </div>
         <button id="download-all" class="btn-primary" disabled>Download</button>
-        <details style="margin-top:12px;">
-            <summary style="cursor:pointer; font-size:13px; color:#888;">Show debug log</summary>
-            <pre id="output" style="font-size:12px; max-height:60vh; overflow:auto;"></pre>
+        <details class="debug-log">
+            <summary>Show debug log</summary>
+            <pre id="output"></pre>
         </details>
     </div>
 
-    <div id="tab-psarc" class="tab-panel" style="display:none;">
+    <div id="tab-psarc" class="tab-panel is-hidden">
         <h2>Rocksmith .psarc Importer</h2>
         <input type="file" id="psarc-input" accept=".psarc" />
-        <div id="psarc-status" style="margin-top:4px;"></div>
+        <div id="psarc-status" class="field-status"></div>
 
-        <div id="psarc-metadata-form" style="display:none; margin-top:16px;">
-            <h3 style="margin:0 0 8px 0;">Song Metadata</h3>
-            <table style="border-spacing:4px 6px;">
+        <div id="psarc-metadata-form" class="meta-form is-hidden">
+            <h3>Song Metadata</h3>
+            <table>
                 <tr><td>Song Name</td><td><input type="text" id="psarc-song-name" size="40" /></td></tr>
                 <tr><td>Artist</td><td><input type="text" id="psarc-artist" size="40" /></td></tr>
                 <tr><td>Album</td><td><input type="text" id="psarc-album" size="40" /></td></tr>
@@ -80,14 +87,14 @@ app.innerHTML = `
         <button id="psarc-download-all" class="btn-primary" disabled>Download</button>
     </div>
 
-    <div id="tab-gp" class="tab-panel" style="display:none;">
+    <div id="tab-gp" class="tab-panel is-hidden">
         <h2>Guitar Pro Importer</h2>
         <input type="file" id="gp-input" accept=".gp3,.gp4,.gp5" />
-        <div id="gp-status" style="margin-top:4px;"></div>
+        <div id="gp-status" class="field-status"></div>
 
-        <div id="gp-metadata-form" style="display:none; margin-top:16px;">
-            <h3 style="margin:0 0 8px 0;">Song Metadata</h3>
-            <table style="border-spacing:4px 6px;">
+        <div id="gp-metadata-form" class="meta-form is-hidden">
+            <h3>Song Metadata</h3>
+            <table>
                 <tr><td>Song Name</td><td><input type="text" id="gp-song-name" size="40" /></td></tr>
                 <tr><td>Artist</td><td><input type="text" id="gp-artist" size="40" /></td></tr>
                 <tr><td>Album</td><td><input type="text" id="gp-album" size="40" /></td></tr>
@@ -104,20 +111,20 @@ app.innerHTML = `
         <button id="gp-download-all" class="btn-primary" disabled>Download</button>
     </div>
 
-    <div id="tab-musicxml" class="tab-panel" style="display:none;">
+    <div id="tab-musicxml" class="tab-panel is-hidden">
         <h2>MusicXML Importer (Piano and Guitar)</h2>
         <input type="file" id="musicxml-input" accept=".musicxml,.xml,.mxl" />
-        <div id="musicxml-status" style="margin-top:4px;"></div>
+        <div id="musicxml-status" class="field-status"></div>
 
-        <div id="musicxml-metadata-form" style="display:none; margin-top:16px;">
-            <h3 style="margin:0 0 8px 0;">Song Metadata</h3>
-            <table style="border-spacing:4px 6px;">
+        <div id="musicxml-metadata-form" class="meta-form is-hidden">
+            <h3>Song Metadata</h3>
+            <table>
                 <tr><td>Song Name</td><td><input type="text" id="musicxml-song-name" size="40" /></td></tr>
                 <tr><td>Artist</td><td><input type="text" id="musicxml-artist" size="40" /></td></tr>
                 <tr><td>Album</td><td><input type="text" id="musicxml-album" size="40" /></td></tr>
                 <tr><td>Album Art (optional)</td><td><input type="file" id="musicxml-album-art" accept="image/*" /></td></tr>
                 <tr><td>Song Audio (optional)</td><td><input type="file" id="musicxml-audio" accept=".ogg,audio/ogg" /></td></tr>
-                <tr id="musicxml-lyrics-row" style="display:none;"><td>Lyrics from</td><td><select id="musicxml-lyrics-select"></select></td></tr>
+                <tr id="musicxml-lyrics-row" class="is-hidden"><td>Lyrics from</td><td><select id="musicxml-lyrics-select"></select></td></tr>
                 <tr>
                     <td></td>
                     <td><span class="field-note">*Audio must be .ogg format.</span></td>

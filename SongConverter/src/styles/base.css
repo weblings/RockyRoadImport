@@ -1,0 +1,35 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* Always reserve the scrollbar gutter so #app's centering doesn't shift between tabs. */
+html {
+  scrollbar-gutter: stable;
+  overflow-y: scroll;
+}
+
+body {
+  background: var(--color-surface-page);
+  color: var(--color-text-default);
+  font-family: var(--font-family-sans);
+}
+
+#app {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--size-space-lg) var(--size-space-lg) 64px;
+}
+
+h2 {
+  font-size: var(--size-font-xl);
+  font-weight: var(--font-weight-bold);
+  margin-bottom: var(--size-space-md);
+}
+
+h3 {
+  font-size: var(--size-font-md);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--size-space-sm);
+}
+
+/* main.ts sets an inline display to reveal an element. */
+.is-hidden { display: none; }

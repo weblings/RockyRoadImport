@@ -1,0 +1,22 @@
+/* Demo-build-only ribbon (see main.ts's VITE_DEMO_MODE check), pinned to the viewport bottom. */
+#source-ribbon {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  text-align: center;
+  padding: var(--size-space-sm) 0;
+  font-size: var(--size-font-sm);
+}
+#source-ribbon a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+#source-ribbon svg { fill: currentColor; }
+#source-ribbon a:hover {
+  color: var(--color-text-default);
+  text-decoration: underline;
+}

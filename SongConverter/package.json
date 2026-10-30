@@ -5,6 +5,8 @@
   "version": "0.1.3",
   "type": "module",
   "scripts": {
+    "build:tokens": "node scripts/build-tokens.mjs",
+    "predev": "npm run build:tokens",
     "dev": "vite",
     "dev:demo": "cross-env VITE_DEMO_MODE=true npm run dev",
     "build": "npm run build:wasm && tsc && vite build",
@@ -14,7 +16,9 @@
     "test:e2e": "playwright test",
     "postinstall": "patch-package",
     "build:wasm": "dotnet build wasm/PsarcChartCore.Wasm -c Release && node scripts/copy-wasm.mjs",
-    "deploy": "npm run build:demo && gh-pages -d dist"
+    "deploy": "npm run build:demo && gh-pages -d dist",
+    "prebuild": "npm run build:tokens",
+    "lint:css": "stylelint \"src/**/*.css\""
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",
@@ -22,12 +26,15 @@
     "cross-env": "^10.1.0",
     "gh-pages": "^6.1.1",
     "patch-package": "^8.0.1",
+    "style-dictionary": "5.7.1",
+    "stylelint": "17.16.0",
     "typescript": "~5.9.3",
     "vite": "^8.0.0",
     "vitest": "^4.1.2"
   },
   "dependencies": {
     "@coderline/alphatab": "^1.8.4",
+    "@fontsource/inter": "5.3.0",
     "fflate": "^0.8.2",
     "midi-json-parser": "^8.1.73"
   }

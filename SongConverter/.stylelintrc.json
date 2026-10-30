@@ -1,0 +1,4 @@
+{
+  "ignoreFiles": ["src/ui/tokens/generated/**", "dist/**"],
+  "rules": { "color-no-hex": true }
+}
