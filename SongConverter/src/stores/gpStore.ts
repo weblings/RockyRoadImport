@@ -7,6 +7,7 @@ export interface GpState {
     phase: Phase;
     status: string;
     formVisible: boolean;
+    fileName: string | null;
     meta: { songName: string; artistName: string; albumName: string };
     attachments: AttachmentFiles;
 }
@@ -17,6 +18,7 @@ export function createGpStore() {
         phase: 'idle',
         status: '',
         formVisible: false,
+        fileName: null,
         meta: { songName: '', artistName: '', albumName: '' },
         attachments: { albumArt: null, audio: null },
     });
@@ -30,7 +32,7 @@ export function createGpStore() {
         async loadFile(file: File): Promise<void> {
             const id = ++requestId;
             result = null;
-            store.set({ phase: 'parsing', status: 'Parsing…', formVisible: false });
+            store.set({ phase: 'parsing', status: 'Parsing…', formVisible: false, fileName: file.name });
             try {
                 const buffer = await file.arrayBuffer();
                 const { convertGuitarPro } = await import('../scoreConverter');

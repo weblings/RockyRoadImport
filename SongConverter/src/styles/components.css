@@ -1,3 +1,4 @@
+@layer legacy {
 /* Tabs: same pill shape and colors as Library's instrument-filter chips. */
 .tabs {
   display: flex;
@@ -102,3 +103,6 @@ table td:first-child {
 .debug-log { margin-top: 12px; }
 .debug-log summary { cursor: pointer; font-size: var(--size-font-sm); color: var(--color-text-muted); }
 .debug-log pre { font-size: var(--size-font-xs); max-height: 60vh; overflow: auto; }
+
+.panel-actions { margin-top: calc(1lh + var(--size-space-md)); }
+}

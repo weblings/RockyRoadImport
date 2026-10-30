@@ -12,6 +12,9 @@ import { createPsarcStore } from './stores/psarcStore';
 import { createGpStore } from './stores/gpStore';
 import { createMusicXmlStore } from './stores/musicXmlStore';
 import { fetchAlbumArtPng, loadPsarcWasm, isPsarcWasmLoaded } from './stores/psarcWasm';
+import { createElement } from 'react';
+import { mountIsland } from './ui';
+import { GpPanel } from './GpPanel';
 import { zipFilenameFor, type AttachmentKind } from './stores/fileIo';
 import type { ZipFiles } from './zipFiles';
 
@@ -87,29 +90,7 @@ app.innerHTML = `
         <button id="psarc-download-all" class="btn-primary" disabled>Download</button>
     </div>
 
-    <div id="tab-gp" class="tab-panel is-hidden">
-        <h2>Guitar Pro Importer</h2>
-        <input type="file" id="gp-input" accept=".gp3,.gp4,.gp5" />
-        <div id="gp-status" class="field-status"></div>
-
-        <div id="gp-metadata-form" class="meta-form is-hidden">
-            <h3>Song Metadata</h3>
-            <table>
-                <tr><td>Song Name</td><td><input type="text" id="gp-song-name" size="40" /></td></tr>
-                <tr><td>Artist</td><td><input type="text" id="gp-artist" size="40" /></td></tr>
-                <tr><td>Album</td><td><input type="text" id="gp-album" size="40" /></td></tr>
-                <tr><td>Album Art (optional)</td><td><input type="file" id="gp-album-art" accept="image/*" /></td></tr>
-                <tr><td>Song Audio (optional)</td><td><input type="file" id="gp-audio" accept=".ogg,audio/ogg" /></td></tr>
-                <tr>
-                    <td></td>
-                    <td><span class="field-note">*Audio must be .ogg format.</span></td>
-                </tr>
-            </table>
-        </div>
-
-        <br>
-        <button id="gp-download-all" class="btn-primary" disabled>Download</button>
-    </div>
+    <div id="tab-gp" class="tab-panel is-hidden"><div id="gp-island"></div></div>
 
     <div id="tab-musicxml" class="tab-panel is-hidden">
         <h2>MusicXML Importer (Piano and Guitar)</h2>
@@ -190,18 +171,20 @@ interface TabStore {
     get(): { meta: { songName: string } };
 }
 
+function downloadFrom(store: TabStore): void {
+    const zipName = zipFilenameFor(store.get().meta.songName);
+    void store.buildFiles().then((files) => {
+        if (files) triggerZipDownload(files, zipName);
+    });
+}
+
 // Wires the main file picker and Download button shared by every tab.
 function bindLoadAndDownload(store: TabStore, inputId: string, downloadId: string): void {
     $<HTMLInputElement>(inputId).addEventListener('change', (e) => {
         const file = (e.target as HTMLInputElement).files?.[0];
         if (file) void store.loadFile(file);
     });
-    $<HTMLButtonElement>(downloadId).addEventListener('click', () => {
-        const zipName = zipFilenameFor(store.get().meta.songName);
-        void store.buildFiles().then((files) => {
-            if (files) triggerZipDownload(files, zipName);
-        });
-    });
+    $<HTMLButtonElement>(downloadId).addEventListener('click', () => downloadFrom(store));
 }
 
 function bindAttachment(store: { setAttachment(k: AttachmentKind, f: File | null): void }, id: string, kind: AttachmentKind): void {
@@ -256,22 +239,7 @@ psarc.subscribe(() => {
 });
 
 // --- Guitar Pro ---
-const gpSongName = bindText('gp-song-name', (v) => gp.setMeta({ songName: v }));
-const gpArtist   = bindText('gp-artist',    (v) => gp.setMeta({ artistName: v }));
-const gpAlbum    = bindText('gp-album',     (v) => gp.setMeta({ albumName: v }));
-bindAttachment(gp, 'gp-album-art', 'albumArt');
-bindAttachment(gp, 'gp-audio', 'audio');
-bindLoadAndDownload(gp, 'gp-input', 'gp-download-all');
-
-gp.subscribe(() => {
-    const s = gp.get();
-    setValue(gpSongName, s.meta.songName);
-    setValue(gpArtist, s.meta.artistName);
-    setValue(gpAlbum, s.meta.albumName);
-    show($('gp-metadata-form'), s.formVisible);
-    $('gp-status').textContent = s.status;
-    $<HTMLButtonElement>('gp-download-all').disabled = s.phase !== 'ready';
-});
+mountIsland($('gp-island'), createElement(GpPanel, { store: gp, onDownload: downloadFrom }));
 
 // --- MusicXML ---
 const xmlSongName = bindText('musicxml-song-name', (v) => musicxml.setMeta({ songName: v }));

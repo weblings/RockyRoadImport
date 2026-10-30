@@ -1,4 +1,9 @@
-* { margin: 0; padding: 0; box-sizing: border-box; }
+/* Unlayered rules beat layered ones, so resets and legacy rules sit in layers below ui. */
+@layer reset, legacy, ui;
+
+@layer reset {
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+}
 
 /* Always reserve the scrollbar gutter so #app's centering doesn't shift between tabs. */
 html {
