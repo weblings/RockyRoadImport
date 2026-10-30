@@ -1,5 +1,5 @@
 import { parseArrayBuffer } from 'midi-json-parser';
-import { zipSync, strToU8 } from 'fflate';
+import { zipSync } from 'fflate';
 import type {
     IMidiFile,
     IMidiSetTempoEvent,
@@ -14,10 +14,9 @@ import type {
 import { buildTempoMap, buildSongStructure, type TempoChange } from './tempoMap';
 import { convertPianoMidi } from './pianoConverter';
 import { buildSongInfo as buildSharedSongInfo, mergePianoTracks } from './songBuilder';
+import { buildMidiFiles, buildPsarcFiles, buildGpFiles, buildMusicXmlFiles } from './zipFiles';
 import type { ScoreConvertResult } from './scoreConverter';
-import type { TrackLyrics } from './vocals';
 import type { SongInfo, SongStructure, SongKeyboardNotes, PsarcSongResult } from './songformat';
-import { GENERATED_BY } from './version';
 
 const app = document.getElementById('app')!;
 app.innerHTML = `
@@ -281,18 +280,9 @@ function buildSongInfo(): SongInfo {
 downloadAllBtn.addEventListener('click', () => {
     if (!_structure || !_keyboardNotes) return;
 
-    const replacer = (_key: string, value: unknown): unknown => {
-        if (value === null) return undefined;
-        if (Array.isArray(value) && value.length === 0) return undefined;
-        return value;
-    };
-
-    const files: Record<string, Uint8Array> = {
-        'song.json':        strToU8(JSON.stringify(buildSongInfo(),  replacer, 2)),
-        'arrangement.json': strToU8(JSON.stringify(_structure,       replacer, 2)),
-        'keys.json':        strToU8(JSON.stringify(_keyboardNotes,   replacer, 2)),
-    };
-
+    const songInfo = buildSongInfo();
+    const structure = _structure;
+    const keyboardNotes = _keyboardNotes;
     const zipName = zipFilenameFor(songNameInput.value);
 
     // Album art and audio are both optional and read async — read whichever are present, then
@@ -302,9 +292,11 @@ downloadAllBtn.addEventListener('click', () => {
         readOptionalFile(albumArtInput),
         readOptionalFile(audioInput),
     ]).then(([artBuf, audioBuf]) => {
-        if (artBuf)   files['albumart.png'] = new Uint8Array(artBuf);
-        if (audioBuf) files['song.ogg']     = new Uint8Array(audioBuf);
-        triggerZipDownload(files, zipName);
+        triggerZipDownload(buildMidiFiles({
+            songInfo, structure, keyboardNotes,
+            albumArt: artBuf && new Uint8Array(artBuf),
+            audio: audioBuf && new Uint8Array(audioBuf),
+        }), zipName);
     });
 });
 
@@ -453,36 +445,13 @@ psarcInput.addEventListener('change', () => {
 psarcDownloadAllBtn.addEventListener('click', () => {
     if (!_psarcResult) return;
 
-    const succeeded = _psarcResult.Parts.filter((p) => p.Part != null);
-    if (succeeded.length === 0) return;
-
-    const songInfo = {
-        ..._psarcResult.SongData,
-        SongName: psarcSongNameInput.value.trim() || _psarcResult.SongData.SongName,
-        ArtistName: psarcArtistInput.value.trim() || _psarcResult.SongData.ArtistName,
-        AlbumName: psarcAlbumInput.value.trim() || undefined,
-        GeneratedBy: GENERATED_BY,
-    };
-
-    const files: Record<string, Uint8Array> = {
-        'song.json': strToU8(JSON.stringify(songInfo, null, 2)),
-    };
-
-    for (const part of succeeded) {
-        files[`${part.Name}.json`] = strToU8(JSON.stringify(part.Notes ?? part.Vocals, null, 2));
-    }
-
-    if (_psarcResult.Structure) {
-        files['arrangement.json'] = strToU8(JSON.stringify(_psarcResult.Structure, null, 2));
-    }
-
-    if (_psarcAlbumArt) {
-        files['albumart.png'] = _psarcAlbumArt;
-    }
-
-    if (_psarcOggAudio) {
-        files['song.ogg'] = _psarcOggAudio;
-    }
+    const files = buildPsarcFiles({
+        result: _psarcResult,
+        songName: psarcSongNameInput.value,
+        artistName: psarcArtistInput.value,
+        albumName: psarcAlbumInput.value,
+    }, { albumArt: _psarcAlbumArt, audio: _psarcOggAudio });
+    if (!files) return;
 
     triggerZipDownload(files, zipFilenameFor(psarcSongNameInput.value));
 });
@@ -536,30 +505,22 @@ gpInput.addEventListener('change', () => {
 gpDownloadAllBtn.addEventListener('click', () => {
     if (!_gpResult || _gpResult.tracks.length === 0) return;
 
-    const songInfo: SongInfo = buildSharedSongInfo({
-        songName: gpSongNameInput.value || _gpResult.songName,
-        artistName: gpArtistInput.value || _gpResult.artistName,
+    const result = _gpResult;
+    const meta = {
+        songName: gpSongNameInput.value,
+        artistName: gpArtistInput.value,
         albumName: gpAlbumInput.value,
-        guitarParts: _gpResult.tracks.map((t) => t.part),
-        guitarNotes: _gpResult.tracks.map((t) => t.notes),
-    });
-
-    const files: Record<string, Uint8Array> = {
-        'song.json':        strToU8(JSON.stringify(songInfo, null, 2)),
-        'arrangement.json': strToU8(JSON.stringify(_gpResult.structure, null, 2)),
     };
-    for (const track of _gpResult.tracks) {
-        files[`${track.part.InstrumentName}.json`] = strToU8(JSON.stringify(track.notes, null, 2));
-    }
-
     const zipName = zipFilenameFor(gpSongNameInput.value);
     Promise.all([
         readOptionalFile(gpAlbumArtInput),
         readOptionalFile(gpAudioInput),
     ]).then(([artBuf, audioBuf]) => {
-        if (artBuf)   files['albumart.png'] = new Uint8Array(artBuf);
-        if (audioBuf) files['song.ogg']     = new Uint8Array(audioBuf);
-        triggerZipDownload(files, zipName);
+        const files = buildGpFiles({ result, ...meta }, {
+            albumArt: artBuf && new Uint8Array(artBuf),
+            audio: audioBuf && new Uint8Array(audioBuf),
+        });
+        if (files) triggerZipDownload(files, zipName);
     });
 });
 
@@ -638,59 +599,26 @@ musicxmlInput.addEventListener('change', () => {
         });
 });
 
-// Single lyric part auto-picks; several read the <select> (defaults to the first).
-function pickMusicXmlLyrics(result: ScoreConvertResult): TrackLyrics | null {
-    const options = result.lyrics.filter((l) => l.vocals.length > 0);
-    if (options.length === 0) return null;
-    if (options.length === 1) return options[0];
-    return options.find((l) => l.trackName === musicxmlLyricsSelect.value) ?? options[0];
-}
-
 musicxmlDownloadAllBtn.addEventListener('click', () => {
     if (!_musicxmlResult) return;
-    const lyrics = pickMusicXmlLyrics(_musicxmlResult);
 
-    // All piano parts merge into one keys.json + keys/Keys part (the MIDI
-    // path shape); mixed guitar+piano+vocals files stay one upload.
-    const keysNotes = mergePianoTracks(_musicxmlResult.pianoTracks);
-    const hasKeys = keysNotes.Notes.length > 0;
-    if (_musicxmlResult.tracks.length === 0 && !lyrics && !hasKeys) return;
-
-    const songInfo: SongInfo = buildSharedSongInfo({
-        songName: musicxmlSongNameInput.value || _musicxmlResult.songName,
-        artistName: musicxmlArtistInput.value || _musicxmlResult.artistName,
+    const result = _musicxmlResult;
+    const meta = {
+        songName: musicxmlSongNameInput.value,
+        artistName: musicxmlArtistInput.value,
         albumName: musicxmlAlbumInput.value,
-        guitarParts: _musicxmlResult.tracks.map((t) => t.part),
-        guitarNotes: _musicxmlResult.tracks.map((t) => t.notes),
-        keysNotes,
-        vocalOnsets: lyrics ? lyrics.vocals.map((v) => v.TimeOffset) : [],
-    });
-    if (lyrics) {
-        songInfo.InstrumentParts.push({ InstrumentName: 'vocals', InstrumentType: 'Vocals' });
-    }
-
-    const files: Record<string, Uint8Array> = {
-        'song.json':        strToU8(JSON.stringify(songInfo, null, 2)),
-        'arrangement.json': strToU8(JSON.stringify(_musicxmlResult.structure, null, 2)),
+        lyricsTrack: musicxmlLyricsSelect.value,
     };
-    for (const track of _musicxmlResult.tracks) {
-        files[`${track.part.InstrumentName}.json`] = strToU8(JSON.stringify(track.notes, null, 2));
-    }
-    if (hasKeys) {
-        files['keys.json'] = strToU8(JSON.stringify(keysNotes, null, 2));
-    }
-    if (lyrics) {
-        files['vocals.json'] = strToU8(JSON.stringify(lyrics.vocals, null, 2));
-    }
-
     const zipName = zipFilenameFor(musicxmlSongNameInput.value);
     Promise.all([
         readOptionalFile(musicxmlAlbumArtInput),
         readOptionalFile(musicxmlAudioInput),
     ]).then(([artBuf, audioBuf]) => {
-        if (artBuf)   files['albumart.png'] = new Uint8Array(artBuf);
-        if (audioBuf) files['song.ogg']     = new Uint8Array(audioBuf);
-        triggerZipDownload(files, zipName);
+        const files = buildMusicXmlFiles({ result, ...meta }, {
+            albumArt: artBuf && new Uint8Array(artBuf),
+            audio: audioBuf && new Uint8Array(audioBuf),
+        });
+        if (files) triggerZipDownload(files, zipName);
     });
 });
 

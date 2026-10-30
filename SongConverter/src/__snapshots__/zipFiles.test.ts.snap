@@ -1,0 +1,357 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Guitar Pro zip entries > falls back to parsed song name, with attachments 1`] = `
+{
+  "albumart.png": "<7 bytes sha1:377eb1d2067f617c482206fb7306b21b0e56da4e>",
+  "arrangement.json": "{
+  "Sections": [],
+  "Beats": [
+    {
+      "TimeOffset": 0,
+      "IsMeasure": true
+    },
+    {
+      "TimeOffset": 0.5,
+      "IsMeasure": false
+    },
+    {
+      "TimeOffset": 1,
+      "IsMeasure": false
+    },
+    {
+      "TimeOffset": 1.5,
+      "IsMeasure": false
+    }
+  ]
+}",
+  "lead.json": "{
+  "Sections": [],
+  "Chords": [],
+  "Notes": [
+    {
+      "TimeOffset": 0,
+      "TimeLength": 0.5,
+      "EndTime": 0.5,
+      "Fret": 0,
+      "String": 5,
+      "HandFret": 0
+    },
+    {
+      "TimeOffset": 0.5,
+      "TimeLength": 0.5,
+      "EndTime": 1,
+      "Fret": 3,
+      "String": 5,
+      "HandFret": 3
+    },
+    {
+      "TimeOffset": 1,
+      "TimeLength": 0.5,
+      "EndTime": 1.5,
+      "Fret": 5,
+      "String": 5,
+      "HandFret": 5
+    }
+  ]
+}",
+  "song.json": "{
+  "SongName": "FixtureTune",
+  "ArtistName": "Someone",
+  "SongLengthSeconds": 1.5,
+  "InstrumentParts": [
+    {
+      "InstrumentName": "lead",
+      "InstrumentType": "LeadGuitar",
+      "Tuning": {
+        "StringSemitoneOffsets": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    }
+  ],
+  "GeneratedBy": "RockyRoadImport_vTEST"
+}",
+  "song.ogg": "<6 bytes sha1:115b05af9ce872705eb67a1b77b7e1efe09c07b9>",
+}
+`;
+
+exports[`MIDI zip entries > without attachments 1`] = `
+{
+  "arrangement.json": "{
+  "Beats": [
+    {
+      "TimeOffset": 0,
+      "IsMeasure": true
+    },
+    {
+      "TimeOffset": 0.5
+    },
+    {
+      "TimeOffset": 1
+    }
+  ]
+}",
+  "keys.json": "{
+  "Notes": [
+    {
+      "TimeOffset": 0,
+      "TimeLength": 0.25,
+      "EndTime": 0.25,
+      "Note": 60,
+      "Velocity": 80,
+      "Hand": "right"
+    },
+    {
+      "TimeOffset": 0.5,
+      "TimeLength": 0.25,
+      "EndTime": 0.75,
+      "Note": 64,
+      "Velocity": 80,
+      "Hand": "right"
+    },
+    {
+      "TimeOffset": 1,
+      "TimeLength": 0.25,
+      "EndTime": 1.25,
+      "Note": 67,
+      "Velocity": 80,
+      "Hand": "right"
+    }
+  ]
+}",
+  "song.json": "{
+  "SongName": "Golden Song",
+  "ArtistName": "Tester",
+  "SongLengthSeconds": 1.25,
+  "InstrumentParts": [
+    {
+      "InstrumentName": "keys",
+      "InstrumentType": "Keys",
+      "SongDifficulty": 2.5
+    }
+  ],
+  "GeneratedBy": "RockyRoadImport_vTEST"
+}",
+}
+`;
+
+exports[`MusicXML zip entries > guitar 1`] = `
+{
+  "arrangement.json": "{
+  "Sections": [],
+  "Beats": [
+    {
+      "TimeOffset": 0,
+      "IsMeasure": true
+    },
+    {
+      "TimeOffset": 0.5,
+      "IsMeasure": false
+    },
+    {
+      "TimeOffset": 1,
+      "IsMeasure": false
+    },
+    {
+      "TimeOffset": 1.5,
+      "IsMeasure": false
+    }
+  ]
+}",
+  "lead.json": "{
+  "Sections": [],
+  "Chords": [],
+  "Notes": [
+    {
+      "TimeOffset": 0,
+      "TimeLength": 0.5,
+      "EndTime": 0.5,
+      "Fret": 0,
+      "String": 5,
+      "HandFret": 0
+    },
+    {
+      "TimeOffset": 0.5,
+      "TimeLength": 0.5,
+      "EndTime": 1,
+      "Fret": 3,
+      "String": 5,
+      "HandFret": 3
+    },
+    {
+      "TimeOffset": 1,
+      "TimeLength": 0.5,
+      "EndTime": 1.5,
+      "Fret": 5,
+      "String": 5,
+      "HandFret": 5
+    }
+  ]
+}",
+  "song.json": "{
+  "SongName": "Typed Name",
+  "ArtistName": "Unknown",
+  "SongLengthSeconds": 1.5,
+  "InstrumentParts": [
+    {
+      "InstrumentName": "lead",
+      "InstrumentType": "LeadGuitar",
+      "Tuning": {
+        "StringSemitoneOffsets": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    }
+  ],
+  "GeneratedBy": "RockyRoadImport_vTEST",
+  "AlbumName": "Typed Album"
+}",
+}
+`;
+
+exports[`MusicXML zip entries > piano keys.json 1`] = `
+{
+  "arrangement.json": "{
+  "Sections": [],
+  "Beats": [
+    {
+      "TimeOffset": 0,
+      "IsMeasure": true
+    },
+    {
+      "TimeOffset": 0.5,
+      "IsMeasure": false
+    },
+    {
+      "TimeOffset": 1,
+      "IsMeasure": false
+    },
+    {
+      "TimeOffset": 1.5,
+      "IsMeasure": false
+    }
+  ]
+}",
+  "keys.json": "{
+  "Sections": [],
+  "Notes": [
+    {
+      "TimeOffset": 0,
+      "TimeLength": 0.5,
+      "EndTime": 0.5,
+      "Note": 60,
+      "Velocity": 95,
+      "Hand": "right"
+    },
+    {
+      "TimeOffset": 0,
+      "TimeLength": 0.5,
+      "EndTime": 0.5,
+      "Note": 48,
+      "Velocity": 95,
+      "Hand": "left"
+    },
+    {
+      "TimeOffset": 0.5,
+      "TimeLength": 0.5,
+      "EndTime": 1,
+      "Note": 62,
+      "Velocity": 95,
+      "Hand": "right"
+    },
+    {
+      "TimeOffset": 0.5,
+      "TimeLength": 0.5,
+      "EndTime": 1,
+      "Note": 50,
+      "Velocity": 95,
+      "Hand": "left"
+    },
+    {
+      "TimeOffset": 1,
+      "TimeLength": 0.5,
+      "EndTime": 1.5,
+      "Note": 64,
+      "Velocity": 95,
+      "Hand": "right"
+    },
+    {
+      "TimeOffset": 1,
+      "TimeLength": 0.5,
+      "EndTime": 1.5,
+      "Note": 52,
+      "Velocity": 95,
+      "Hand": "left"
+    },
+    {
+      "TimeOffset": 1.5,
+      "TimeLength": 0.5,
+      "EndTime": 2,
+      "Note": 65,
+      "Velocity": 95,
+      "Hand": "right"
+    },
+    {
+      "TimeOffset": 1.5,
+      "TimeLength": 0.5,
+      "EndTime": 2,
+      "Note": 53,
+      "Velocity": 95,
+      "Hand": "left"
+    }
+  ]
+}",
+  "song.json": "{
+  "SongName": "Typed Name",
+  "ArtistName": "Unknown",
+  "SongLengthSeconds": 2,
+  "InstrumentParts": [
+    {
+      "InstrumentName": "keys",
+      "InstrumentType": "Keys"
+    }
+  ],
+  "GeneratedBy": "RockyRoadImport_vTEST",
+  "AlbumName": "Typed Album"
+}",
+  "song.ogg": "<6 bytes sha1:115b05af9ce872705eb67a1b77b7e1efe09c07b9>",
+}
+`;
+
+exports[`psarc zip entries > trims names, empty album becomes undefined, failed parts skipped 1`] = `
+{
+  "albumart.png": "<7 bytes sha1:377eb1d2067f617c482206fb7306b21b0e56da4e>",
+  "arrangement.json": "{
+  "Sections": []
+}",
+  "lead.json": "{
+  "Notes": [
+    {
+      "TimeOffset": 1
+    }
+  ]
+}",
+  "song.json": "{
+  "SongName": "Edited",
+  "ArtistName": "Parsed Artist",
+  "InstrumentParts": [],
+  "GeneratedBy": "RockyRoadImport_vTEST"
+}",
+  "song.ogg": "<6 bytes sha1:115b05af9ce872705eb67a1b77b7e1efe09c07b9>",
+  "vocals.json": "[
+  {
+    "TimeOffset": 2
+  }
+]",
+}
+`;

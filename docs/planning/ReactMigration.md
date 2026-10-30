@@ -90,6 +90,13 @@ Each phase lands on its own and keeps the GitHub Pages demo deployable.
 The shell comes last so the tabs work across mixed vanilla and React panels, which is the same
 coexistence pattern Aurora needs.
 
+## Phase 0 baseline
+
+- Main chunk (`vite build`, 2026-10-30): 1,196.25 kB, 291.56 kB gzip. Phase 5 compares against this.
+- Goldens: `src/zipFiles.test.ts` (`npm test`). `.psarc` is pinned from a hand-built result, so the
+  wasm parse path needs a manual check: `node wasm/PsarcChartCore.Wasm/test-node.mjs <file.psarc>`.
+- Screenshots: `npm run test:e2e`. Baselines are win32 only. `.psarc` has no loaded state (no fixture).
+
 ## Risks
 
 - **Bundle size.** React plus React Aria is large next to today's main chunk. alphaTab and the wasm

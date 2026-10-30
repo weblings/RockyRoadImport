@@ -11,11 +11,14 @@
     "build:demo": "cross-env VITE_DEMO_MODE=true npm run build",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "postinstall": "patch-package",
     "build:wasm": "dotnet build wasm/PsarcChartCore.Wasm -c Release && node scripts/copy-wasm.mjs",
     "deploy": "npm run build:demo && gh-pages -d dist"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^26.6.6",
     "cross-env": "^10.1.0",
     "gh-pages": "^6.1.1",
     "patch-package": "^8.0.1",

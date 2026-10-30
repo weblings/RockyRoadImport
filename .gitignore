@@ -17,3 +17,7 @@ SongConverter/public/psarc-wasm/
 .beads-credential-key
 .beads/proxieddb/
 *.gate.lock*
+
+# Playwright
+SongConverter/test-results/
+SongConverter/playwright-report/
