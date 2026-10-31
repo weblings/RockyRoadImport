@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-// Screenshot baselines are per-platform (only win32 is committed; other platforms skip the
+// Screenshot baselines are per-platform (win32 and darwin are committed; other platforms skip the
 // screenshot assertion), and the local font makes them approximate. Loaded states use the committed fixtures. .psarc has no loaded state
 // because there is no redistributable fixture.
 const fixture = (name: string) => fileURLToPath(new URL(`../src/fixtures/${name}`, import.meta.url));

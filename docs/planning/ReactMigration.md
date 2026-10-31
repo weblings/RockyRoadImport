@@ -105,6 +105,17 @@ coexistence pattern Aurora needs.
   wasm parse path needs a manual check: `node wasm/PsarcChartCore.Wasm/test-node.mjs <file.psarc>`.
 - Screenshots: `npm run test:e2e`. Baselines are win32 only. `.psarc` has no loaded state (no fixture).
 
+## Accepted bundle budget
+
+Accepted at +133 kB gzip over Phase 0 (main chunk 424.62 kB gzip, 1,624.69 kB raw). Growth beyond
+that needs a reason recorded here.
+
+## Deferred from the extraction
+
+- Fonts (`@fontsource/inter`) are imported in `src/main.tsx`, not `src/ui`; the consumer owns them.
+- `tokens.json` has no primitive tier; semantic tokens hold raw values directly.
+- `mountIsland` has no test and no caller (the shell uses a single `createRoot`).
+
 ## Risks
 
 - **Bundle size.** React plus React Aria is large next to today's main chunk. alphaTab and the wasm
