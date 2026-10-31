@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import { FileTrigger as AriaFileTrigger } from 'react-aria-components';
 import { Button } from './Button';
 
@@ -14,12 +14,22 @@ export interface FileTriggerProps {
 
 export function FileTrigger({ label, accept, fileName, onSelect, layout = 'field' }: FileTriggerProps) {
     const labelId = useId();
+    // The browser refocuses the button when the native dialog closes, which reads as keyboard focus.
+    // Cleared only by a keypress: the dialog itself blurs the button, so blur can't reset it.
+    const [pointerOpened, setPointerOpened] = useState(false);
     return (
         <div className="ui-field ui-file-trigger" data-layout={layout}>
             <span id={labelId} className="ui-field-label">{label}</span>
             <div className="ui-file-trigger-control">
                 <AriaFileTrigger acceptedFileTypes={accept} onSelect={(files) => onSelect(files?.item(0) ?? null)}>
-                    <Button aria-labelledby={labelId}>Choose File</Button>
+                    <Button
+                        aria-labelledby={labelId}
+                        data-pointer-opened={pointerOpened || undefined}
+                        onPress={(e) => setPointerOpened(e.pointerType !== 'keyboard')}
+                        onKeyDown={() => setPointerOpened(false)}
+                    >
+                        Choose File
+                    </Button>
                 </AriaFileTrigger>
                 <span className="ui-file-name">{fileName ?? 'No file chosen'}</span>
             </div>

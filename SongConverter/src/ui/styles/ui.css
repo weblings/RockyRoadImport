@@ -10,6 +10,7 @@
     outline: var(--size-focus-ring-width) solid var(--color-focus-ring);
     outline-offset: var(--size-focus-ring-offset);
   }
+  .ui-button[data-pointer-opened] { outline: none; }
   .ui-button[data-variant="primary"] {
     padding: 10px var(--size-space-lg); border-radius: var(--size-radius-md);
     background: var(--color-primary-bg); color: var(--color-text-on-primary);
@@ -22,9 +23,8 @@
   .ui-field-list { display: grid; grid-template-columns: max-content 1fr; }
   .ui-field {
     display: grid; grid-template-columns: subgrid; grid-column: 1 / -1; align-items: center;
-    padding: 10px 0; border-bottom: 1px solid var(--color-border-subtle);
+    padding: 10px 0;
   }
-  .ui-field-list > .ui-field:last-child { border-bottom: none; }
   .ui-field-label {
     color: var(--color-text-secondary); font-size: var(--size-font-sm);
     padding-right: var(--size-space-md); white-space: nowrap;
