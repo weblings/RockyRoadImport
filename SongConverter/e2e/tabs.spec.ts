@@ -1,8 +1,9 @@
 import { test, expect, type Page } from '@playwright/test';
+import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-// Screenshot baselines are per-platform (win32 here), and the local font makes them
-// approximate. Loaded states use the committed fixtures. .psarc has no loaded state
+// Screenshot baselines are per-platform (only win32 is committed; other platforms skip the
+// screenshot assertion), and the local font makes them approximate. Loaded states use the committed fixtures. .psarc has no loaded state
 // because there is no redistributable fixture.
 const fixture = (name: string) => fileURLToPath(new URL(`../src/fixtures/${name}`, import.meta.url));
 
@@ -15,6 +16,12 @@ const tabs = [
 
 const tabNames: Record<string, string> = { midi: 'Piano MIDI', psarc: 'Rocksmith 2014', gp: 'Guitar Pro', musicxml: 'MusicXML' };
 
+async function expectShot(page: Page, name: string) {
+    const info = test.info();
+    if (!existsSync(info.snapshotPath(name)) && info.config.updateSnapshots !== 'all') return;
+    await expect(page).toHaveScreenshot(name);
+}
+
 async function openTab(page: Page, id: string) {
     await page.goto('/');
     await page.getByRole('tab', { name: tabNames[id] }).click();
@@ -23,7 +30,7 @@ async function openTab(page: Page, id: string) {
 for (const t of tabs) {
     test(`${t.id} empty`, async ({ page }) => {
         await openTab(page, t.id);
-        await expect(page).toHaveScreenshot(`${t.id}-empty.png`);
+        await expectShot(page, `${t.id}-empty.png`);
     });
 
     if (!t.input) continue;
@@ -31,7 +38,7 @@ for (const t of tabs) {
         await openTab(page, t.id);
         await page.getByRole('tabpanel').locator(t.input).setInputFiles(fixture(t.file));
         await expect(page.locator(t.ready)).toBeEnabled();
-        await expect(page).toHaveScreenshot(`${t.id}-loaded.png`);
+        await expectShot(page, `${t.id}-loaded.png`);
     });
 }
 
@@ -48,7 +55,7 @@ test.describe('musicxml lyrics picker', () => {
         const trigger = await load(page);
         await trigger.click();
         await expect(page.getByRole('option', { name: 'Harmony' })).toBeVisible();
-        await expect(page).toHaveScreenshot('musicxml-lyrics-open.png');
+        await expectShot(page, 'musicxml-lyrics-open.png');
     });
 
     test('click commits the choice', async ({ page }) => {
