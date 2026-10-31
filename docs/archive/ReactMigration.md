@@ -103,7 +103,8 @@ coexistence pattern Aurora needs.
   Playground: `npm run dev`, then `/playground.html` (dev only).
 - Goldens: `src/zipFiles.test.ts` (`npm test`). `.psarc` is pinned from a hand-built result, so the
   wasm parse path needs a manual check: `node wasm/PsarcChartCore.Wasm/test-node.mjs <file.psarc>`.
-- Screenshots: `npm run test:e2e`. Baselines are win32 only. `.psarc` has no loaded state (no fixture).
+- Screenshots: `npm run test:e2e`. Baselines are committed for win32 and darwin; other platforms skip the
+  screenshot assertion. `.psarc` has no loaded state (no fixture).
 
 ## Accepted bundle budget
 
