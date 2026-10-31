@@ -6,8 +6,12 @@ import { errorMessage, type Phase } from './fileIo';
 export interface PsarcState {
     phase: Phase;
     status: string;
+    // Things to check on a ready result; Download stays enabled.
+    warnings: string[];
     formVisible: boolean;
     fileName: string | null;
+    // Message from the last failed Download, cleared on retry or new file.
+    downloadError: string | null;
     meta: { songName: string; artistName: string; albumName: string };
 }
 
@@ -22,8 +26,10 @@ export function createPsarcStore(deps: PsarcDeps) {
     const store = createStore<PsarcState>({
         phase: 'idle',
         status: '',
+        warnings: [],
         formVisible: false,
         fileName: null,
+        downloadError: null,
         meta: { songName: '', artistName: '', albumName: '' },
     });
     let requestId = 0;
@@ -41,7 +47,7 @@ export function createPsarcStore(deps: PsarcDeps) {
             result = null;
             albumArt = Promise.resolve(null);
             oggAudio = null;
-            store.set({ phase: 'parsing', status: 'Parsing…', formVisible: false, fileName: file.name });
+            store.set({ phase: 'parsing', status: 'Parsing…', warnings: [], formVisible: false, fileName: file.name, downloadError: null });
             try {
                 const psarcBytes = new Uint8Array(await file.arrayBuffer());
                 if (deps.isWasmLoaded && !deps.isWasmLoaded()) {
@@ -75,9 +81,10 @@ export function createPsarcStore(deps: PsarcDeps) {
                     return;
                 }
 
-                let status = `Converted ${succeeded.length}/${song.Parts.length} part(s): ${succeeded.map((p) => p.Name).join(', ')}.`;
-                if (songs.length > 1) status += ` (${songs.length - 1} additional song(s) in this file were ignored.)`;
-                if (failed.length > 0) status += ` Failed: ${failed.map((p) => `${p.Name} (${p.Error})`).join('; ')}`;
+                const status = `Converted ${succeeded.length}/${song.Parts.length} part(s): ${succeeded.map((p) => p.Name).join(', ')}.`;
+                const warnings: string[] = [];
+                if (failed.length > 0) warnings.push(`Failed: ${failed.map((p) => `${p.Name} (${p.Error})`).join('; ')}.`);
+                if (songs.length > 1) warnings.push(`${songs.length - 1} additional song(s) in this file were ignored.`);
 
                 // Album art and audio are non-fatal: a failure drops that file, not the chart data.
                 albumArt = deps.fetchAlbumArt(exports, psarcBytes, song.SongKey).catch((err: unknown) => {
@@ -87,11 +94,15 @@ export function createPsarcStore(deps: PsarcDeps) {
                 const ogg: Uint8Array = exports.PsarcInterop.GetOggAudio(psarcBytes, song.SongKey);
                 oggAudio = ogg.length > 0 ? ogg : null;
 
-                store.set({ phase: 'ready', status });
+                store.set({ phase: 'ready', status, warnings });
             } catch (err: unknown) {
                 if (id !== requestId) return;
                 store.set({ phase: 'error', status: `Error parsing .psarc file: ${errorMessage(err)}` });
             }
+        },
+
+        setDownloadError(message: string | null): void {
+            store.set({ downloadError: message });
         },
 
         setMeta(patch: Partial<PsarcState['meta']>): void {

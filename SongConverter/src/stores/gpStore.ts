@@ -6,8 +6,12 @@ import { errorMessage, readOptionalFile, type AttachmentFiles, type AttachmentKi
 export interface GpState {
     phase: Phase;
     status: string;
+    // Things to check on a ready result; Download stays enabled.
+    warnings: string[];
     formVisible: boolean;
     fileName: string | null;
+    // Message from the last failed Download, cleared on retry or new file.
+    downloadError: string | null;
     meta: { songName: string; artistName: string; albumName: string };
     attachments: AttachmentFiles;
 }
@@ -17,8 +21,10 @@ export function createGpStore() {
     const store = createStore<GpState>({
         phase: 'idle',
         status: '',
+        warnings: [],
         formVisible: false,
         fileName: null,
+        downloadError: null,
         meta: { songName: '', artistName: '', albumName: '' },
         attachments: { albumArt: null, audio: null },
     });
@@ -32,7 +38,7 @@ export function createGpStore() {
         async loadFile(file: File): Promise<void> {
             const id = ++requestId;
             result = null;
-            store.set({ phase: 'parsing', status: 'Parsing…', formVisible: false, fileName: file.name });
+            store.set({ phase: 'parsing', status: 'Parsing…', warnings: [], formVisible: false, fileName: file.name, downloadError: null });
             try {
                 const buffer = await file.arrayBuffer();
                 const { convertGuitarPro } = await import('../scoreConverter');
@@ -52,11 +58,12 @@ export function createGpStore() {
                 }
 
                 result = converted;
-                let status = `Converted ${converted.tracks.length} track(s): ${converted.tracks.map((t) => t.trackName).join(', ')}.`;
-                if (skipped.length > 0) status += ` Skipped (not a fretted instrument): ${skipped.join(', ')}.`;
+                const status = `Converted ${converted.tracks.length} track(s): ${converted.tracks.map((t) => t.trackName).join(', ')}.`;
+                const warnings = skipped.length > 0 ? [`Skipped (not a fretted instrument): ${skipped.join(', ')}.`] : [];
                 store.set({
                     phase: 'ready',
                     status,
+                    warnings,
                     formVisible: true,
                     meta: { songName: converted.songName, artistName: converted.artistName, albumName: '' },
                 });
@@ -64,6 +71,10 @@ export function createGpStore() {
                 if (id !== requestId) return;
                 store.set({ phase: 'error', status: `Error parsing Guitar Pro file: ${errorMessage(err)}` });
             }
+        },
+
+        setDownloadError(message: string | null): void {
+            store.set({ downloadError: message });
         },
 
         setMeta(patch: Partial<GpState['meta']>): void {

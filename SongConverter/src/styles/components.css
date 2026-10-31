@@ -1,8 +1,7 @@
 @layer legacy {
 .meta-form { margin-top: var(--size-space-md); }
 
-.field-status { margin-top: var(--size-space-xs); }
-#psarc-status { color: var(--color-text-muted); font-size: var(--size-font-sm); }
+#psarc-status:not([data-tone="error"]) { color: var(--color-text-muted); font-size: var(--size-font-sm); }
 
 .debug-log { font-size: var(--size-font-xs); max-height: 60vh; overflow: auto; }
 

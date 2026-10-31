@@ -22,7 +22,7 @@ describe('PsarcPanel status', () => {
     it('is a polite live region that announces wasm-load and parse results', async () => {
         const { store, release } = setup();
         const { container } = render(<PsarcPanel store={store} onDownload={() => {}} />);
-        const status = screen.getByRole('status');
+        const status = document.getElementById('psarc-status')!;
         expect(status.getAttribute('aria-live')).toBe('polite');
         expect(status.textContent).toBe('');
 
@@ -31,11 +31,39 @@ describe('PsarcPanel status', () => {
         expect(status.textContent).toBe('Loading wasm module (first use only)…');
 
         await act(async () => { release(); await loading; });
-        expect(status.textContent).toBe('No arrangements found in this .psarc file.');
+        expect(status.textContent).toBe('✖ No arrangements found in this .psarc file.');
+        expect(status.getAttribute('data-tone')).toBe('error');
         expect(screen.getByRole('button', { name: 'Download' }).hasAttribute('disabled')).toBe(true);
         expect(screen.getByText('song.psarc')).toBeTruthy();
 
         const results = await axe(container);
         expect(results.violations).toEqual([]);
+    });
+});
+
+describe('PsarcPanel partial failure', () => {
+    it('keeps Download enabled and shows the failure as a separate warning line', async () => {
+        const song = (parts: unknown[]) => JSON.stringify([{
+            SongKey: 'k', SongData: { SongName: 'S', ArtistName: 'A', AlbumName: 'B', InstrumentParts: [] },
+            Structure: { Sections: [] }, Parts: parts,
+        }]);
+        const store = createPsarcStore({
+            loadWasm: async () => ({ PsarcInterop: {
+                ConvertAllPsarc: () => song([
+                    { Name: 'Rhythm', Part: { InstrumentName: 'rhythm' } },
+                    { Name: 'Lead', Part: null, Error: 'bad tuning' },
+                ]),
+                GetOggAudio: () => new Uint8Array(),
+            } }),
+            fetchAlbumArt: async () => null,
+        });
+        render(<PsarcPanel store={store} onDownload={() => {}} />);
+        await act(async () => { await store.loadFile(new File([new Uint8Array(4)], 'song.psarc')); });
+
+        expect(document.getElementById('psarc-status')!.textContent).toBe('Converted 1/2 part(s): Rhythm.');
+        const warnings = document.getElementById('psarc-warnings')!;
+        expect(warnings.getAttribute('data-tone')).toBe('warning');
+        expect(warnings.textContent).toBe('⚠ Failed: Lead (bad tuning).');
+        expect(screen.getByRole('button', { name: 'Download' }).hasAttribute('disabled')).toBe(false);
     });
 });

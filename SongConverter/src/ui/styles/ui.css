@@ -107,6 +107,10 @@
   .ui-callout-body li { margin-bottom: var(--size-space-xs); }
   .ui-callout-body li strong { color: var(--color-text-emphasis); }
 
+  .ui-status-message { margin-top: var(--size-space-xs); }
+  .ui-status-message[data-tone="warning"] { color: var(--color-text-warning); }
+  .ui-status-message[data-tone="error"] { color: var(--color-text-error); }
+
   .ui-tab-list { display: flex; justify-content: center; gap: var(--size-space-sm); margin-bottom: var(--size-space-lg); }
   .ui-tab {
     padding: var(--size-space-sm) 20px; border: none; border-radius: var(--size-radius-pill); outline: none;

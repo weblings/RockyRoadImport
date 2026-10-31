@@ -1,4 +1,4 @@
-import { Button, Callout, Disclosure, FieldList, FieldNote, FileTrigger, Slider, TextField } from './ui';
+import { Button, Callout, Disclosure, FieldList, FieldNote, FileTrigger, Slider, StatusMessage, TextField } from './ui';
 import type { MidiStore } from './stores/midiStore';
 import { useStore } from './useStore';
 
@@ -19,6 +19,7 @@ export function MidiPanel({ store, onDownload }: Props) {
                 fileName={s.fileName}
                 onSelect={(file) => { if (file) void store.loadFile(file); }}
             />
+            <StatusMessage id="midi-status" tone={s.phase === 'error' ? 'error' : 'neutral'}>{s.status}</StatusMessage>
 
             {s.formVisible && (
                 <div className="meta-form">
@@ -69,8 +70,9 @@ export function MidiPanel({ store, onDownload }: Props) {
                     Download
                 </Button>
             </div>
+            <StatusMessage tone="error" urgent>{s.downloadError}</StatusMessage>
             <Disclosure title="Show debug log">
-                <pre className="debug-log">{s.status}</pre>
+                <pre className="debug-log">{s.log}</pre>
             </Disclosure>
         </>
     );

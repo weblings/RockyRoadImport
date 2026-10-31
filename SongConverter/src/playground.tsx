@@ -6,7 +6,7 @@ import './ui/tokens/generated/tokens.css';
 import './styles/base.css';
 import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Button, Callout, Disclosure, FieldList, FieldNote, FileTrigger, Select, Slider, Tabs, TextField } from './ui';
+import { Button, Callout, Disclosure, FieldList, FieldNote, FileTrigger, Select, Slider, StatusMessage, Tabs, TextField } from './ui';
 
 function Playground() {
     const [text, setText] = useState('Artist');
@@ -33,6 +33,8 @@ function Playground() {
                 { id: 'b', label: 'Second', content: <p>Second panel.</p> },
             ]} />
             <Callout title="Callout"><p>Callout body.</p></Callout>
+            <StatusMessage>Status message.</StatusMessage>
+            <StatusMessage tone="error" urgent>Error message.</StatusMessage>
         </main>
     );
 }

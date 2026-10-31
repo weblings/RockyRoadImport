@@ -7,8 +7,12 @@ import { errorMessage, readOptionalFile, type AttachmentFiles, type AttachmentKi
 export interface MusicXmlState {
     phase: Phase;
     status: string;
+    // Things to check on a ready result; Download stays enabled.
+    warnings: string[];
     formVisible: boolean;
     fileName: string | null;
+    // Message from the last failed Download, cleared on retry or new file.
+    downloadError: string | null;
     meta: { songName: string; artistName: string; albumName: string; lyricsTrack: string };
     // Only populated when several tracks carry lyrics, which is when the picker shows.
     lyricsOptions: string[];
@@ -19,8 +23,10 @@ export function createMusicXmlStore() {
     const store = createStore<MusicXmlState>({
         phase: 'idle',
         status: '',
+        warnings: [],
         formVisible: false,
         fileName: null,
+        downloadError: null,
         meta: { songName: '', artistName: '', albumName: '', lyricsTrack: '' },
         lyricsOptions: [],
         attachments: { albumArt: null, audio: null },
@@ -35,7 +41,7 @@ export function createMusicXmlStore() {
         async loadFile(file: File): Promise<void> {
             const id = ++requestId;
             result = null;
-            store.set({ phase: 'parsing', status: 'Parsing…', formVisible: false, fileName: file.name });
+            store.set({ phase: 'parsing', status: 'Parsing…', warnings: [], formVisible: false, fileName: file.name, downloadError: null });
             try {
                 const buffer = await file.arrayBuffer();
                 const { convertMusicXml } = await import('../scoreConverter');
@@ -65,7 +71,7 @@ export function createMusicXmlStore() {
                 // vocals and piano parts merge into keys.json.
                 const skippedShown = converted.skipped.filter((n) => !lyricTracks.some((l) => l.trackName === n) && !pianoNames.includes(n));
 
-                // Only surface things that need attention; a clean parse leaves this blank.
+                // Only surface things that need attention; a clean parse leaves status blank.
                 const notes: string[] = [];
                 if (skippedShown.length > 0) notes.push(`Skipped (not a fretted instrument): ${skippedShown.join(', ')}.`);
                 if (converted.pianoTracks.some((p) => p.usedHandFallback)) {
@@ -75,7 +81,8 @@ export function createMusicXmlStore() {
 
                 store.set({
                     phase: 'ready',
-                    status: notes.join(' '),
+                    status: '',
+                    warnings: notes,
                     formVisible: true,
                     lyricsOptions,
                     meta: {
@@ -89,6 +96,10 @@ export function createMusicXmlStore() {
                 if (id !== requestId) return;
                 store.set({ phase: 'error', status: `Error parsing MusicXML file: ${errorMessage(err)}` });
             }
+        },
+
+        setDownloadError(message: string | null): void {
+            store.set({ downloadError: message });
         },
 
         setMeta(patch: Partial<MusicXmlState['meta']>): void {

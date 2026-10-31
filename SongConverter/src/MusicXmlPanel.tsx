@@ -1,4 +1,4 @@
-import { Button, FieldList, FieldNote, FileTrigger, Select, TextField } from './ui';
+import { Button, StatusMessage, FieldList, FieldNote, FileTrigger, Select, TextField } from './ui';
 import type { MusicXmlStore } from './stores/musicXmlStore';
 import { useStore } from './useStore';
 
@@ -19,7 +19,8 @@ export function MusicXmlPanel({ store, onDownload }: Props) {
                 fileName={s.fileName}
                 onSelect={(file) => { if (file) void store.loadFile(file); }}
             />
-            <div id="musicxml-status" className="field-status" role="status">{s.status}</div>
+            <StatusMessage id="musicxml-status" tone={s.phase === 'error' ? 'error' : 'neutral'}>{s.status}</StatusMessage>
+            <StatusMessage id="musicxml-warnings" tone="warning">{s.warnings.join(' ')}</StatusMessage>
 
             {s.formVisible && (
                 <div className="meta-form">
@@ -58,6 +59,7 @@ export function MusicXmlPanel({ store, onDownload }: Props) {
                     Download
                 </Button>
             </div>
+            <StatusMessage tone="error" urgent>{s.downloadError}</StatusMessage>
         </>
     );
 }

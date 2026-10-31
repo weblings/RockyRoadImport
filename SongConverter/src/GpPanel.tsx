@@ -1,4 +1,4 @@
-import { Button, FieldList, FieldNote, FileTrigger, TextField } from './ui';
+import { Button, StatusMessage, FieldList, FieldNote, FileTrigger, TextField } from './ui';
 import type { GpStore } from './stores/gpStore';
 import { useStore } from './useStore';
 
@@ -19,7 +19,8 @@ export function GpPanel({ store, onDownload }: Props) {
                 fileName={s.fileName}
                 onSelect={(file) => { if (file) void store.loadFile(file); }}
             />
-            <div id="gp-status" className="field-status" role="status">{s.status}</div>
+            <StatusMessage id="gp-status" tone={s.phase === 'error' ? 'error' : 'neutral'}>{s.status}</StatusMessage>
+            <StatusMessage id="gp-warnings" tone="warning">{s.warnings.join(' ')}</StatusMessage>
 
             {s.formVisible && (
                 <div className="meta-form">
@@ -50,6 +51,7 @@ export function GpPanel({ store, onDownload }: Props) {
                     Download
                 </Button>
             </div>
+            <StatusMessage tone="error" urgent>{s.downloadError}</StatusMessage>
         </>
     );
 }

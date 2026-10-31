@@ -10,10 +10,14 @@ import { errorMessage, readOptionalFile, type AttachmentFiles, type AttachmentKi
 
 export interface MidiState {
     phase: Phase;
-    // Debug log or the latest parse/convert message.
+    // One-line result or error message.
     status: string;
+    // Full conversion log, shown in the collapsed debug disclosure.
+    log: string;
     formVisible: boolean;
     fileName: string | null;
+    // Message from the last failed Download, cleared on retry or new file.
+    downloadError: string | null;
     handFallback: boolean;
     meta: { songName: string; artistName: string; albumName: string; difficulty: number };
     attachments: AttachmentFiles;
@@ -28,8 +32,10 @@ export function createMidiStore(deps: MidiDeps) {
     const store = createStore<MidiState>({
         phase: 'idle',
         status: '',
+        log: '',
         formVisible: false,
         fileName: null,
+        downloadError: null,
         handFallback: false,
         meta: { songName: '', artistName: '', albumName: '', difficulty: 0 },
         attachments: { albumArt: null, audio: null },
@@ -49,14 +55,15 @@ export function createMidiStore(deps: MidiDeps) {
                 store.set({
                     phase: 'error',
                     handFallback: false,
-                    status: 'Warning: No piano notes found. Check that the MIDI file contains note data on a piano/keys track.',
+                    status: 'No piano notes found. Check that the MIDI file contains note data on a piano/keys track.',
                 });
                 return;
             }
 
             const text = logMidi(filename, midi, tempoMap, keyboardNotes.Notes.length);
             console.log(text);
-            store.set({ phase: 'ready', handFallback: result.usedHandFallback, status: text });
+            const count = keyboardNotes.Notes.length;
+            store.set({ phase: 'ready', handFallback: result.usedHandFallback, status: `Converted ${count} piano note(s).`, log: text });
         } catch (err: unknown) {
             store.set({ phase: 'error', status: `Conversion error: ${errorMessage(err)}` });
         }
@@ -70,7 +77,7 @@ export function createMidiStore(deps: MidiDeps) {
             const id = ++requestId;
             structure = null;
             keyboardNotes = null;
-            store.set({ phase: 'parsing', status: 'Parsing…', fileName: file.name });
+            store.set({ phase: 'parsing', status: 'Parsing…', log: '', fileName: file.name, downloadError: null });
             try {
                 const midi = await deps.parse(await file.arrayBuffer());
                 if (id !== requestId) return;
@@ -85,6 +92,10 @@ export function createMidiStore(deps: MidiDeps) {
                 if (id !== requestId) return;
                 store.set({ phase: 'error', status: `Error parsing MIDI file: ${errorMessage(err)}` });
             }
+        },
+
+        setDownloadError(message: string | null): void {
+            store.set({ downloadError: message });
         },
 
         setMeta(patch: Partial<MidiState['meta']>): void {

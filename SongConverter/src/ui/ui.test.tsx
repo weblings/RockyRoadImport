@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'vitest-axe';
-import { Button, Callout, Disclosure, FieldList, FieldNote, FileTrigger, Select, Slider, Tabs, TextField } from './index';
+import { Button, Callout, Disclosure, FieldList, FieldNote, FileTrigger, Select, Slider, StatusMessage, Tabs, TextField } from './index';
 
 afterEach(cleanup);
 
@@ -158,6 +158,34 @@ describe('Callout', () => {
 
     it('has no axe violations', async () => {
         const { container } = render(<Callout title="Heads up"><p>details</p></Callout>);
+        await expectNoViolations(container);
+    });
+});
+
+describe('StatusMessage', () => {
+    it('is a polite status region by default and stays mounted when empty', () => {
+        render(<StatusMessage />);
+        const region = screen.getByRole('status');
+        expect(region.getAttribute('aria-live')).toBe('polite');
+        expect(region.textContent).toBe('');
+    });
+
+    it('becomes an assertive alert with an icon in the error tone when urgent', () => {
+        render(<StatusMessage tone="error" urgent>Failed</StatusMessage>);
+        const region = screen.getByRole('alert');
+        expect(region.getAttribute('data-tone')).toBe('error');
+        expect(region.textContent).toBe('✖ Failed');
+    });
+
+    it('prefixes the warning tone with a warning icon', () => {
+        render(<StatusMessage tone="warning">Partly done</StatusMessage>);
+        const region = screen.getByRole('status');
+        expect(region.getAttribute('data-tone')).toBe('warning');
+        expect(region.textContent).toBe('⚠ Partly done');
+    });
+
+    it('has no axe violations', async () => {
+        const { container } = render(<StatusMessage tone="error">Failed</StatusMessage>);
         await expectNoViolations(container);
     });
 });

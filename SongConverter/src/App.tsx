@@ -6,7 +6,7 @@ import { createPsarcStore } from './stores/psarcStore';
 import { createGpStore } from './stores/gpStore';
 import { createMusicXmlStore } from './stores/musicXmlStore';
 import { fetchAlbumArtPng, loadPsarcWasm, isPsarcWasmLoaded } from './stores/psarcWasm';
-import { zipFilenameFor } from './stores/fileIo';
+import { errorMessage, zipFilenameFor } from './stores/fileIo';
 import { MidiPanel } from './MidiPanel';
 import { PsarcPanel } from './PsarcPanel';
 import { GpPanel } from './GpPanel';
@@ -17,6 +17,7 @@ import type { ZipFiles } from './zipFiles';
 interface TabStore {
     buildFiles(): Promise<ZipFiles | null>;
     get(): { meta: { songName: string } };
+    setDownloadError(message: string | null): void;
 }
 
 function triggerZipDownload(files: ZipFiles, zipName: string): void {
@@ -30,11 +31,14 @@ function triggerZipDownload(files: ZipFiles, zipName: string): void {
     URL.revokeObjectURL(url);
 }
 
-function downloadFrom(store: TabStore): void {
-    const zipName = zipFilenameFor(store.get().meta.songName);
-    void store.buildFiles().then((files) => {
-        if (files) triggerZipDownload(files, zipName);
-    });
+export async function downloadFrom(store: TabStore): Promise<void> {
+    store.setDownloadError(null);
+    try {
+        const files = await store.buildFiles();
+        if (files) triggerZipDownload(files, zipFilenameFor(store.get().meta.songName));
+    } catch (err: unknown) {
+        store.setDownloadError(`Download failed: ${errorMessage(err)}`);
+    }
 }
 
 function SourceRibbon() {
