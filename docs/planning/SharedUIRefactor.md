@@ -1,6 +1,6 @@
 # Shared tokens and UI components across Aurora, RockyRoad, RockyRoadImport and the Website
 
-Status: planning (React direction chosen 2026-10-30. RockyRoadImport migration planned in [[rri-react-migration]], nothing else started)
+Status: in progress (React direction chosen 2026-10-30. RockyRoadImport migration shipped, see [[rri-react-migration]]; src/ui extraction and RockyRoad/Aurora adoption not started)
 Id: shared-ui-refactor
 
 Findings from a survey (2026-10-29) of how the four projects share design tokens and web UI

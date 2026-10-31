@@ -1,6 +1,6 @@
 # RockyRoadImport: migrate SongConverter's UI to React
 
-Status: planning (sequence agreed 2026-10-30, no work started)
+Status: shipped (all phases and the human A/B check complete 2026-10-31; epic RockyRoadImport-74l)
 Id: rri-react-migration
 
 Scoped plan for moving `SongConverter`'s page from one `innerHTML` template plus DOM wiring in
