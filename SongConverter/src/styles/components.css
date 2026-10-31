@@ -1,43 +1,4 @@
 @layer legacy {
-/* Tabs: same pill shape and colors as Library's instrument-filter chips. */
-.tabs {
-  display: flex;
-  justify-content: center;
-  gap: var(--size-space-sm);
-  margin-bottom: var(--size-space-lg);
-}
-
-/* The divider extends to #app's outer edge, past the narrower fields below it. */
-.tab-panel {
-  position: relative;
-  padding-top: var(--size-space-lg);
-}
-.tab-panel[inert] { display: none; }
-.tab-panel::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: calc(-1 * var(--size-space-lg));
-  right: calc(-1 * var(--size-space-lg));
-  height: 3px;
-  background: var(--color-surface-raised);
-}
-.tab-btn {
-  padding: var(--size-space-sm) 20px; border: none; border-radius: var(--size-radius-pill);
-  font-size: var(--size-font-md); font-weight: var(--font-weight-regular); cursor: pointer; font-family: inherit;
-  background: var(--color-control-bg); color: var(--color-text-default);
-}
-.tab-btn { outline: none; }
-.tab-btn[data-focus-visible] {
-  outline: var(--size-focus-ring-width) solid var(--color-focus-ring);
-  outline-offset: var(--size-focus-ring-offset);
-}
-.tab-btn[data-hovered] { background: var(--color-control-bg-hover); }
-.tab-btn[data-pressed] { background: var(--color-control-bg-active); }
-.tab-btn[data-selected] { background: var(--color-primary-bg); color: var(--color-text-on-primary); }
-.tab-btn[data-selected][data-hovered] { background: var(--color-primary-bg-hover); }
-.tab-btn[data-selected][data-pressed] { background: var(--color-primary-bg-active); }
-
 /* Text/number inputs: same treatment as Library's search field. */
 input[type="text"],
 input[type="number"] {

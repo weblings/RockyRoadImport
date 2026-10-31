@@ -6,7 +6,7 @@ import './ui/tokens/generated/tokens.css';
 import './styles/base.css';
 import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Button, Callout, Disclosure, FieldList, FieldNote, FileTrigger, Select, Slider, TextField } from './ui';
+import { Button, Callout, Disclosure, FieldList, FieldNote, FileTrigger, Select, Slider, Tabs, TextField } from './ui';
 
 function Playground() {
     const [text, setText] = useState('Artist');
@@ -28,6 +28,10 @@ function Playground() {
                 <Slider label="Slider" min={0} max={5} step={0.5} value={level} onChange={setLevel} />
             </FieldList>
             <Disclosure title="Disclosure"><p>Panel content.</p></Disclosure>
+            <Tabs label="Tabs" tabs={[
+                { id: 'a', label: 'First', content: <p>First panel.</p> },
+                { id: 'b', label: 'Second', content: <p>Second panel.</p> },
+            ]} />
             <Callout title="Callout"><p>Callout body.</p></Callout>
         </main>
     );

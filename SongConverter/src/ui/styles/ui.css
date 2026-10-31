@@ -115,4 +115,28 @@
   .ui-callout-body ul { padding-left: 20px; }
   .ui-callout-body li { margin-bottom: var(--size-space-xs); }
   .ui-callout-body li strong { color: var(--color-text-emphasis); }
+
+  .ui-tab-list { display: flex; justify-content: center; gap: var(--size-space-sm); margin-bottom: var(--size-space-lg); }
+  .ui-tab {
+    padding: var(--size-space-sm) 20px; border: none; border-radius: var(--size-radius-pill); outline: none;
+    font-size: var(--size-font-md); font-weight: var(--font-weight-regular); cursor: pointer; font-family: inherit;
+    background: var(--color-control-bg); color: var(--color-text-default);
+  }
+  .ui-tab[data-focus-visible] {
+    outline: var(--size-focus-ring-width) solid var(--color-focus-ring);
+    outline-offset: var(--size-focus-ring-offset);
+  }
+  .ui-tab[data-hovered] { background: var(--color-control-bg-hover); }
+  .ui-tab[data-pressed] { background: var(--color-control-bg-active); }
+  .ui-tab[data-selected] { background: var(--color-primary-bg); color: var(--color-text-on-primary); }
+  .ui-tab[data-selected][data-hovered] { background: var(--color-primary-bg-hover); }
+  .ui-tab[data-selected][data-pressed] { background: var(--color-primary-bg-active); }
+
+  /* The divider extends past the panel's edges to the page container's outer edge. */
+  .ui-tab-panel { position: relative; padding-top: var(--size-space-lg); }
+  .ui-tab-panel[inert] { display: none; }
+  .ui-tab-panel::before {
+    content: ""; position: absolute; top: 0; height: 3px; background: var(--color-surface-raised);
+    left: calc(-1 * var(--size-space-lg)); right: calc(-1 * var(--size-space-lg));
+  }
 }

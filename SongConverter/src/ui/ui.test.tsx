@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'vitest-axe';
-import { Button, Callout, Disclosure, FieldList, FieldNote, FileTrigger, Select, Slider, TextField } from './index';
+import { Button, Callout, Disclosure, FieldList, FieldNote, FileTrigger, Select, Slider, Tabs, TextField } from './index';
 
 afterEach(cleanup);
 
@@ -124,6 +124,27 @@ describe('Disclosure', () => {
 
     it('has no axe violations', async () => {
         const { container } = render(<Disclosure title="Show log"><p>log text</p></Disclosure>);
+        await expectNoViolations(container);
+    });
+});
+
+describe('Tabs', () => {
+    const tabs = [
+        { id: 'a', label: 'First', content: <p>first body</p> },
+        { id: 'b', label: 'Second', content: <p>second body</p> },
+    ];
+
+    it('switches tabs and keeps hidden panels mounted', async () => {
+        render(<Tabs label="Converter" tabs={tabs} />);
+        expect(screen.getByRole('tab', { name: 'First' }).getAttribute('aria-selected')).toBe('true');
+        await userEvent.click(screen.getByRole('tab', { name: 'Second' }));
+        expect(screen.getByRole('tab', { name: 'Second' }).getAttribute('aria-selected')).toBe('true');
+        expect(screen.getByText('first body', { selector: 'p' })).toBeTruthy();
+        expect(screen.getByRole('tabpanel').textContent).toBe('second body');
+    });
+
+    it('has no axe violations', async () => {
+        const { container } = render(<Tabs label="Converter" tabs={tabs} />);
         await expectNoViolations(container);
     });
 });

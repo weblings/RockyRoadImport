@@ -1,4 +1,5 @@
-// Fails if src/ui imports anything outside itself except the allowed packages.
+// Fails if src/ui imports anything outside itself except the allowed packages,
+// or if app code outside src/ui imports react-aria-components directly.
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 
@@ -16,6 +17,16 @@ function* walk(dir) {
 }
 
 const errors = [];
+const srcRoot = resolve('src');
+for (const file of walk(srcRoot)) {
+    if (file.startsWith(root + sep) || !/\.tsx?$/.test(file)) continue;
+    for (const m of readFileSync(file, 'utf8').matchAll(importRe)) {
+        const spec = m[1] ?? m[2] ?? m[3];
+        if (spec === 'react-aria-components' || spec.startsWith('react-aria')) {
+            errors.push(`${relative(process.cwd(), file)}: '${spec}' must be wrapped in src/ui`);
+        }
+    }
+}
 for (const file of walk(root)) {
     const isTest = /\.test\.tsx?$/.test(file);
     for (const m of readFileSync(file, 'utf8').matchAll(importRe)) {

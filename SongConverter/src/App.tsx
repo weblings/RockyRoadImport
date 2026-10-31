@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { Tab, TabList, TabPanel, Tabs } from 'react-aria-components';
 import { parseArrayBuffer } from 'midi-json-parser';
 import { zipSync } from 'fflate';
 import { createMidiStore } from './stores/midiStore';
@@ -12,6 +11,7 @@ import { MidiPanel } from './MidiPanel';
 import { PsarcPanel } from './PsarcPanel';
 import { GpPanel } from './GpPanel';
 import { MusicXmlPanel } from './MusicXmlPanel';
+import { Tabs } from './ui';
 import type { ZipFiles } from './zipFiles';
 
 interface TabStore {
@@ -61,27 +61,12 @@ export function App() {
 
     return (
         <>
-            <Tabs>
-                <TabList className="tabs" aria-label="Converter">
-                    <Tab id="midi" className="tab-btn">Piano MIDI</Tab>
-                    <Tab id="psarc" className="tab-btn">Rocksmith 2014</Tab>
-                    <Tab id="gp" className="tab-btn">Guitar Pro</Tab>
-                    <Tab id="musicxml" className="tab-btn">MusicXML</Tab>
-                </TabList>
-                {/* Force-mounted so each panel keeps its local state while hidden. */}
-                <TabPanel id="midi" className="tab-panel" shouldForceMount>
-                    <MidiPanel store={stores.midi} onDownload={downloadFrom} />
-                </TabPanel>
-                <TabPanel id="psarc" className="tab-panel" shouldForceMount>
-                    <PsarcPanel store={stores.psarc} onDownload={downloadFrom} />
-                </TabPanel>
-                <TabPanel id="gp" className="tab-panel" shouldForceMount>
-                    <GpPanel store={stores.gp} onDownload={downloadFrom} />
-                </TabPanel>
-                <TabPanel id="musicxml" className="tab-panel" shouldForceMount>
-                    <MusicXmlPanel store={stores.musicxml} onDownload={downloadFrom} />
-                </TabPanel>
-            </Tabs>
+            <Tabs label="Converter" tabs={[
+                { id: 'midi', label: 'Piano MIDI', content: <MidiPanel store={stores.midi} onDownload={downloadFrom} /> },
+                { id: 'psarc', label: 'Rocksmith 2014', content: <PsarcPanel store={stores.psarc} onDownload={downloadFrom} /> },
+                { id: 'gp', label: 'Guitar Pro', content: <GpPanel store={stores.gp} onDownload={downloadFrom} /> },
+                { id: 'musicxml', label: 'MusicXML', content: <MusicXmlPanel store={stores.musicxml} onDownload={downloadFrom} /> },
+            ]} />
             {import.meta.env.VITE_DEMO_MODE === 'true' && <SourceRibbon />}
         </>
     );
