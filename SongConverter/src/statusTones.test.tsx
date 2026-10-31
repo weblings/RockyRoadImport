@@ -82,7 +82,7 @@ describe('MusicXML status tones', () => {
         [{ name: 'clean', tone: 'neutral', downloadable: true, text: '' }, xml({})],
         [{ name: 'skipped', tone: 'neutral', downloadable: true, text: '', warning: /^⚠ Skipped \(not a fretted instrument\): Drums/ }, xml({ skipped: ['Drums'] })],
         [{ name: 'hand fallback', tone: 'neutral', downloadable: true, text: '', warning: /^⚠ Piano hand assigned by fallback/ }, xml({ pianoTracks: [{ trackName: 'Piano', usedHandFallback: true, notes: { Notes: [{}] } }] })],
-        [{ name: 'several lyric tracks', tone: 'neutral', downloadable: true, text: '', warning: /^⚠ Lyrics in 2 tracks/ }, xml({ lyrics: [lyric('V1'), lyric('V2')] })],
+        [{ name: 'several lyric tracks', tone: 'neutral', downloadable: true, text: /^Lyrics in 2 tracks — choose one below\.$/ }, xml({ lyrics: [lyric('V1'), lyric('V2')] })],
         [{ name: 'nothing usable', tone: 'error', downloadable: false, text: /^✖ No convertible notes found\. Skipped: Drums/ }, xml({ tracks: [], skipped: ['Drums'] })],
         [{ name: 'throws', tone: 'error', downloadable: false, text: /^✖ Error parsing MusicXML file: bad/ }, () => converters.musicXml.mockImplementation(() => { throw new Error('bad'); })],
     ];

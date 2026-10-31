@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render, screen } from '@testing-library/react';
 import { axe } from 'vitest-axe';
 import { MidiPanel } from './MidiPanel';
@@ -35,5 +35,20 @@ describe('MidiPanel errors', () => {
 
         act(() => store.setDownloadError(null));
         expect(screen.getByRole('alert').textContent).toBe('');
+    });
+
+    it('hides the previous song\'s form and hand-fallback callout after a failed load', async () => {
+        const parse = vi.fn()
+            .mockResolvedValueOnce({ tracks: [[]], division: 480 })
+            .mockRejectedValueOnce(new Error('bad header'));
+        const store = createMidiStore({ parse });
+        render(<MidiPanel store={store} onDownload={() => {}} />);
+        act(() => store.setMeta({ songName: 'Good' }));
+        await act(async () => { await store.loadFile(new File([new Uint8Array(4)], 'good.mid')); });
+        await act(async () => { await store.loadFile(new File([new Uint8Array(4)], 'broken.mid')); });
+
+        expect(store.get().formVisible).toBe(false);
+        expect(store.get().handFallback).toBe(false);
+        expect(screen.queryByText('Song Metadata')).toBeNull();
     });
 });

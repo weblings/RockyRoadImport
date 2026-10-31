@@ -77,11 +77,10 @@ export function createMusicXmlStore() {
                 if (converted.pianoTracks.some((p) => p.usedHandFallback)) {
                     notes.push('Piano hand assigned by fallback (not grand staff); may be wrong where hands cross.');
                 }
-                if (lyricTracks.length > 1) notes.push(`Lyrics in ${lyricTracks.length} tracks — choose one.`);
 
                 store.set({
                     phase: 'ready',
-                    status: '',
+                    status: lyricTracks.length > 1 ? `Lyrics in ${lyricTracks.length} tracks — choose one below.` : '',
                     warnings: notes,
                     formVisible: true,
                     lyricsOptions,

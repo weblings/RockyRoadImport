@@ -77,7 +77,7 @@ export function createMidiStore(deps: MidiDeps) {
             const id = ++requestId;
             structure = null;
             keyboardNotes = null;
-            store.set({ phase: 'parsing', status: 'Parsing…', log: '', fileName: file.name, downloadError: null });
+            store.set({ phase: 'parsing', status: 'Parsing…', log: '', formVisible: false, handFallback: false, fileName: file.name, downloadError: null });
             try {
                 const midi = await deps.parse(await file.arrayBuffer());
                 if (id !== requestId) return;
