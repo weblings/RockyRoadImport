@@ -22,7 +22,7 @@ for (const file of walk(srcRoot)) {
     if (file.startsWith(root + sep) || !/\.tsx?$/.test(file)) continue;
     for (const m of readFileSync(file, 'utf8').matchAll(importRe)) {
         const spec = m[1] ?? m[2] ?? m[3];
-        if (spec === 'react-aria-components' || spec.startsWith('react-aria')) {
+        if (/^(react-aria|@react-aria\/|react-stately|@react-stately\/|@react-types\/)/.test(spec)) {
             errors.push(`${relative(process.cwd(), file)}: '${spec}' must be wrapped in src/ui`);
         }
     }

@@ -5,7 +5,7 @@
   left: 0;
   right: 0;
   text-align: center;
-  padding: var(--size-space-sm) 0;
+  padding: var(--size-space-md) 0;
   font-size: var(--size-font-sm);
 }
 #source-ribbon a {

@@ -1,5 +1,5 @@
-/* Unlayered rules beat layered ones, so resets and legacy rules sit in layers below ui. */
-@layer reset, legacy, ui;
+/* Unlayered rules beat layered ones, so resets and app rules sit in layers below ui. */
+@layer reset, app, ui;
 
 @layer reset {
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -19,20 +19,21 @@ body {
 
 #app {
   max-width: 640px;
+  --ui-tab-panel-bleed: var(--size-space-2xl);
   margin: 0 auto;
-  padding: var(--size-space-lg) var(--size-space-lg) 64px;
+  padding: var(--size-space-2xl) var(--size-space-2xl) 64px;
 }
 
 h2 {
   font-size: var(--size-font-xl);
   font-weight: var(--font-weight-bold);
-  margin-bottom: var(--size-space-md);
+  margin-bottom: var(--size-space-xl);
 }
 
 h3 {
   font-size: var(--size-font-md);
   font-weight: var(--font-weight-bold);
   color: var(--color-text-secondary);
-  margin-bottom: var(--size-space-sm);
+  margin-bottom: var(--size-space-md);
 }
 
