@@ -33,6 +33,7 @@ describe('PsarcPanel status', () => {
         await act(async () => { release(); await loading; });
         expect(status.textContent).toBe('No arrangements found in this .psarc file.');
         expect(screen.getByRole('button', { name: 'Download' }).hasAttribute('disabled')).toBe(true);
+        expect(screen.getByText('song.psarc')).toBeTruthy();
 
         const results = await axe(container);
         expect(results.violations).toEqual([]);

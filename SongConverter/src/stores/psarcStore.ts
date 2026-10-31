@@ -41,7 +41,7 @@ export function createPsarcStore(deps: PsarcDeps) {
             result = null;
             albumArt = Promise.resolve(null);
             oggAudio = null;
-            store.set({ phase: 'parsing', status: 'Parsing…', formVisible: false });
+            store.set({ phase: 'parsing', status: 'Parsing…', formVisible: false, fileName: file.name });
             try {
                 const psarcBytes = new Uint8Array(await file.arrayBuffer());
                 if (deps.isWasmLoaded && !deps.isWasmLoaded()) {
