@@ -1,0 +1,60 @@
+diff --git a/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs b/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs
+index c02bd31..6f48c10 100644
+--- a/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs
++++ b/node_modules/@coderline/alphatab/dist/alphaTab.core.mjs
+@@ -7480,6 +7480,11 @@ class Beat {
+ 	*/
+ 	lyrics = null;
+ 	/**
++	* Parallel to lyrics: the <syllabic> value (single/begin/end/middle) per
++	* verse line, "" when the lyric carries none. The consumer joins runs.
++	*/
++	lyricsSyllabic = null;
++	/**
+ 	* Gets or sets a value indicating whether the beat is played in rasgueado style.
+ 	*/
+ 	get hasRasgueado() {
+@@ -8232,6 +8237,7 @@ class BeatCloner {
+ 		clone.dots = original.dots;
+ 		clone.fade = original.fade;
+ 		clone.lyrics = original.lyrics ? original.lyrics.slice() : null;
++		clone.lyricsSyllabic = original.lyricsSyllabic ? original.lyricsSyllabic.slice() : null;
+ 		clone.pop = original.pop;
+ 		clone.slap = original.slap;
+ 		clone.tap = original.tap;
+@@ -25937,12 +25943,19 @@ class MusicXmlImporter extends ScoreImporter {
+ 		const index = this._indexToTrackInfo.get(track.index).getLyricLine(element.getAttribute("number", ""));
+ 		if (beat.lyrics === null) beat.lyrics = [];
+ 		while (beat.lyrics.length <= index) beat.lyrics.push("");
++		if (beat.lyricsSyllabic === null) beat.lyricsSyllabic = [];
++		while (beat.lyricsSyllabic.length <= index) beat.lyricsSyllabic.push("");
+ 		for (const c of element.childElements()) switch (c.localName) {
+ 			case "text":
+ 				if (beat.lyrics[index]) beat.lyrics[index] += ` ${c.innerText}`;
+ 				else beat.lyrics[index] = c.innerText;
+ 				break;
+-			case "elision": beat.lyrics[index] += c.innerText;
++			case "elision":
++				beat.lyrics[index] += c.innerText;
++				break;
++			case "syllabic":
++				beat.lyricsSyllabic[index] = c.innerText;
++				break;
+ 		}
+ 	}
+ 	_parseNotations(element, note, beat, voice) {
+diff --git a/node_modules/@coderline/alphatab/dist/alphaTab.d.ts b/node_modules/@coderline/alphatab/dist/alphaTab.d.ts
+index 47ecdb0..93ecf6a 100644
+--- a/node_modules/@coderline/alphatab/dist/alphaTab.d.ts
++++ b/node_modules/@coderline/alphatab/dist/alphaTab.d.ts
+@@ -5016,6 +5016,10 @@ declare class Beat {
+      * Gets or sets the lyrics shown on this beat.
+      */
+     lyrics: string[] | null;
++    /**
++     * Parallel to lyrics: the MusicXML syllabic value per verse line.
++     */
++    lyricsSyllabic: string[] | null;
+     /**
+      * Gets or sets a value indicating whether the beat is played in rasgueado style.
+      */

@@ -133,7 +133,7 @@ export function extractTrackLyrics(
                     verses = Math.max(verses, beat.lyrics.length);
                     if (Array.isArray(beat.lyricsSyllabic)) syllabic = true;
                     const text = beat.lyrics[verse] ?? '';
-                    if (!text) continue;
+                    if (!text.trim()) continue; // placeholder lyrics like an ideographic space
                     const tick = beat.absolutePlaybackStart + tickShift;
                     const key = `${tick} ${text}`;
                     if (seen.has(key)) continue;

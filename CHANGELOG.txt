@@ -3,6 +3,7 @@ v0.2.0
 - Errors - Unified error displaying design and copy
 - Fix - Loading a new file clears the previous file's form and warnings
 - Dev - Added CI and tests
+- Dev - Update AlphaTab to 1.9.0 which addressed our submitted issue for MusicXML dynamics
 
 v0.1.3
 - Dev - Updated node dependencies (vite 8.3, vitest 4.1.12, fflate 0.8.3)

@@ -129,8 +129,7 @@ describe('piano note mapping', () => {
 
     it('keeps per-staff dynamics timelines apart (cross-staff leak)', () => {
         // Treble p must not reach the m.1 bass note; bass ff must not reach
-        // the m.2 treble note. Fails while alphaTab's part-wide
-        // _currentDynamics leaks across the <backup> interleave.
+        // the m.2 treble note (marks apply forward in time, not across the <backup> interleave).
         const [piano] = convertMusicXml(encode(leakFixtureXml)).pianoTracks;
         expect(piano.notes.filter((n) => n.Hand === 'right').map((n) => n.Velocity)).toEqual([95, 47, 47]);
         expect(piano.notes.filter((n) => n.Hand === 'left').map((n) => n.Velocity)).toEqual([95, 111, 111]);
@@ -151,8 +150,8 @@ describe('piano note mapping', () => {
         expect(piano.notes.filter((n) => n.Hand === 'left').map((n) => n.Velocity)).toEqual([31, 31, 95, 95]);
     });
 
-    it('keeps a staff on its own marks once it has one', () => {
-        // Bass marks p at beat 2; the later treble ff must not override it.
+    it('applies a later mark from either staff to both (alphaTab carries dynamics part-wide)', () => {
+        // Bass marks p at beat 2; the later treble ff at beat 3 takes over for the bass too.
         const mark = (m: string, staff: 1 | 2) =>
             `<direction><direction-type><dynamics><${m}/></dynamics></direction-type><staff>${staff}</staff></direction>`;
         const xml = pedalPart(
@@ -161,7 +160,7 @@ describe('piano note mapping', () => {
             + staffNote('C', 3, 2) + mark('p', 2) + staffNote('D', 3, 2) + staffNote('E', 3, 2) + staffNote('F', 3, 2),
         );
         const [piano] = convertMusicXml(encode(xml)).pianoTracks;
-        expect(piano.notes.filter((n) => n.Hand === 'left').map((n) => n.Velocity)).toEqual([95, 47, 47, 47]);
+        expect(piano.notes.filter((n) => n.Hand === 'left').map((n) => n.Velocity)).toEqual([95, 47, 111, 111]);
         expect(piano.notes.filter((n) => n.Hand === 'right').map((n) => n.Velocity)).toEqual([95, 47, 111, 111]);
     });
 
