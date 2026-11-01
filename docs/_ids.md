@@ -11,5 +11,6 @@ every run. Human lookup for `[[id]]` citations elsewhere in `docs/`.
 | `musicxml-support` | [planning/MusicXMLSupport.md](planning/MusicXMLSupport.md) | MusicXML → OpenSongChart: License & Library Findings |
 | `native-logic-reuse-decision` | [native-logic-reuse-decision.md](native-logic-reuse-decision.md) | Reusing existing native-language logic in a browser tool |
 | `piano-midi-analysis` | [archive/PIANO_MIDI_ANALYSIS.md](archive/PIANO_MIDI_ANALYSIS.md) | Piano MIDI → OpenSongChart: Gap Analysis |
+| `releasing` | [releasing.md](releasing.md) | Releasing a version |
 | `rri-react-migration` | [archive/ReactMigration.md](archive/ReactMigration.md) | RockyRoadImport: migrate SongConverter's UI to React |
 | `shared-ui-refactor` | [planning/SharedUIRefactor.md](planning/SharedUIRefactor.md) | Shared tokens and UI components across Aurora, RockyRoad, RockyRoadImport and the Website |
