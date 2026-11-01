@@ -1,0 +1,193 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`state copy > matches the snapshot 1`] = `
+{
+  "gp": [
+    {
+      "downloadError": undefined,
+      "name": "parse failure",
+      "status": "Couldn't read the Guitar Pro file: unexpected end of file.",
+      "warnings": [],
+    },
+    {
+      "downloadError": undefined,
+      "name": "no tracks",
+      "status": "No tracks found in this file. Check that it contains a guitar or bass track.",
+      "warnings": [],
+    },
+    {
+      "downloadError": undefined,
+      "name": "only skipped tracks",
+      "status": "No fretted-instrument tracks found. Skipped: Drums, Piano.",
+      "warnings": [],
+    },
+    {
+      "downloadError": undefined,
+      "name": "clean",
+      "status": "Converted 2 tracks: Lead, Bass.",
+      "warnings": [],
+    },
+    {
+      "downloadError": undefined,
+      "name": "skipped warning",
+      "status": "Converted 1 track: Lead.",
+      "warnings": [
+        "Skipped (not a fretted instrument): Drums.",
+      ],
+    },
+    {
+      "downloadError": "Couldn't download the ZIP: disk full.",
+      "name": "download failure",
+      "status": "Converted 1 track: Lead.",
+      "warnings": [],
+    },
+  ],
+  "midi": [
+    {
+      "downloadError": undefined,
+      "name": "parsing",
+      "status": "Parsing…",
+      "warnings": undefined,
+    },
+    {
+      "downloadError": undefined,
+      "name": "parse failure",
+      "status": "Couldn't read the MIDI file: unexpected end of file.",
+      "warnings": [],
+    },
+    {
+      "downloadError": undefined,
+      "name": "no piano notes",
+      "status": "No piano notes found. Check that the MIDI file contains note data on a piano/keys track.",
+      "warnings": [],
+    },
+    {
+      "downloadError": undefined,
+      "name": "conversion failure",
+      "status": "Couldn't convert the MIDI file: unexpected end of file.",
+      "warnings": [],
+    },
+    {
+      "downloadError": undefined,
+      "name": "clean",
+      "status": "Converted 42 piano notes.",
+      "warnings": [],
+    },
+    {
+      "downloadError": undefined,
+      "name": "hand fallback warning",
+      "status": "Converted 42 piano notes.",
+      "warnings": [
+        "Hands assigned by pitch (below middle C is left) because no Left Hand / Right Hand track names were found; may be wrong where hands cross. Rename tracks to include them.",
+      ],
+    },
+    {
+      "downloadError": "Couldn't download the ZIP: disk full.",
+      "name": "download failure",
+      "status": "Converted 42 piano notes.",
+      "warnings": [],
+    },
+  ],
+  "musicxml": [
+    {
+      "downloadError": undefined,
+      "name": "parse failure",
+      "status": "Couldn't read the MusicXML file: unexpected end of file.",
+      "warnings": [],
+    },
+    {
+      "downloadError": undefined,
+      "name": "no tracks",
+      "status": "No tracks found in this file. Check that it contains a guitar or bass track.",
+      "warnings": [],
+    },
+    {
+      "downloadError": undefined,
+      "name": "only skipped tracks",
+      "status": "No convertible notes found. Skipped: Drums.",
+      "warnings": [],
+    },
+    {
+      "downloadError": undefined,
+      "name": "clean (blank status)",
+      "status": "",
+      "warnings": [],
+    },
+    {
+      "downloadError": undefined,
+      "name": "skipped warning",
+      "status": "",
+      "warnings": [
+        "Skipped (not a fretted instrument): Drums.",
+      ],
+    },
+    {
+      "downloadError": undefined,
+      "name": "piano hand fallback warning",
+      "status": "",
+      "warnings": [
+        "Piano hand assigned by fallback (not grand staff); may be wrong where hands cross.",
+      ],
+    },
+    {
+      "downloadError": undefined,
+      "name": "several lyric tracks",
+      "status": "Lyrics in 2 tracks — choose one below.",
+      "warnings": [],
+    },
+    {
+      "downloadError": "Couldn't download the ZIP: disk full.",
+      "name": "download failure",
+      "status": "",
+      "warnings": [],
+    },
+  ],
+  "psarc": [
+    {
+      "downloadError": undefined,
+      "name": "loading converter",
+      "status": "Loading the converter (first use only)…",
+      "warnings": undefined,
+    },
+    {
+      "downloadError": undefined,
+      "name": "parse failure",
+      "status": "Couldn't read the PSARC file: unexpected end of file.",
+      "warnings": [],
+    },
+    {
+      "downloadError": undefined,
+      "name": "no arrangements",
+      "status": "No arrangements found in this PSARC file. Check that it is a Rocksmith 2014 song.",
+      "warnings": [],
+    },
+    {
+      "downloadError": undefined,
+      "name": "all failed",
+      "status": "Couldn't convert any of the 2 arrangements: Lead (bad tuning); Bass (unknown error).",
+      "warnings": [],
+    },
+    {
+      "downloadError": undefined,
+      "name": "clean",
+      "status": "Converted 2 of 2 parts: Lead, Bass.",
+      "warnings": [],
+    },
+    {
+      "downloadError": undefined,
+      "name": "partial failure + extra song",
+      "status": "Converted 1 of 2 parts: Bass.",
+      "warnings": [
+        "Couldn't convert: Lead (bad tuning).",
+        "Ignored 1 additional song in this file.",
+      ],
+    },
+    {
+      "downloadError": "Couldn't download the ZIP: disk full.",
+      "name": "download failure",
+      "status": "Converted 2 of 2 parts: Lead, Bass.",
+      "warnings": [],
+    },
+  ],
+}
+`;

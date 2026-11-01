@@ -2,6 +2,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { failure, plural } from './messages';
+import { STATE_CASES } from './stateCases';
 
 describe('messages', () => {
     it('formats failures as Couldn\'t <action>: <reason>.', () => {
@@ -26,5 +27,16 @@ describe('copy lives in messages.ts', () => {
     it.each(files)('%s', (file) => {
         const text = readFileSync(file, 'utf8');
         for (const re of banned) expect(text, `${file} matches ${re}`).not.toMatch(re);
+    });
+});
+
+// Pins the literal copy; a wording change shows up as a reviewable snapshot diff.
+describe('state copy', () => {
+    it('matches the snapshot', () => {
+        const texts = Object.fromEntries(Object.entries(STATE_CASES).map(([tab, cases]) => [
+            tab,
+            cases.map((c) => ({ name: c.name, status: c.patch.status, warnings: c.patch.warnings, downloadError: c.patch.downloadError })),
+        ]));
+        expect(texts).toMatchSnapshot();
     });
 });
