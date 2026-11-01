@@ -261,3 +261,17 @@ before a leading rest no longer reaches the other staff (~23 notes in 4 sweep fi
 
 **Fix:** diff converter output old-vs-new over real files before dropping a patch; green tests
 only cover what the patch was written for.
+
+---
+
+## Delete the old `patch-package` patch when bumping the dependency
+Tags: patch-package, upgrade, ci
+Applies-when: upgrading a patched dependency to a new version
+
+CI failed with `patch-package` exit 1 after the alphaTab 1.9.0 bump: the old
+`@coderline+alphatab+1.8.4.patch` was still tracked beside the new 1.9.0 patch, and
+`patch-package` applies every file in `patches/`, so it tried the 1.8.4 patch on 1.9.0.
+Local `node_modules` had already been swapped, so only a fresh install showed it.
+
+**Fix:** after regenerating a patch, check `git ls-files patches/` lists only the current version,
+and verify with a clean install (`npm i <pkg>@<version> patch-package` in a temp dir).
