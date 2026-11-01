@@ -19,7 +19,7 @@ describe('MidiPanel errors', () => {
         await act(async () => { await store.loadFile(new File([new Uint8Array(4)], 'broken.mid')); });
 
         const status = document.getElementById('midi-status')!;
-        expect(status.textContent).toBe('✖ Error parsing MIDI file: bad header');
+        expect(status.textContent).toBe("✖ Couldn't read the MIDI file: bad header.");
         expect(status.getAttribute('data-tone')).toBe('error');
         expect(status.closest('.ui-disclosure-panel, [hidden]')).toBeNull();
         expect(screen.getByRole('button', { name: 'Download' }).hasAttribute('disabled')).toBe(true);
@@ -30,8 +30,8 @@ describe('MidiPanel errors', () => {
         const { store } = setup();
         expect(screen.getByRole('alert').textContent).toBe('');
 
-        act(() => store.setDownloadError('Download failed: boom'));
-        expect(screen.getByRole('alert').textContent).toBe('✖ Download failed: boom');
+        act(() => store.setDownloadError("Couldn't download the ZIP: boom."));
+        expect(screen.getByRole('alert').textContent).toBe("✖ Couldn't download the ZIP: boom.");
 
         act(() => store.setDownloadError(null));
         expect(screen.getByRole('alert').textContent).toBe('');

@@ -28,10 +28,10 @@ describe('PsarcPanel status', () => {
 
         let loading!: Promise<void>;
         await act(async () => { loading = store.loadFile(new File([new Uint8Array(4)], 'song.psarc')); });
-        expect(status.textContent).toBe('Loading wasm module (first use only)…');
+        expect(status.textContent).toBe('Loading the converter (first use only)…');
 
         await act(async () => { release(); await loading; });
-        expect(status.textContent).toBe('✖ No arrangements found in this .psarc file.');
+        expect(status.textContent).toBe('✖ No arrangements found in this PSARC file. Check that it is a Rocksmith 2014 song.');
         expect(status.getAttribute('data-tone')).toBe('error');
         expect(screen.getByRole('button', { name: 'Download' }).hasAttribute('disabled')).toBe(true);
         expect(screen.getByText('song.psarc')).toBeTruthy();
@@ -60,10 +60,10 @@ describe('PsarcPanel partial failure', () => {
         render(<PsarcPanel store={store} onDownload={() => {}} />);
         await act(async () => { await store.loadFile(new File([new Uint8Array(4)], 'song.psarc')); });
 
-        expect(document.getElementById('psarc-status')!.textContent).toBe('Converted 1/2 part(s): Rhythm.');
+        expect(document.getElementById('psarc-status')!.textContent).toBe('Converted 1 of 2 parts: Rhythm.');
         const warnings = document.getElementById('psarc-warnings')!;
         expect(warnings.getAttribute('data-tone')).toBe('warning');
-        expect(warnings.textContent).toBe('⚠ Failed: Lead (bad tuning).');
+        expect(warnings.textContent).toBe("⚠ Couldn't convert: Lead (bad tuning).");
         expect(screen.getByRole('button', { name: 'Download' }).hasAttribute('disabled')).toBe(false);
     });
 });

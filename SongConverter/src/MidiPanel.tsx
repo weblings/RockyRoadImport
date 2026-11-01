@@ -57,7 +57,7 @@ export function MidiPanel({ store, onDownload }: Props) {
             )}
 
             {s.handFallback && (
-                <Callout title="Hand Fallback Used">
+                <Callout title="Hand fallback used">
                     <ul>
                         <li><strong>No "Left Hand" / "Right Hand" track names detected</strong> — rename MIDI tracks to include these for accurate results.</li>
                         <li><strong>Hand assigned by pitch</strong> — below middle C (MIDI 60) → left, above → right. May be wrong where hands cross.</li>

@@ -58,11 +58,11 @@ describe('Guitar Pro status tones', () => {
         songName: 'S', artistName: 'A', skipped: [], pianoTracks: [], tracks: [], ...result,
     });
     const cases: Array<[Case, () => void]> = [
-        [{ name: 'clean', tone: 'neutral', downloadable: true, text: /^Converted 1 track\(s\): Lead\.$/ }, gp({ tracks: [track] })],
-        [{ name: 'skipped', tone: 'neutral', downloadable: true, text: /^Converted 1 track\(s\): Lead\.$/, warning: /^⚠ Skipped \(not a fretted instrument\): Drums/ }, gp({ tracks: [track], skipped: ['Drums'] })],
+        [{ name: 'clean', tone: 'neutral', downloadable: true, text: /^Converted 1 track: Lead\.$/ }, gp({ tracks: [track] })],
+        [{ name: 'skipped', tone: 'neutral', downloadable: true, text: /^Converted 1 track: Lead\.$/, warning: /^⚠ Skipped \(not a fretted instrument\): Drums/ }, gp({ tracks: [track], skipped: ['Drums'] })],
         [{ name: 'nothing usable', tone: 'error', downloadable: false, text: /^✖ No fretted-instrument tracks found\. Skipped: Drums/ }, gp({ skipped: ['Drums'] })],
-        [{ name: 'empty', tone: 'error', downloadable: false, text: /^✖ No tracks found/ }, gp({})],
-        [{ name: 'throws', tone: 'error', downloadable: false, text: /^✖ Error parsing Guitar Pro file: bad/ }, () => converters.gp.mockImplementation(() => { throw new Error('bad'); })],
+        [{ name: 'empty', tone: 'error', downloadable: false, text: /^✖ No tracks found in this file\./ }, gp({})],
+        [{ name: 'throws', tone: 'error', downloadable: false, text: /^✖ Couldn't read the Guitar Pro file: bad\./ }, () => converters.gp.mockImplementation(() => { throw new Error('bad'); })],
     ];
     it.each(cases)('case %#', async (c, arrange) => {
         arrange();
@@ -84,7 +84,7 @@ describe('MusicXML status tones', () => {
         [{ name: 'hand fallback', tone: 'neutral', downloadable: true, text: '', warning: /^⚠ Piano hand assigned by fallback/ }, xml({ pianoTracks: [{ trackName: 'Piano', usedHandFallback: true, notes: { Notes: [{}] } }] })],
         [{ name: 'several lyric tracks', tone: 'neutral', downloadable: true, text: /^Lyrics in 2 tracks — choose one below\.$/ }, xml({ lyrics: [lyric('V1'), lyric('V2')] })],
         [{ name: 'nothing usable', tone: 'error', downloadable: false, text: /^✖ No convertible notes found\. Skipped: Drums/ }, xml({ tracks: [], skipped: ['Drums'] })],
-        [{ name: 'throws', tone: 'error', downloadable: false, text: /^✖ Error parsing MusicXML file: bad/ }, () => converters.musicXml.mockImplementation(() => { throw new Error('bad'); })],
+        [{ name: 'throws', tone: 'error', downloadable: false, text: /^✖ Couldn't read the MusicXML file: bad\./ }, () => converters.musicXml.mockImplementation(() => { throw new Error('bad'); })],
     ];
     it.each(cases)('case %#', async (c, arrange) => {
         arrange();
@@ -102,10 +102,10 @@ describe('Rocksmith status tones', () => {
         Structure: { Sections: [] }, Parts: parts,
     });
     const cases: Array<[Case, object[]]> = [
-        [{ name: 'clean', tone: 'neutral', downloadable: true, text: /^Converted 1\/1 part\(s\): lead\.$/ }, [song([part('lead')])]],
-        [{ name: 'partial failure', tone: 'neutral', downloadable: true, text: /^Converted 1\/2 part\(s\): lead\.$/, warning: /^⚠ Failed: bass \(boom\)\.$/ }, [song([part('lead'), part('bass', false)])]],
-        [{ name: 'extra songs ignored', tone: 'neutral', downloadable: true, text: /^Converted 1\/1 part\(s\): lead\.$/, warning: /^⚠ 1 additional song\(s\) in this file were ignored\.$/ }, [song([part('lead')]), song([part('lead')])]],
-        [{ name: 'all failed', tone: 'error', downloadable: false, text: /^✖ All 1 arrangement\(s\) failed/ }, [song([part('bass', false)])]],
+        [{ name: 'clean', tone: 'neutral', downloadable: true, text: /^Converted 1 of 1 part: lead\.$/ }, [song([part('lead')])]],
+        [{ name: 'partial failure', tone: 'neutral', downloadable: true, text: /^Converted 1 of 2 parts: lead\.$/, warning: /^⚠ Couldn't convert: bass \(boom\)\.$/ }, [song([part('lead'), part('bass', false)])]],
+        [{ name: 'extra songs ignored', tone: 'neutral', downloadable: true, text: /^Converted 1 of 1 part: lead\.$/, warning: /^⚠ Ignored 1 additional song in this file\.$/ }, [song([part('lead')]), song([part('lead')])]],
+        [{ name: 'all failed', tone: 'error', downloadable: false, text: /^✖ Couldn't convert any of the 1 arrangement/ }, [song([part('bass', false)])]],
         [{ name: 'no arrangements', tone: 'error', downloadable: false, text: /^✖ No arrangements found/ }, []],
     ];
     it.each(cases)('case %#', async (c, songs) => {
@@ -124,11 +124,11 @@ describe('MIDI status tones', () => {
     const converted = (usedHandFallback: boolean) => () =>
         converters.piano.mockReturnValueOnce({ keyboardNotes: { Notes: [{}] }, usedHandFallback });
     const cases: Array<[Case, () => Promise<unknown>, () => void]> = [
-        [{ name: 'parse failure', tone: 'error', downloadable: false, text: /^✖ Error parsing MIDI file: bad/ }, async () => { throw new Error('bad'); }, () => {}],
+        [{ name: 'parse failure', tone: 'error', downloadable: false, text: /^✖ Couldn't read the MIDI file: bad\./ }, async () => { throw new Error('bad'); }, () => {}],
         [{ name: 'no piano notes', tone: 'error', downloadable: false, text: /^✖ No piano notes found\./ }, empty, () => {}],
-        [{ name: 'conversion failure', tone: 'error', downloadable: false, text: /^✖ Conversion error: bad/ }, empty, () => converters.piano.mockImplementationOnce(() => { throw new Error('bad'); })],
-        [{ name: 'clean', tone: 'neutral', downloadable: true, text: /^Converted 1 piano note\(s\)\.$/ }, empty, converted(false)],
-        [{ name: 'hand fallback', tone: 'neutral', downloadable: true, text: /^Converted 1 piano note\(s\)\.$/ }, empty, converted(true)],
+        [{ name: 'conversion failure', tone: 'error', downloadable: false, text: /^✖ Couldn't convert the MIDI file: bad\./ }, empty, () => converters.piano.mockImplementationOnce(() => { throw new Error('bad'); })],
+        [{ name: 'clean', tone: 'neutral', downloadable: true, text: /^Converted 1 piano note\.$/ }, empty, converted(false)],
+        [{ name: 'hand fallback', tone: 'neutral', downloadable: true, text: /^Converted 1 piano note\.$/ }, empty, converted(true)],
     ];
     it.each(cases)('case %#', async (c, parse, arrange) => {
         arrange();

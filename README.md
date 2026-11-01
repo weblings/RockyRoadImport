@@ -43,7 +43,7 @@ The **Rocksmith 2014** tab needs one extra setup step beyond Quick Start, becaus
 
 ## Troubleshooting
 
-**Rocksmith 2014 tab doesn't work / "Error parsing .psarc file":**
+**Rocksmith 2014 tab doesn't work / "Couldn't read the PSARC file":**
 - The wasm module needs the one-time setup above — if you skipped it, the tab will fail with an
   error rather than silently not appearing.
 - Confirm `dotnet workload install wasm-tools` actually completed before running

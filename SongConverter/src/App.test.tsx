@@ -35,7 +35,7 @@ describe('downloadFrom', () => {
     it('reports a buildFiles rejection and clears the error first', async () => {
         const store = fakeStore(() => Promise.reject(new Error('disk full')));
         await downloadFrom(store);
-        expect(store.setDownloadError.mock.calls).toEqual([[null], ['Download failed: disk full']]);
+        expect(store.setDownloadError.mock.calls).toEqual([[null], ["Couldn't download the ZIP: disk full."]]);
     });
 
     it('leaves the error cleared when there is nothing to download', async () => {

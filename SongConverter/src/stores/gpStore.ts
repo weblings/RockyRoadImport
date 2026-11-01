@@ -1,7 +1,8 @@
 import type { ScoreConvertResult } from '../scoreConverter';
 import { buildGpFiles, type ZipFiles } from '../zipFiles';
 import { createStore } from './store';
-import { errorMessage, readOptionalFile, type AttachmentFiles, type AttachmentKind, type Phase } from './fileIo';
+import { readOptionalFile, type AttachmentFiles, type AttachmentKind, type Phase } from './fileIo';
+import { FILE_KIND, NO_TRACKS, PARSING, convertedTracks, noFrettedTracks, parseFailure, skippedNotFretted } from '../messages';
 
 export interface GpState {
     phase: Phase;
@@ -38,7 +39,7 @@ export function createGpStore() {
         async loadFile(file: File): Promise<void> {
             const id = ++requestId;
             result = null;
-            store.set({ phase: 'parsing', status: 'Parsing…', warnings: [], formVisible: false, fileName: file.name, downloadError: null });
+            store.set({ phase: 'parsing', status: PARSING, warnings: [], formVisible: false, fileName: file.name, downloadError: null });
             try {
                 const buffer = await file.arrayBuffer();
                 const { convertGuitarPro } = await import('../scoreConverter');
@@ -51,15 +52,15 @@ export function createGpStore() {
                     store.set({
                         phase: 'error',
                         status: skipped.length > 0
-                            ? `No fretted-instrument tracks found. Skipped: ${skipped.join(', ')}.`
-                            : 'No tracks found in this file.',
+                            ? noFrettedTracks(skipped)
+                            : NO_TRACKS,
                     });
                     return;
                 }
 
                 result = converted;
-                const status = `Converted ${converted.tracks.length} track(s): ${converted.tracks.map((t) => t.trackName).join(', ')}.`;
-                const warnings = skipped.length > 0 ? [`Skipped (not a fretted instrument): ${skipped.join(', ')}.`] : [];
+                const status = convertedTracks(converted.tracks.map((t) => t.trackName));
+                const warnings = skipped.length > 0 ? [skippedNotFretted(skipped)] : [];
                 store.set({
                     phase: 'ready',
                     status,
@@ -69,7 +70,7 @@ export function createGpStore() {
                 });
             } catch (err: unknown) {
                 if (id !== requestId) return;
-                store.set({ phase: 'error', status: `Error parsing Guitar Pro file: ${errorMessage(err)}` });
+                store.set({ phase: 'error', status: parseFailure(FILE_KIND.gp, err) });
             }
         },
 

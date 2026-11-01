@@ -25,7 +25,7 @@ function loadDotnetViaScriptTag(): Promise<any> {
             window.dispatchEvent(new Event('psarc-dotnet-ready'));
         `;
         window.addEventListener('psarc-dotnet-ready', () => resolve(window.__psarcDotnet), { once: true });
-        script.onerror = () => reject(new Error(`Failed to load ${base}psarc-wasm/dotnet.js`));
+        script.onerror = () => reject(new Error('the converter failed to load'));
         document.head.appendChild(script);
     });
 }

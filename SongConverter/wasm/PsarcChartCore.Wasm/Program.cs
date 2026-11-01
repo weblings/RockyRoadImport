@@ -46,7 +46,7 @@ public partial class PsarcInterop
 
                     if (result == null)
                     {
-                        partResult.Error = "Could not read SNG data for this arrangement";
+                        partResult.Error = "SNG data unreadable";
                     }
                     else
                     {

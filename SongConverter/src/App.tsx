@@ -6,13 +6,14 @@ import { createPsarcStore } from './stores/psarcStore';
 import { createGpStore } from './stores/gpStore';
 import { createMusicXmlStore } from './stores/musicXmlStore';
 import { fetchAlbumArtPng, loadPsarcWasm, isPsarcWasmLoaded } from './stores/psarcWasm';
-import { errorMessage, zipFilenameFor } from './stores/fileIo';
+import { zipFilenameFor } from './stores/fileIo';
 import { MidiPanel } from './MidiPanel';
 import { PsarcPanel } from './PsarcPanel';
 import { GpPanel } from './GpPanel';
 import { MusicXmlPanel } from './MusicXmlPanel';
 import { Tabs } from './ui';
 import type { ZipFiles } from './zipFiles';
+import { downloadFailure } from './messages';
 
 interface TabStore {
     buildFiles(): Promise<ZipFiles | null>;
@@ -37,7 +38,7 @@ export async function downloadFrom(store: TabStore): Promise<void> {
         const files = await store.buildFiles();
         if (files) triggerZipDownload(files, zipFilenameFor(store.get().meta.songName));
     } catch (err: unknown) {
-        store.setDownloadError(`Download failed: ${errorMessage(err)}`);
+        store.setDownloadError(downloadFailure(err));
     }
 }
 

@@ -14,10 +14,6 @@ export async function readOptionalFile(file: File | null): Promise<Uint8Array | 
     }
 }
 
-export function errorMessage(err: unknown): string {
-    return err instanceof Error ? err.message : String(err);
-}
-
 export type Phase = 'idle' | 'parsing' | 'ready' | 'error';
 
 export interface AttachmentFiles {
