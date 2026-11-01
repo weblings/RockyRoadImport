@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { parseArrayBuffer } from 'midi-json-parser';
 import { zipSync } from 'fflate';
 import { createMidiStore } from './stores/midiStore';
@@ -63,10 +63,27 @@ export function App() {
         gp: createGpStore(),
         musicxml: createMusicXmlStore(),
     }), []);
+    const [tab, setTab] = useState('midi');
+    const [walkLabel, setWalkLabel] = useState<string | null>(null);
+
+    // Dev-only error-state walkthrough; see src/walkthrough.ts.
+    useEffect(() => {
+        if (!import.meta.env.DEV) return;
+        const params = new URLSearchParams(window.location.search);
+        const dwell = params.get('walkthrough');
+        if (dwell === null) return;
+        let cancelled = false;
+        void import('./walkthrough').then(({ runWalkthrough }) => runWalkthrough({
+            stores, dwellMs: Number(dwell) || 2000, tab: params.get('tab'), loop: params.has('loop'),
+            setTab, setLabel: setWalkLabel, isCancelled: () => cancelled,
+        }));
+        return () => { cancelled = true; };
+    }, [stores]);
 
     return (
         <>
-            <Tabs label="Converter" tabs={[
+            {walkLabel && <div style={{ position: 'fixed', top: 0, right: 0, zIndex: 10, padding: '4px 8px', background: '#222', color: '#fff', font: '12px monospace' }}>{walkLabel}</div>}
+            <Tabs label="Converter" selectedKey={tab} onSelectionChange={setTab} tabs={[
                 { id: 'midi', label: 'Piano MIDI', content: <MidiPanel store={stores.midi} onDownload={downloadFrom} /> },
                 { id: 'psarc', label: 'Rocksmith 2014', content: <PsarcPanel store={stores.psarc} onDownload={downloadFrom} /> },
                 { id: 'gp', label: 'Guitar Pro', content: <GpPanel store={stores.gp} onDownload={downloadFrom} /> },

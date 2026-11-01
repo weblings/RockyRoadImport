@@ -39,6 +39,11 @@ export function createMusicXmlStore() {
         get: store.get,
         subscribe: store.subscribe,
 
+        // Dev walkthrough only (src/walkthrough.ts).
+        seed(patch: Partial<MusicXmlState>): void {
+            store.set(patch);
+        },
+
         async loadFile(file: File): Promise<void> {
             const id = ++requestId;
             result = null;

@@ -10,12 +10,15 @@ export interface TabItem {
 export interface TabsProps {
     label: string;
     tabs: TabItem[];
+    // Optional controlled selection; uncontrolled when omitted.
+    selectedKey?: string;
+    onSelectionChange?: (id: string) => void;
 }
 
 // Panels are force-mounted so each keeps its local state while hidden.
-export function Tabs({ label, tabs }: TabsProps) {
+export function Tabs({ label, tabs, selectedKey, onSelectionChange }: TabsProps) {
     return (
-        <AriaTabs>
+        <AriaTabs selectedKey={selectedKey} onSelectionChange={onSelectionChange && ((k) => onSelectionChange(String(k)))}>
             <TabList className="ui-tab-list" aria-label={label}>
                 {tabs.map((t) => <Tab key={t.id} id={t.id} className="ui-tab">{t.label}</Tab>)}
             </TabList>

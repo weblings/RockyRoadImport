@@ -36,6 +36,11 @@ export function createGpStore() {
         get: store.get,
         subscribe: store.subscribe,
 
+        // Dev walkthrough only (src/walkthrough.ts).
+        seed(patch: Partial<GpState>): void {
+            store.set(patch);
+        },
+
         async loadFile(file: File): Promise<void> {
             const id = ++requestId;
             result = null;
