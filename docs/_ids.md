@@ -5,6 +5,8 @@ every run. Human lookup for `[[id]]` citations elsewhere in `docs/`.
 
 | Id | Path | Title |
 |---|---|---|
+| `alphatab-190-upgrade` | [log/2026-11-01-alphatab-190-upgrade.md](log/2026-11-01-alphatab-190-upgrade.md) | alphaTab 1.9.0 upgrade: patch cut to the syllabic hunk (2026-11-01) |
+| `alphatab-upstream-replies` | [log/2026-11-01-alphatab-upstream-replies.md](log/2026-11-01-alphatab-upstream-replies.md) | alphaTab upstream: dynamics fixed, syllabic needs a use case (2026-11-01) |
 | `aurora-docs-migration` | [archive/AuroraDocsMigrationPlan.md](archive/AuroraDocsMigrationPlan.md) | Migrate docs infra to Aurora's system (+ beads) |
 | `browser-piano-midi-port-plan` | [archive/BrowserPianoMidiPortPlan.md](archive/BrowserPianoMidiPortPlan.md) | Browser Piano MIDI Port Plan |
 | `error-copy-audit` | [log/2026-11-01-error-copy-audit.md](log/2026-11-01-error-copy-audit.md) | Error and status copy audit, unified in messages.ts (2026-11-01) |

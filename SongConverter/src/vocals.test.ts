@@ -152,6 +152,13 @@ describe('convertMusicXml lyrics', () => {
         expect(times[1]).toBeGreaterThan(times[0]);
     });
 
+    it('drops whitespace-only lyric placeholders', () => {
+        const xml = TWO_VOICE_XML.replace('<text>yo</text>', '<text>\u3000</text>');
+        expect(xml).not.toBe(TWO_VOICE_XML);
+        const result = convertMusicXml(new TextEncoder().encode(xml));
+        expect(result.lyrics.map((l) => l.trackName)).toEqual(['Backing']);
+    });
+
     it('exposes every lyric-bearing part so the UI can offer the choice', () => {
         const result = convertMusicXml(new TextEncoder().encode(TWO_VOICE_XML));
         expect(result.lyrics.map((l) => l.trackName)).toEqual(['LeadVocal', 'Backing']);

@@ -118,7 +118,8 @@ behind the cross-staff dynamics leak. Wiring the 5 use sites to the dead field
 made the patch minimal and upstream-plausible instead of inventing new state.
 
 **Fix:** grep the dependency for unread/unwritten fields around the bug first —
-dead state often marks where the maintainer meant the fix to go.
+dead state often marks where the maintainer meant the fix to go. (Not a guarantee: upstream's
+#2996 deleted that field and tracked dynamics per part instead.)
 
 ---
 
@@ -202,6 +203,23 @@ spec-literal (per staff); the "one mark covers both hands" guess lives in our co
 **Fix:** when the source can't distinguish two intents, patch the dependency to the spec and
 put the interpretation in this repo's code, where it can be tuned without upstream buy-in.
 
+**Upstream outcome (#2996):** the maintainer split the question in two. The mark is drawn only on
+its own staff (`showDynamics`), but it plays part-wide, so the guess moved into the importer. Expect
+the maintainer to make that call: file the symptom, not the semantics.
+
+---
+
+## Check how the dependency already encodes the data before proposing a new field
+Tags: upstream, lyrics, api-design
+Applies-when: asking a dependency to surface data its model drops
+
+We proposed `Beat.lyricsSyllabic` for MusicXML `<syllabic>`, but alphaTab's GP/alphaTex lyrics
+already carry word joins in the text (`"Tra-"`, `"la-"` on beats). The maintainer pushed back on
+the memory cost; matching that existing convention needs no field at all.
+
+**Fix:** before proposing a model addition, check whether another importer already expresses the
+same thing in existing data — matching it is cheaper and easier to get accepted.
+
 ---
 
 ## A UI caveat about a dependency gap needs rechecking against source, not just against memory
@@ -231,3 +249,15 @@ it was never installed and its `postinstall` hook never ran - every other depend
 
 **Fix:** re-run `npm install` (not just trust an existing `node_modules`) after pulling commits
 that touch `package.json`, especially before a release build.
+
+---
+
+## An upstream fix for your patch can change behavior your patch got right
+Tags: upstream, patch-package, upgrade, sweep
+Applies-when: retiring a local dependency patch because a release "fixes the same thing"
+
+1.9.0's dynamics fix passed every test here but attaches a mark to the next note, so a dynamic
+before a leading rest no longer reaches the other staff (~23 notes in 4 sweep files went to F).
+
+**Fix:** diff converter output old-vs-new over real files before dropping a patch; green tests
+only cover what the patch was written for.
