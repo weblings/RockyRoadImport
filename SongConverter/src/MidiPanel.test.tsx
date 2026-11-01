@@ -48,7 +48,7 @@ describe('MidiPanel errors', () => {
         await act(async () => { await store.loadFile(new File([new Uint8Array(4)], 'broken.mid')); });
 
         expect(store.get().formVisible).toBe(false);
-        expect(store.get().handFallback).toBe(false);
+        expect(store.get().warnings).toEqual([]);
         expect(screen.queryByText('Song Metadata')).toBeNull();
     });
 });

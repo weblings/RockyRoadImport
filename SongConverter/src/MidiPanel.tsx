@@ -1,4 +1,4 @@
-import { Button, Callout, Disclosure, FieldList, FieldNote, FileTrigger, Slider, StatusMessage, TextField } from './ui';
+import { Button, Disclosure, FieldList, FieldNote, FileTrigger, Slider, StatusMessage, TextField } from './ui';
 import type { MidiStore } from './stores/midiStore';
 import { useStore } from './useStore';
 
@@ -20,6 +20,7 @@ export function MidiPanel({ store, onDownload }: Props) {
                 onSelect={(file) => { if (file) void store.loadFile(file); }}
             />
             <StatusMessage id="midi-status" tone={s.phase === 'error' ? 'error' : 'neutral'}>{s.status}</StatusMessage>
+            <StatusMessage id="midi-warnings" tone="warning">{s.warnings.join(' ')}</StatusMessage>
 
             {s.formVisible && (
                 <div className="meta-form">
@@ -54,15 +55,6 @@ export function MidiPanel({ store, onDownload }: Props) {
                         />
                     </FieldList>
                 </div>
-            )}
-
-            {s.handFallback && (
-                <Callout title="Hand fallback used">
-                    <ul>
-                        <li><strong>No "Left Hand" / "Right Hand" track names detected</strong> — rename MIDI tracks to include these for accurate results.</li>
-                        <li><strong>Hand assigned by pitch</strong> — below middle C (MIDI 60) → left, above → right. May be wrong where hands cross.</li>
-                    </ul>
-                </Callout>
             )}
 
             <div className="panel-actions">

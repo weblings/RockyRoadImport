@@ -1,7 +1,7 @@
 // Dev-only: `npm run dev`, then /?walkthrough=<dwellMs>[&tab=<id>][&loop] steps every tab through its
 // error and status states in the real UI. Loaded by dynamic import behind import.meta.env.DEV.
 import {
-    FILE_KIND, LOADING_CONVERTER, NO_ARRANGEMENTS, NO_PIANO_NOTES, NO_TRACKS, PARSING, PIANO_HAND_FALLBACK,
+    FILE_KIND, LOADING_CONVERTER, MIDI_HAND_FALLBACK, NO_ARRANGEMENTS, NO_PIANO_NOTES, NO_TRACKS, PARSING, PIANO_HAND_FALLBACK,
     allPartsFailed, convertFailure, convertedParts, convertedPianoNotes, convertedTracks, downloadFailure,
     failedParts, ignoredSongs, lyricsInTracks, noConvertibleNotes, noFrettedTracks, parseFailure, skippedNotFretted,
 } from './messages';
@@ -10,7 +10,7 @@ interface Seedable { seed(patch: Record<string, unknown>): void }
 type Patch = Record<string, unknown>;
 interface Step { label: string; patch: Patch }
 
-const BLANK: Patch = { phase: 'idle', status: '', warnings: [], downloadError: null, formVisible: false, handFallback: false };
+const BLANK: Patch = { phase: 'idle', status: '', warnings: [], downloadError: null, formVisible: false };
 const ready = (status: string, extra: Patch = {}): Patch => ({ phase: 'ready', status, formVisible: true, ...extra });
 const error = (status: string): Patch => ({ phase: 'error', status });
 const dlFail = ready('', { downloadError: downloadFailure(new Error('disk full')) });
@@ -24,7 +24,7 @@ const STEPS: Record<string, Step[]> = {
         { label: 'no piano notes', patch: error(NO_PIANO_NOTES) },
         { label: 'conversion failure', patch: error(convertFailure(FILE_KIND.midi, bad)) },
         { label: 'clean', patch: ready(convertedPianoNotes(42)) },
-        { label: 'hand fallback callout', patch: ready(convertedPianoNotes(42), { handFallback: true }) },
+        { label: 'hand fallback warning', patch: ready(convertedPianoNotes(42), { warnings: [MIDI_HAND_FALLBACK] }) },
         { label: 'download failure', patch: { ...dlFail, status: convertedPianoNotes(42) } },
     ],
     psarc: [

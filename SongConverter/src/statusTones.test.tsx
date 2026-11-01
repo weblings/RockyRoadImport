@@ -128,7 +128,7 @@ describe('MIDI status tones', () => {
         [{ name: 'no piano notes', tone: 'error', downloadable: false, text: /^✖ No piano notes found\./ }, empty, () => {}],
         [{ name: 'conversion failure', tone: 'error', downloadable: false, text: /^✖ Couldn't convert the MIDI file: bad\./ }, empty, () => converters.piano.mockImplementationOnce(() => { throw new Error('bad'); })],
         [{ name: 'clean', tone: 'neutral', downloadable: true, text: /^Converted 1 piano note\.$/ }, empty, converted(false)],
-        [{ name: 'hand fallback', tone: 'neutral', downloadable: true, text: /^Converted 1 piano note\.$/ }, empty, converted(true)],
+        [{ name: 'hand fallback', tone: 'neutral', downloadable: true, text: /^Converted 1 piano note\.$/, warning: /^⚠ Hands assigned by pitch/ }, empty, converted(true)],
     ];
     it.each(cases)('case %#', async (c, parse, arrange) => {
         arrange();
@@ -136,7 +136,5 @@ describe('MIDI status tones', () => {
         render(<MidiPanel store={store} onDownload={noop} />);
         await act(async () => { await store.loadFile(bytes()); });
         expectStatus(c, 'midi');
-        // Hand fallback is reported by the Callout card, not the status line.
-        expect(screen.queryByRole('note') !== null).toBe(c.name === 'hand fallback');
     });
 });

@@ -47,6 +47,8 @@ export const convertedParts = (done: number, total: number, names: string[]) =>
     `Converted ${done} of ${plural(total, 'part')}: ${names.join(', ')}.`;
 
 export const lyricsInTracks = (count: number) => `Lyrics in ${count} tracks — choose one below.`;
+export const MIDI_HAND_FALLBACK =
+    'Hands assigned by pitch (below middle C is left) because no Left Hand / Right Hand track names were found; may be wrong where hands cross. Rename tracks to include them.';
 export const PIANO_HAND_FALLBACK = 'Piano hand assigned by fallback (not grand staff); may be wrong where hands cross.';
 
 interface FailedPart { Name: string; Error?: string }
