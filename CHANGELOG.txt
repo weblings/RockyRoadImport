@@ -1,5 +1,5 @@
 v0.2.0
-- Dev - Refactored UI to be built with React and Aria (adds screen reader and keyboard support)
+- Dev - Refactored UI to be built with React and Aria (keyboard support, roles, live status)
 - Errors - Unified error displaying design and copy
 - Fix - Loading a new file clears the previous file's form and warnings
 - Dev - Added CI and tests
