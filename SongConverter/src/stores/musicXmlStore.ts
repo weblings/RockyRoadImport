@@ -2,7 +2,8 @@ import type { ScoreConvertResult } from '../scoreConverter';
 import { mergePianoTracks } from '../songBuilder';
 import { buildMusicXmlFiles, type ZipFiles } from '../zipFiles';
 import { createStore } from './store';
-import { errorMessage, readOptionalFile, type AttachmentFiles, type AttachmentKind, type Phase } from './fileIo';
+import { readOptionalFile, type AttachmentFiles, type AttachmentKind, type Phase } from './fileIo';
+import { FILE_KIND, NO_TRACKS, PARSING, PIANO_HAND_FALLBACK, lyricsInTracks, noConvertibleNotes, parseFailure, skippedNotFretted } from '../messages';
 
 export interface MusicXmlState {
     phase: Phase;
@@ -38,10 +39,15 @@ export function createMusicXmlStore() {
         get: store.get,
         subscribe: store.subscribe,
 
+        // Dev walkthrough only (src/walkthrough.ts).
+        seed(patch: Partial<MusicXmlState>): void {
+            store.set(patch);
+        },
+
         async loadFile(file: File): Promise<void> {
             const id = ++requestId;
             result = null;
-            store.set({ phase: 'parsing', status: 'Parsing…', warnings: [], formVisible: false, fileName: file.name, downloadError: null });
+            store.set({ phase: 'parsing', status: PARSING, warnings: [], formVisible: false, fileName: file.name, downloadError: null });
             try {
                 const buffer = await file.arrayBuffer();
                 const { convertMusicXml } = await import('../scoreConverter');
@@ -57,8 +63,8 @@ export function createMusicXmlStore() {
                     store.set({
                         phase: 'error',
                         status: skipped.length > 0
-                            ? `No convertible notes found. Skipped: ${skipped.join(', ')}.`
-                            : 'No tracks found in this file.',
+                            ? noConvertibleNotes(skipped)
+                            : NO_TRACKS,
                     });
                     return;
                 }
@@ -73,14 +79,14 @@ export function createMusicXmlStore() {
 
                 // Only surface things that need attention; a clean parse leaves status blank.
                 const notes: string[] = [];
-                if (skippedShown.length > 0) notes.push(`Skipped (not a fretted instrument): ${skippedShown.join(', ')}.`);
+                if (skippedShown.length > 0) notes.push(skippedNotFretted(skippedShown));
                 if (converted.pianoTracks.some((p) => p.usedHandFallback)) {
-                    notes.push('Piano hand assigned by fallback (not grand staff); may be wrong where hands cross.');
+                    notes.push(PIANO_HAND_FALLBACK);
                 }
 
                 store.set({
                     phase: 'ready',
-                    status: lyricTracks.length > 1 ? `Lyrics in ${lyricTracks.length} tracks — choose one below.` : '',
+                    status: lyricTracks.length > 1 ? lyricsInTracks(lyricTracks.length) : '',
                     warnings: notes,
                     formVisible: true,
                     lyricsOptions,
@@ -93,7 +99,7 @@ export function createMusicXmlStore() {
                 });
             } catch (err: unknown) {
                 if (id !== requestId) return;
-                store.set({ phase: 'error', status: `Error parsing MusicXML file: ${errorMessage(err)}` });
+                store.set({ phase: 'error', status: parseFailure(FILE_KIND.musicXml, err) });
             }
         },
 

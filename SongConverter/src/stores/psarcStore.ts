@@ -1,7 +1,8 @@
 import type { PsarcSongResult } from '../songformat';
 import { buildPsarcFiles, type ZipFiles } from '../zipFiles';
 import { createStore } from './store';
-import { errorMessage, type Phase } from './fileIo';
+import type { Phase } from './fileIo';
+import { FILE_KIND, LOADING_CONVERTER, NO_ARRANGEMENTS, PARSING, allPartsFailed, convertedParts, failedParts, ignoredSongs, parseFailure } from '../messages';
 
 export interface PsarcState {
     phase: Phase;
@@ -18,7 +19,7 @@ export interface PsarcState {
 export interface PsarcDeps {
     loadWasm(): Promise<any>;
     fetchAlbumArt(exports: any, psarcBytes: Uint8Array, songKey: string): Promise<Uint8Array | null>;
-    // When false, the one-off "Loading wasm" message shows before the first parse.
+    // When false, the one-off converter-loading message shows before the first parse.
     isWasmLoaded?(): boolean;
 }
 
@@ -42,23 +43,28 @@ export function createPsarcStore(deps: PsarcDeps) {
         get: store.get,
         subscribe: store.subscribe,
 
+        // Dev walkthrough only (src/walkthrough.ts).
+        seed(patch: Partial<PsarcState>): void {
+            store.set(patch);
+        },
+
         async loadFile(file: File): Promise<void> {
             const id = ++requestId;
             result = null;
             albumArt = Promise.resolve(null);
             oggAudio = null;
-            store.set({ phase: 'parsing', status: 'Parsing…', warnings: [], formVisible: false, fileName: file.name, downloadError: null });
+            store.set({ phase: 'parsing', status: PARSING, warnings: [], formVisible: false, fileName: file.name, downloadError: null });
             try {
                 const psarcBytes = new Uint8Array(await file.arrayBuffer());
                 if (deps.isWasmLoaded && !deps.isWasmLoaded()) {
-                    store.set({ status: 'Loading wasm module (first use only)…' });
+                    store.set({ status: LOADING_CONVERTER });
                 }
                 const exports = await deps.loadWasm();
                 if (id !== requestId) return;
 
                 const songs: PsarcSongResult[] = JSON.parse(exports.PsarcInterop.ConvertAllPsarc(psarcBytes));
                 if (songs.length === 0 || songs[0].Parts.length === 0) {
-                    store.set({ phase: 'error', status: 'No arrangements found in this .psarc file.' });
+                    store.set({ phase: 'error', status: NO_ARRANGEMENTS });
                     return;
                 }
 
@@ -77,14 +83,14 @@ export function createPsarcStore(deps: PsarcDeps) {
                 const succeeded = song.Parts.filter((p) => p.Part != null);
                 const failed = song.Parts.filter((p) => p.Part == null);
                 if (succeeded.length === 0) {
-                    store.set({ phase: 'error', status: `All ${failed.length} arrangement(s) failed to convert.` });
+                    store.set({ phase: 'error', status: allPartsFailed(failed) });
                     return;
                 }
 
-                const status = `Converted ${succeeded.length}/${song.Parts.length} part(s): ${succeeded.map((p) => p.Name).join(', ')}.`;
+                const status = convertedParts(succeeded.length, song.Parts.length, succeeded.map((p) => p.Name));
                 const warnings: string[] = [];
-                if (failed.length > 0) warnings.push(`Failed: ${failed.map((p) => `${p.Name} (${p.Error})`).join('; ')}.`);
-                if (songs.length > 1) warnings.push(`${songs.length - 1} additional song(s) in this file were ignored.`);
+                if (failed.length > 0) warnings.push(failedParts(failed));
+                if (songs.length > 1) warnings.push(ignoredSongs(songs.length - 1));
 
                 // Album art and audio are non-fatal: a failure drops that file, not the chart data.
                 albumArt = deps.fetchAlbumArt(exports, psarcBytes, song.SongKey).catch((err: unknown) => {
@@ -97,7 +103,7 @@ export function createPsarcStore(deps: PsarcDeps) {
                 store.set({ phase: 'ready', status, warnings });
             } catch (err: unknown) {
                 if (id !== requestId) return;
-                store.set({ phase: 'error', status: `Error parsing .psarc file: ${errorMessage(err)}` });
+                store.set({ phase: 'error', status: parseFailure(FILE_KIND.psarc, err) });
             }
         },
 

@@ -9,6 +9,7 @@ import { createGpStore } from './stores/gpStore';
 import { createMidiStore } from './stores/midiStore';
 import { createMusicXmlStore } from './stores/musicXmlStore';
 import { createPsarcStore } from './stores/psarcStore';
+import { BAD, FAILED_BASS, FAILED_LEAD, STATE_CASES, type StateCase } from './stateCases';
 
 const converters = vi.hoisted(() => ({ gp: vi.fn(), musicXml: vi.fn(), piano: vi.fn() }));
 vi.mock('./scoreConverter', () => ({
@@ -26,117 +27,112 @@ vi.mock('./pianoConverter', async (importActual) => {
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
 const bytes = () => new File([new Uint8Array(4)], 'input');
-const track = { trackName: 'Lead' };
+const track = (trackName: string) => ({ trackName });
 const noop = () => {};
+const boom = () => { throw BAD; };
 
-// Every message a tab can show, pinned to one vocabulary: the status line is neutral or error
-// (error = nothing downloadable), and anything to double-check sits in a separate warning line.
-interface Case {
-    name: string;
-    tone: 'error' | 'neutral';
-    downloadable: boolean;
-    text: RegExp | '';
-    warning?: RegExp;
-}
+// Each tab's cases (src/stateCases.ts) name the store state a file should land on. Here every
+// reachable case is arranged through the real store and checked in state and in the rendered panel.
+function expectCase(c: StateCase, tab: string, store: { get(): any }) {
+    const p = c.patch as { phase: string; status: string; warnings: string[] };
+    const state = store.get();
+    expect({ phase: state.phase, status: state.status, warnings: state.warnings }).toEqual({ phase: p.phase, status: p.status, warnings: p.warnings });
 
-function expectStatus(c: Case, tab: string) {
     // Not getByRole: the MIDI slider's <output> also has the status role.
     const status = document.getElementById(`${tab}-status`)!;
-    expect(status.getAttribute('data-tone')).toBe(c.tone);
-    if (c.text === '') expect(status.textContent).toBe('');
-    else expect(status.textContent).toMatch(c.text);
-
-    const warnings = document.getElementById(`${tab}-warnings`);
-    if (c.warning) expect(warnings!.textContent).toMatch(c.warning);
-    else if (warnings) expect(warnings.textContent).toBe('');
-
-    expect(screen.getByRole('button', { name: 'Download' }).hasAttribute('disabled')).toBe(!c.downloadable);
+    expect(status.getAttribute('data-tone')).toBe(p.phase === 'error' ? 'error' : 'neutral');
+    expect(status.textContent).toBe(p.status && `${p.phase === 'error' ? '✖ ' : ''}${p.status}`);
+    expect(document.getElementById(`${tab}-warnings`)!.textContent).toBe(p.warnings.length ? `⚠ ${p.warnings.join(' ')}` : '');
+    expect(screen.getByRole('button', { name: 'Download' }).hasAttribute('disabled')).toBe(p.phase !== 'ready');
 }
 
-describe('Guitar Pro status tones', () => {
-    const gp = (result: object): Case['name'] extends string ? () => void : never => () => converters.gp.mockReturnValue({
-        songName: 'S', artistName: 'A', skipped: [], pianoTracks: [], tracks: [], ...result,
+// Arrangers are keyed by case name; a case with neither an arranger nor seedOnly fails the suite.
+type Arrange = () => unknown;
+function runCases(tab: string, arrangers: Record<string, Arrange>, make: (arranged: unknown) => { store: any; render: () => void }) {
+    const cases = STATE_CASES[tab];
+    it('covers every case', () => {
+        expect(Object.keys(arrangers).sort()).toEqual(cases.filter((c) => !c.seedOnly).map((c) => c.name).sort());
     });
-    const cases: Array<[Case, () => void]> = [
-        [{ name: 'clean', tone: 'neutral', downloadable: true, text: /^Converted 1 track\(s\): Lead\.$/ }, gp({ tracks: [track] })],
-        [{ name: 'skipped', tone: 'neutral', downloadable: true, text: /^Converted 1 track\(s\): Lead\.$/, warning: /^⚠ Skipped \(not a fretted instrument\): Drums/ }, gp({ tracks: [track], skipped: ['Drums'] })],
-        [{ name: 'nothing usable', tone: 'error', downloadable: false, text: /^✖ No fretted-instrument tracks found\. Skipped: Drums/ }, gp({ skipped: ['Drums'] })],
-        [{ name: 'empty', tone: 'error', downloadable: false, text: /^✖ No tracks found/ }, gp({})],
-        [{ name: 'throws', tone: 'error', downloadable: false, text: /^✖ Error parsing Guitar Pro file: bad/ }, () => converters.gp.mockImplementation(() => { throw new Error('bad'); })],
-    ];
-    it.each(cases)('case %#', async (c, arrange) => {
-        arrange();
+    it.each(cases.filter((c) => !c.seedOnly).map((c) => [c.name, c] as const))('%s', async (name, c) => {
+        const arranged = await arrangers[name]();
+        const { store, render: draw } = make(arranged);
+        draw();
+        await act(async () => { await store.loadFile(bytes()); });
+        expectCase(c, tab, store);
+    });
+}
+
+describe('Guitar Pro states', () => {
+    const gp = (result: object) => () => { converters.gp.mockReturnValue({ songName: 'S', artistName: 'A', skipped: [], pianoTracks: [], tracks: [], ...result }); };
+    runCases('gp', {
+        'parse failure': () => { converters.gp.mockImplementation(boom); },
+        'no tracks': gp({}),
+        'only skipped tracks': gp({ skipped: ['Drums'], pianoTracks: [track('Piano')] }),
+        clean: gp({ tracks: [track('Lead'), track('Bass')] }),
+        'skipped warning': gp({ tracks: [track('Lead')], skipped: ['Drums'] }),
+    }, () => {
         const store = createGpStore();
-        render(<GpPanel store={store} onDownload={noop} />);
-        await act(async () => { await store.loadFile(bytes()); });
-        expectStatus(c, 'gp');
+        return { store, render: () => render(<GpPanel store={store} onDownload={noop} />) };
     });
 });
 
-describe('MusicXML status tones', () => {
-    const xml = (result: object) => () => converters.musicXml.mockReturnValue({
-        songName: 'S', artistName: 'A', skipped: [], pianoTracks: [], lyrics: [], tracks: [track], ...result,
-    });
+describe('MusicXML states', () => {
+    const xml = (result: object) => () => { converters.musicXml.mockReturnValue({ songName: 'S', artistName: 'A', skipped: [], pianoTracks: [], lyrics: [], tracks: [track('Lead')], ...result }); };
     const lyric = (trackName: string) => ({ trackName, vocals: [{}] });
-    const cases: Array<[Case, () => void]> = [
-        [{ name: 'clean', tone: 'neutral', downloadable: true, text: '' }, xml({})],
-        [{ name: 'skipped', tone: 'neutral', downloadable: true, text: '', warning: /^⚠ Skipped \(not a fretted instrument\): Drums/ }, xml({ skipped: ['Drums'] })],
-        [{ name: 'hand fallback', tone: 'neutral', downloadable: true, text: '', warning: /^⚠ Piano hand assigned by fallback/ }, xml({ pianoTracks: [{ trackName: 'Piano', usedHandFallback: true, notes: { Notes: [{}] } }] })],
-        [{ name: 'several lyric tracks', tone: 'neutral', downloadable: true, text: /^Lyrics in 2 tracks — choose one below\.$/ }, xml({ lyrics: [lyric('V1'), lyric('V2')] })],
-        [{ name: 'nothing usable', tone: 'error', downloadable: false, text: /^✖ No convertible notes found\. Skipped: Drums/ }, xml({ tracks: [], skipped: ['Drums'] })],
-        [{ name: 'throws', tone: 'error', downloadable: false, text: /^✖ Error parsing MusicXML file: bad/ }, () => converters.musicXml.mockImplementation(() => { throw new Error('bad'); })],
-    ];
-    it.each(cases)('case %#', async (c, arrange) => {
-        arrange();
+    runCases('musicxml', {
+        'parse failure': () => { converters.musicXml.mockImplementation(boom); },
+        'no tracks': xml({ tracks: [] }),
+        'only skipped tracks': xml({ tracks: [], skipped: ['Drums'] }),
+        'clean (blank status)': xml({}),
+        'skipped warning': xml({ skipped: ['Drums'] }),
+        'piano hand fallback warning': xml({ pianoTracks: [{ trackName: 'Piano', usedHandFallback: true, notes: { Notes: [{}] } }] }),
+        'several lyric tracks': xml({ lyrics: [lyric('Vocals 1'), lyric('Vocals 2')] }),
+    }, () => {
         const store = createMusicXmlStore();
-        render(<MusicXmlPanel store={store} onDownload={noop} />);
-        await act(async () => { await store.loadFile(bytes()); });
-        expectStatus(c, 'musicxml');
+        return { store, render: () => render(<MusicXmlPanel store={store} onDownload={noop} />) };
     });
 });
 
-describe('Rocksmith status tones', () => {
-    const part = (Name: string, ok = true) => ({ Name, Part: ok ? { InstrumentName: Name } : null, Error: ok ? undefined : 'boom' });
+describe('Rocksmith states', () => {
+    const part = (Name: string, ok = true, Error?: string) => ({ Name, Part: ok ? { InstrumentName: Name } : null, Error });
     const song = (parts: object[]) => ({
         SongKey: 'k', SongData: { SongName: 'S', ArtistName: 'A', AlbumName: 'B', InstrumentParts: [] },
         Structure: { Sections: [] }, Parts: parts,
     });
-    const cases: Array<[Case, object[]]> = [
-        [{ name: 'clean', tone: 'neutral', downloadable: true, text: /^Converted 1\/1 part\(s\): lead\.$/ }, [song([part('lead')])]],
-        [{ name: 'partial failure', tone: 'neutral', downloadable: true, text: /^Converted 1\/2 part\(s\): lead\.$/, warning: /^⚠ Failed: bass \(boom\)\.$/ }, [song([part('lead'), part('bass', false)])]],
-        [{ name: 'extra songs ignored', tone: 'neutral', downloadable: true, text: /^Converted 1\/1 part\(s\): lead\.$/, warning: /^⚠ 1 additional song\(s\) in this file were ignored\.$/ }, [song([part('lead')]), song([part('lead')])]],
-        [{ name: 'all failed', tone: 'error', downloadable: false, text: /^✖ All 1 arrangement\(s\) failed/ }, [song([part('bass', false)])]],
-        [{ name: 'no arrangements', tone: 'error', downloadable: false, text: /^✖ No arrangements found/ }, []],
-    ];
-    it.each(cases)('case %#', async (c, songs) => {
+    const failedLead = part(FAILED_LEAD.Name, false, FAILED_LEAD.Error);
+    const failedBass = part(FAILED_BASS.Name, false);
+    runCases('psarc', {
+        'parse failure': () => ({ throws: true }),
+        'no arrangements': () => [],
+        'all failed': () => [song([failedLead, failedBass])],
+        clean: () => [song([part('Lead'), part('Bass')])],
+        'partial failure + extra song': () => [song([failedLead, part('Bass')]), song([part('Lead')])],
+    }, (arranged) => {
+        const a = arranged as { throws?: boolean } | object[];
         const store = createPsarcStore({
-            loadWasm: async () => ({ PsarcInterop: { ConvertAllPsarc: () => JSON.stringify(songs), GetOggAudio: () => new Uint8Array() } }),
+            loadWasm: async () => ({ PsarcInterop: {
+                ConvertAllPsarc: () => { if (!Array.isArray(a)) throw BAD; return JSON.stringify(a); },
+                GetOggAudio: () => new Uint8Array(),
+            } }),
             fetchAlbumArt: async () => null,
         });
-        render(<PsarcPanel store={store} onDownload={noop} />);
-        await act(async () => { await store.loadFile(bytes()); });
-        expectStatus(c, 'psarc');
+        return { store, render: () => render(<PsarcPanel store={store} onDownload={noop} />) };
     });
 });
 
-describe('MIDI status tones', () => {
+describe('MIDI states', () => {
     const empty = async () => ({ tracks: [[]], division: 480 });
     const converted = (usedHandFallback: boolean) => () =>
-        converters.piano.mockReturnValueOnce({ keyboardNotes: { Notes: [{}] }, usedHandFallback });
-    const cases: Array<[Case, () => Promise<unknown>, () => void]> = [
-        [{ name: 'parse failure', tone: 'error', downloadable: false, text: /^✖ Error parsing MIDI file: bad/ }, async () => { throw new Error('bad'); }, () => {}],
-        [{ name: 'no piano notes', tone: 'error', downloadable: false, text: /^✖ No piano notes found\./ }, empty, () => {}],
-        [{ name: 'conversion failure', tone: 'error', downloadable: false, text: /^✖ Conversion error: bad/ }, empty, () => converters.piano.mockImplementationOnce(() => { throw new Error('bad'); })],
-        [{ name: 'clean', tone: 'neutral', downloadable: true, text: /^Converted 1 piano note\(s\)\.$/ }, empty, converted(false)],
-        [{ name: 'hand fallback', tone: 'neutral', downloadable: true, text: /^Converted 1 piano note\(s\)\.$/ }, empty, converted(true)],
-    ];
-    it.each(cases)('case %#', async (c, parse, arrange) => {
-        arrange();
+        converters.piano.mockReturnValueOnce({ keyboardNotes: { Notes: Array.from({ length: 42 }, () => ({})) }, usedHandFallback });
+    const withParse = (parse: () => Promise<unknown>, arrange: () => void = () => {}) => () => { arrange(); return parse; };
+    runCases('midi', {
+        'parse failure': withParse(async () => { throw BAD; }),
+        'no piano notes': withParse(empty),
+        'conversion failure': withParse(empty, () => converters.piano.mockImplementationOnce(boom)),
+        clean: withParse(empty, converted(false)),
+        'hand fallback warning': withParse(empty, converted(true)),
+    }, (parse) => {
         const store = createMidiStore({ parse: parse as never });
-        render(<MidiPanel store={store} onDownload={noop} />);
-        await act(async () => { await store.loadFile(bytes()); });
-        expectStatus(c, 'midi');
-        // Hand fallback is reported by the Callout card, not the status line.
-        expect(screen.queryByRole('note') !== null).toBe(c.name === 'hand fallback');
+        return { store, render: () => render(<MidiPanel store={store} onDownload={noop} />) };
     });
 });

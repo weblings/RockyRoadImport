@@ -24,7 +24,7 @@ console.log('Result length (chars):', resultJson.length);
 const songs = JSON.parse(resultJson);
 console.log(`Songs: ${songs.length}`);
 for (const song of songs) {
-    console.log(`  "${song.SongData.SongName}" by ${song.SongData.ArtistName} - ${song.Parts.length} part(s)`);
+    console.log(`  "${song.SongData.SongName}" by ${song.SongData.ArtistName} - ${song.Parts.length} ${song.Parts.length === 1 ? 'part' : 'parts'}`);
     for (const part of song.Parts) {
         const status = part.Part ? 'ok' : `FAILED: ${part.Error}`;
         const noteCount = part.Notes?.Notes?.length ?? part.Vocals?.length ?? 0;

@@ -6,7 +6,8 @@ import { buildMidiFiles, type ZipFiles } from '../zipFiles';
 import { extractMetadata, logMidi } from '../midiLog';
 import type { SongStructure, SongKeyboardNotes } from '../songformat';
 import { createStore } from './store';
-import { errorMessage, readOptionalFile, type AttachmentFiles, type AttachmentKind, type Phase } from './fileIo';
+import { readOptionalFile, type AttachmentFiles, type AttachmentKind, type Phase } from './fileIo';
+import { FILE_KIND, MIDI_HAND_FALLBACK, NO_PIANO_NOTES, PARSING, convertFailure, convertedPianoNotes, parseFailure } from '../messages';
 
 export interface MidiState {
     phase: Phase;
@@ -18,7 +19,8 @@ export interface MidiState {
     fileName: string | null;
     // Message from the last failed Download, cleared on retry or new file.
     downloadError: string | null;
-    handFallback: boolean;
+    // Things to check on a ready result; Download stays enabled.
+    warnings: string[];
     meta: { songName: string; artistName: string; albumName: string; difficulty: number };
     attachments: AttachmentFiles;
 }
@@ -36,7 +38,7 @@ export function createMidiStore(deps: MidiDeps) {
         formVisible: false,
         fileName: null,
         downloadError: null,
-        handFallback: false,
+        warnings: [],
         meta: { songName: '', artistName: '', albumName: '', difficulty: 0 },
         attachments: { albumArt: null, audio: null },
     });
@@ -54,8 +56,8 @@ export function createMidiStore(deps: MidiDeps) {
             if (keyboardNotes.Notes.length === 0) {
                 store.set({
                     phase: 'error',
-                    handFallback: false,
-                    status: 'No piano notes found. Check that the MIDI file contains note data on a piano/keys track.',
+                    warnings: [],
+                    status: NO_PIANO_NOTES,
                 });
                 return;
             }
@@ -63,9 +65,9 @@ export function createMidiStore(deps: MidiDeps) {
             const text = logMidi(filename, midi, tempoMap, keyboardNotes.Notes.length);
             console.log(text);
             const count = keyboardNotes.Notes.length;
-            store.set({ phase: 'ready', handFallback: result.usedHandFallback, status: `Converted ${count} piano note(s).`, log: text });
+            store.set({ phase: 'ready', warnings: result.usedHandFallback ? [MIDI_HAND_FALLBACK] : [], status: convertedPianoNotes(count), log: text });
         } catch (err: unknown) {
-            store.set({ phase: 'error', status: `Conversion error: ${errorMessage(err)}` });
+            store.set({ phase: 'error', status: convertFailure(FILE_KIND.midi, err) });
         }
     }
 
@@ -73,11 +75,16 @@ export function createMidiStore(deps: MidiDeps) {
         get: store.get,
         subscribe: store.subscribe,
 
+        // Dev walkthrough only (src/walkthrough.ts).
+        seed(patch: Partial<MidiState>): void {
+            store.set(patch);
+        },
+
         async loadFile(file: File): Promise<void> {
             const id = ++requestId;
             structure = null;
             keyboardNotes = null;
-            store.set({ phase: 'parsing', status: 'Parsing…', log: '', formVisible: false, handFallback: false, fileName: file.name, downloadError: null });
+            store.set({ phase: 'parsing', status: PARSING, log: '', formVisible: false, warnings: [], fileName: file.name, downloadError: null });
             try {
                 const midi = await deps.parse(await file.arrayBuffer());
                 if (id !== requestId) return;
@@ -90,7 +97,7 @@ export function createMidiStore(deps: MidiDeps) {
                 convert(midi, file.name);
             } catch (err: unknown) {
                 if (id !== requestId) return;
-                store.set({ phase: 'error', status: `Error parsing MIDI file: ${errorMessage(err)}` });
+                store.set({ phase: 'error', status: parseFailure(FILE_KIND.midi, err) });
             }
         },
 

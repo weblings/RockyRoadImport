@@ -2,7 +2,7 @@
   "name": "RockyRoadImport",
   "private": true,
   "license": "GPL-3.0-or-later",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "build:tokens": "node scripts/build-tokens.mjs",
@@ -49,5 +49,9 @@
     "react": "19.3.0",
     "react-aria-components": "1.22.1",
     "react-dom": "19.3.0"
+  },
+  "overrides": {
+    "glob": "14.0.3",
+    "minimatch": "11.0.3"
   }
 }
