@@ -202,3 +202,13 @@ the tie fixtures never crossed a repeat, so nothing failed.
 
 **Fix:** validate carried state against the current position (here: merge only into a note
 ending exactly at this onset), and add one fixture where the state crosses the replay seam.
+
+---
+
+## Python doc tooling must pin encoding and path separators, or it breaks on Windows
+Tags: windows, python, encoding, paths, docs-tooling
+Applies-when: writing or editing a Python script that reads docs or writes a committed file
+
+`check-links.sh` crashed with `UnicodeDecodeError` (bare `open()` uses cp1252 on Windows) and wrote
+`planning\X.md` links into `_ids.md` that GitHub can't follow. Pass `encoding='utf-8'` to every
+`open()`, and `.replace(os.sep, '/')` any `os.path` result that ends up in committed text.

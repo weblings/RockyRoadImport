@@ -31,3 +31,4 @@ stands and what resumes it. Planning docs stay clean: decisions, status, and poi
 | 2026-10-10 | MusicXML piano shared dynamics marks across staves, 79 tests green, 69-file sweep, 1 lesson | RockyRoadImport-dej |
 | 2026-10-10 | alphaTab upstream recheck: ic6/pedal fixed on develop, 2 issues left (dynamics bug, syllabic feature), issue-first process | RockyRoadImport-aio |
 | 2026-10-10 | MusicXML tab status trimmed to only actionable info (blank on clean parse); README format list stopped singling out MusicXML's keys.json detail; alphaTab's MusicXML slap/pop/harmonic gap reconfirmed unpatched | RockyRoadImport-we6 |
+| 2026-10-31 | React migration closed: SongConverter on React Aria, src/ui extraction-ready, lints in build, human A/B check passed; plan archived | RockyRoadImport-74l |

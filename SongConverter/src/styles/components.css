@@ -1,0 +1,9 @@
+@layer app {
+.meta-form { margin-top: var(--size-space-xl); }
+
+#psarc-status:not([data-tone="error"]) { color: var(--color-text-muted); font-size: var(--size-font-sm); }
+
+.debug-log { font-size: var(--size-font-xs); max-height: 60vh; overflow: auto; }
+
+.panel-actions { margin-top: calc(1lh + var(--size-space-xl)); }
+}
