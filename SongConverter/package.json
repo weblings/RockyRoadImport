@@ -2,7 +2,7 @@
   "name": "RockyRoadImport",
   "private": true,
   "license": "GPL-3.0-or-later",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "build:tokens": "node scripts/build-tokens.mjs",
