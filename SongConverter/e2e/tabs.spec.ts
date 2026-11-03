@@ -24,6 +24,8 @@ async function expectShot(page: Page, name: string) {
 
 async function openTab(page: Page, id: string) {
     await page.goto('/');
+    // Test-only: drop the reserved scrollbar gutter so layout width matches across platforms.
+    await page.addStyleTag({ content: 'html { scrollbar-width: none; }' });
     await page.getByRole('tab', { name: tabNames[id] }).click();
 }
 
