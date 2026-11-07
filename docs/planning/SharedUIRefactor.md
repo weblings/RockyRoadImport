@@ -1,6 +1,6 @@
 # Shared tokens and UI components across Aurora, RockyRoad, RockyRoadImport and the Website
 
-Status: in progress (React direction chosen 2026-10-30. Name chosen 2026-11-06: Grille. RockyRoadImport migration shipped, see [[rri-react-migration]]; split to weblings/GrilleDS done and RockyRoadImport consumes it by pinned commit, see Split readiness; RockyRoad/Aurora adoption not started)
+Status: in progress (React direction chosen 2026-10-30. Name chosen 2026-11-06: Grille. RockyRoadImport migration shipped, see [[rri-react-migration]]; split to weblings/GrilleDS done, and RockyRoadImport consumes it by pinned commit on `dev` (PR #5, CI passed), see Split readiness; RockyRoad/Aurora adoption not started)
 Id: shared-ui-refactor
 
 Findings from a survey (2026-10-29) of how the four projects share design tokens and web UI
