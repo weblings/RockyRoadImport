@@ -12,10 +12,10 @@ start a new LessonsLearned-style doc elsewhere; if unsure whether one already ex
 
 | File | Scope | Entries | File here when |
 |---|---|---|---|
-| [engineering-hygiene.md](engineering-hygiene.md) | general design principles | 14 | general principle, demonstrated by a real bug here |
-| [upstream-dependencies.md](upstream-dependencies.md) | dependency behavior, patching, upstream process | 18 | bug/fix lives in a third-party package, its importer, a patch, or the upstream filing process |
+| [engineering-hygiene.md](engineering-hygiene.md) | general design principles | 15 | general principle, demonstrated by a real bug here |
+| [upstream-dependencies.md](upstream-dependencies.md) | dependency behavior, patching, upstream process | 20 | bug/fix lives in a third-party package, its importer, a patch, or the upstream filing process |
 
-Counts as of 2026-11-01 — bump the count when adding entries
+Counts as of 2026-11-06 — bump the count when adding entries
 (`grep -c '^## '` per file).
 
 ## Where a new lesson goes

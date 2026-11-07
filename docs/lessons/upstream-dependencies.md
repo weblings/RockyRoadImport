@@ -275,3 +275,26 @@ Local `node_modules` had already been swapped, so only a fresh install showed it
 
 **Fix:** after regenerating a patch, check `git ls-files patches/` lists only the current version,
 and verify with a clean install (`npm i <pkg>@<version> patch-package` in a temp dir).
+
+---
+
+## `npm install <package>` can skip the `patch-package` postinstall
+Tags: npm, patch-package, postinstall, install
+Applies-when: adding or updating a dependency by name in a project with local patches
+
+Installing the Grille tarball by name left alphaTab unpatched, which showed up as `lyricsSyllabic`
+type errors and 2 test failures that looked unrelated to the install.
+
+**Fix:** edit `package.json` and run a plain `npm install`, or run one after the named install.
+
+---
+
+## A `git+ssh` lockfile entry doesn't mean CI needs an SSH key
+Tags: npm, git-dependency, lockfile, ci
+Applies-when: consuming a public package from a GitHub repo
+
+`github:` dependencies lock as `git+ssh://` with an integrity hash, which looks like it would fail in
+Actions or break across OSes. A clean `npm ci` with SSH disabled passed on Windows and Linux: it
+fetched without SSH and logged "skipping integrity check for git dependency".
+
+**Fix:** no workaround needed for a public repo. Test with `GIT_SSH_COMMAND=false npm ci`.

@@ -212,3 +212,15 @@ Applies-when: writing or editing a Python script that reads docs or writes a com
 `check-links.sh` crashed with `UnicodeDecodeError` (bare `open()` uses cp1252 on Windows) and wrote
 `planning\X.md` links into `_ids.md` that GitHub can't follow. Pass `encoding='utf-8'` to every
 `open()`, and `.replace(os.sep, '/')` any `os.path` result that ends up in committed text.
+
+---
+
+## A shared package must declare its own CSS layer order
+Tags: css, layers, packaging, design-system
+Applies-when: shipping layered CSS for other projects to import
+
+With `@layer reset, app, ui;` only in the app's `base.css`, importing `ui.css` first made `ui` the
+lowest layer. That broke 5 screenshot tests while `tsc` and unit tests stayed green. An unlayered
+reset in RockyRoad did the same kind of damage, zeroing padding on every `ui-*` control.
+
+**Fix:** declare the order in the package's CSS, and keep consumer resets in `@layer reset`.
