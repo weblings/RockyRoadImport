@@ -1,8 +1,6 @@
 // Dev-only page (npm run dev, /playground.html). Not part of the production build.
-import '@fontsource/inter/latin-400.css';
-import '@fontsource/inter/latin-600.css';
-import '@fontsource/inter/latin-700.css';
-import './ui/tokens/generated/tokens.css';
+import './ui/fonts.css';
+import './ui/tokens.css';
 import './styles/base.css';
 import { useState } from 'react';
 import { createRoot } from 'react-dom/client';

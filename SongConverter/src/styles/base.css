@@ -1,6 +1,4 @@
-/* Unlayered rules beat layered ones, so resets and app rules sit in layers below ui. */
-@layer reset, app, ui;
-
+/* Layer order is declared in ui.css. Unlayered rules beat layered ones, so resets stay in a layer. */
 @layer reset {
   * { margin: 0; padding: 0; box-sizing: border-box; }
 }
@@ -12,28 +10,28 @@ html {
 }
 
 body {
-  background: var(--color-surface-page);
-  color: var(--color-text-default);
-  font-family: var(--font-family-sans);
+  background: var(--ui-color-surface-page);
+  color: var(--ui-color-text-default);
+  font-family: var(--ui-font-family-sans);
 }
 
 #app {
   max-width: 640px;
-  --ui-tab-panel-bleed: var(--size-space-2xl);
+  --ui-tab-panel-bleed: var(--ui-size-space-2xl);
   margin: 0 auto;
-  padding: var(--size-space-2xl) var(--size-space-2xl) 64px;
+  padding: var(--ui-size-space-2xl) var(--ui-size-space-2xl) 64px;
 }
 
 h2 {
-  font-size: var(--size-font-xl);
-  font-weight: var(--font-weight-bold);
-  margin-bottom: var(--size-space-xl);
+  font-size: var(--ui-size-font-xl);
+  font-weight: var(--ui-font-weight-bold);
+  margin-bottom: var(--ui-size-space-xl);
 }
 
 h3 {
-  font-size: var(--size-font-md);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-secondary);
-  margin-bottom: var(--size-space-md);
+  font-size: var(--ui-size-font-md);
+  font-weight: var(--ui-font-weight-bold);
+  color: var(--ui-color-text-secondary);
+  margin-bottom: var(--ui-size-space-md);
 }
 

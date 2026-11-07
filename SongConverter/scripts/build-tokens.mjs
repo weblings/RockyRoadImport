@@ -8,7 +8,7 @@ const sd = new StyleDictionary({
     log: { verbosity: 'silent' },
     hooks: {
         transforms: {
-            // Dimensions are authored as px numbers (RockyRoad XR converts px / 10 to cm).
+            // Dimensions are authored as px numbers.
             'rri/dimension-px': {
                 type: 'value',
                 filter: (token) => token.$type === 'dimension',
@@ -29,6 +29,7 @@ const sd = new StyleDictionary({
     platforms: {
         css: {
             transformGroup: 'rri',
+            prefix: 'ui',
             buildPath: out,
             files: [{ destination: 'tokens.css', format: 'css/variables', options: { outputReferences: true } }],
         },

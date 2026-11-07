@@ -5,18 +5,18 @@
   left: 0;
   right: 0;
   text-align: center;
-  padding: var(--size-space-md) 0;
-  font-size: var(--size-font-sm);
+  padding: var(--ui-size-space-md) 0;
+  font-size: var(--ui-size-font-sm);
 }
 #source-ribbon a {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: var(--color-text-secondary);
+  color: var(--ui-color-text-secondary);
   text-decoration: none;
 }
 #source-ribbon svg { fill: currentColor; }
 #source-ribbon a:hover {
-  color: var(--color-text-default);
+  color: var(--ui-color-text-default);
   text-decoration: underline;
 }

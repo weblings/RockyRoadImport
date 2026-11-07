@@ -4,7 +4,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 
 const root = resolve('src/ui');
-const allowed = ['react', 'react-dom', 'react-aria-components'];
+const allowed = ['react', 'react-dom', 'react-aria-components', '@fontsource/inter'];
 const testOnly = ['vitest', 'vitest-axe', '@testing-library/'];
 const importRe = /(?:import|export)\s[^'"]*?from\s*['"]([^'"]+)['"]|import\s*['"]([^'"]+)['"]|@import\s*['"]([^'"]+)['"]/g;
 

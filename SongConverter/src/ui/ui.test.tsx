@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
+import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'vitest-axe';
-import { Button, Callout, Disclosure, FieldList, FieldNote, FileTrigger, Select, Slider, StatusMessage, Tabs, TextField } from './index';
+import { Button, Callout, Disclosure, FieldList, FieldNote, FileTrigger, mountIsland, Select, Slider, StatusMessage, Tabs, TextField } from './index';
 
 afterEach(cleanup);
 
@@ -187,5 +188,39 @@ describe('StatusMessage', () => {
     it('has no axe violations', async () => {
         const { container } = render(<StatusMessage tone="error">Failed</StatusMessage>);
         await expectNoViolations(container);
+    });
+});
+
+describe('mountIsland', () => {
+    function mount(el: HTMLElement, node: React.ReactNode) {
+        let unmount = () => {};
+        act(() => { unmount = mountIsland(el, node); });
+        return () => act(() => unmount());
+    }
+
+    it('renders into the element and clears it on unmount', () => {
+        const el = document.createElement('div');
+        const unmount = mount(el, <Button>Save</Button>);
+        expect(el.querySelector('button')?.textContent).toBe('Save');
+        unmount();
+        expect(el.childElementCount).toBe(0);
+    });
+
+    it('can mount again on the same element', () => {
+        const el = document.createElement('div');
+        mount(el, <Button>First</Button>)();
+        const unmount = mount(el, <Button>Second</Button>);
+        expect(el.textContent).toBe('Second');
+        unmount();
+    });
+
+    it('removes an open popover on unmount', async () => {
+        const el = document.body.appendChild(document.createElement('div'));
+        const unmount = mount(el, <Select label="Part" options={['Lead', 'Bass']} value="Lead" onChange={() => {}} />);
+        await userEvent.click(screen.getByRole('button'));
+        expect(screen.getByRole('listbox')).toBeTruthy();
+        unmount();
+        expect(screen.queryByRole('listbox')).toBeNull();
+        el.remove();
     });
 });
