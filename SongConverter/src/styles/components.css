@@ -1,9 +1,9 @@
 @layer app {
-.meta-form { margin-top: var(--size-space-xl); }
+.meta-form { margin-top: var(--ui-size-space-xl); }
 
-#psarc-status:not([data-tone="error"]) { color: var(--color-text-muted); font-size: var(--size-font-sm); }
+#psarc-status:not([data-tone="error"]) { color: var(--ui-color-text-muted); font-size: var(--ui-size-font-sm); }
 
-.debug-log { font-size: var(--size-font-xs); max-height: 60vh; overflow: auto; }
+.debug-log { font-size: var(--ui-size-font-xs); max-height: 60vh; overflow: auto; }
 
-.panel-actions { margin-top: calc(1lh + var(--size-space-xl)); }
+.panel-actions { margin-top: calc(1lh + var(--ui-size-space-xl)); }
 }

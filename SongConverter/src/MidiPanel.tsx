@@ -1,4 +1,4 @@
-import { Button, Disclosure, FieldList, FieldNote, FileTrigger, Slider, StatusMessage, TextField } from './ui';
+import { Button, Disclosure, FieldList, FieldNote, FileTrigger, Slider, StatusMessage, TextField } from '@weblings/grille';
 import type { MidiStore } from './stores/midiStore';
 import { useStore } from './useStore';
 

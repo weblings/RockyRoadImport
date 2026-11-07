@@ -1,4 +1,4 @@
-import { Button, StatusMessage, FieldList, FileTrigger, TextField } from './ui';
+import { Button, StatusMessage, FieldList, FileTrigger, TextField } from '@weblings/grille';
 import type { PsarcStore } from './stores/psarcStore';
 import { useStore } from './useStore';
 

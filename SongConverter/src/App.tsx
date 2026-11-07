@@ -11,7 +11,7 @@ import { MidiPanel } from './MidiPanel';
 import { PsarcPanel } from './PsarcPanel';
 import { GpPanel } from './GpPanel';
 import { MusicXmlPanel } from './MusicXmlPanel';
-import { Tabs } from './ui';
+import { Tabs } from '@weblings/grille';
 import type { ZipFiles } from './zipFiles';
 import { downloadFailure } from './messages';
 

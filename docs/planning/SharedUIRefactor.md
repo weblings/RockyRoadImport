@@ -1,12 +1,12 @@
 # Shared tokens and UI components across Aurora, RockyRoad, RockyRoadImport and the Website
 
-Status: in progress (React direction chosen 2026-10-30. RockyRoadImport migration shipped, see [[rri-react-migration]]; src/ui extraction and RockyRoad/Aurora adoption not started)
+Status: in progress (React direction chosen 2026-10-30. Name chosen 2026-11-06: Grille. RockyRoadImport migration shipped, see [[rri-react-migration]]; split to weblings/GrilleDS done and RockyRoadImport consumes it by pinned commit, see Split readiness; RockyRoad/Aurora adoption not started)
 Id: shared-ui-refactor
 
 Findings from a survey (2026-10-29) of how the four projects share design tokens and web UI
 components today, and options for a shared package. Lives here because RockyRoadImport is the
-smallest consumer and the first adopter. Only the React direction and the RockyRoadImport sequence
-are settled (see Decisions below).
+smallest consumer and the first adopter. Only the React direction, the RockyRoadImport sequence and
+the name are settled (see Decisions and Name below).
 
 ---
 
@@ -17,7 +17,7 @@ are settled (see Decisions below).
 | Aurora `web/ui` | Plain static ESM + CSS, no build step, no npm. Embedded in the app binary | Source of `styles/tokens.css` (`--aurora-*` vars). Demo gets byte-identical copies via `web/demo/vendor/sync-webui.py` + `MANIFEST.json` |
 | RockyRoad desktop | TypeScript + Vite, DOM screens in `src/desktop/` | Same grayscale values as literal hex in `desktop.html` and `src/xr/panel.css` |
 | RockyRoad XR | IWSDK + uikitml (`ui/*.uikitml`), migrated off html2canvas | Same values hand-converted px / 10 into cm units |
-| RockyRoadImport | TypeScript + Vite, single 193-line `SongConverter/index.html` | Same values as literal hex |
+| RockyRoadImport | TypeScript + Vite + React on React Aria | Generated from DTCG JSON in `SongConverter/src/ui/tokens/` since the migration |
 | Website | Next.js 16 + React 19 + Bootstrap 4 | Separate palette (blues, `#facade`), no CSS custom properties |
 
 - One grayscale system is hand-copied four times. Aurora's `tokens.css` header says it was verified
@@ -32,14 +32,16 @@ are settled (see Decisions below).
 
 ## Licensing
 
-- Git history shows a single author across Aurora `web/ui` and RockyRoad, so these files can be
-  published under MIT in a new repo. The GPL copies in their original repos are unaffected.
+- Git history shows a single author across Aurora `web/ui`, RockyRoad and RockyRoadImport's `src/ui`
+  plus its token and boundary scripts, so these files can be published under MIT in a new repo. The
+  GPL copies in their original repos are unaffected.
 - **Must stay out of an MIT package** (comments state huenicorn-derived code):
   - Aurora `screens/DashboardScreen.js` ("Ported close to verbatim from huenicorn's own real WebUI.js")
   - Aurora `screens/ZoneMappingScreen.js` ("Ported from huenicorn's real `ScreenWidget.js`")
   - Aurora `ZoneCanvas.js` ("Ported drag behavior/comments preserved from the original")
 - **Clean to extract:** `styles/tokens.css`, `Dropdown.js`, `SliderFill.js`, `AccordionSection.js`,
   `Tooltips.js`. `ZoneActiveToggle.js` mentions huenicorn only to contrast with it.
+- Inter is OFL-1.1, so its license ships with the font files, including in Aurora's vendored copy.
 - Aurora's `web/ui` README currently says the design "carries the same license forward". Reword it
   if the tokens move, so they aren't read as GPL-derived. Not legal advice.
 
@@ -51,13 +53,23 @@ Three layers so logic can be shared without forcing a theme:
 |---|---|---|
 | `tokens` | W3C DTCG token JSON (format stable since 2025.10), built to CSS vars, a TS module and other targets | Values only |
 | `behavior` | ARIA, keyboard, focus and open/closed state. Emits attributes and `data-state`, never styles | None |
-| `skin` (optional) | Default CSS reading semantic vars with fallbacks, inside `@layer shared` | Opt-in |
+| `skin` (optional) | Default CSS reading semantic vars with fallbacks, inside `@layer ui` | Opt-in |
 
 - Two token tiers: primitives (`gray-800: #333`) and semantic roles (`--ui-button-bg`). Skins read
   only semantic tokens, so a consumer like the Website remaps them to its own palette.
-- `@layer` lets unlayered project CSS always win regardless of specificity.
-- Distribution: a git repo with tags (`github:<owner>/<repo>#v0.1.0`) is enough for one developer.
-  Aurora consumes it through the existing sync-script vendoring pattern while it stays no-build.
+- `@layer` lets unlayered project CSS always win regardless of specificity. That cuts both ways: an
+  unlayered reset zeroed padding on every `ui-*` control in the RockyRoad trial, so each consumer must
+  put its reset in `@layer reset`.
+- The package CSS declares `@layer reset, app, ui;`, so import order can't demote `ui`. Those layer
+  names are public API, and `@layer app` rules can't override `ui`. Only unlayered rules can.
+- Distribution: a git repo pinned by commit (`github:weblings/GrilleDS#<commit>`) is enough for one
+  developer. Start tagging releases when a second consumer arrives.
+  It needs a `prepare` script, since compiled output and generated tokens aren't committed, and a
+  public repo so consumer CI needs no token. Aurora consumes it through the existing sync-script
+  vendoring pattern while it stays no-build.
+- One package with subpath exports, not separate `-tokens` and `-react` packages: npm can't install a
+  subfolder of a git repo. React is an optional peer, and the DTCG JSON sits at the repo root so
+  non-React generators don't touch React code.
 
 ## Existing component libraries as a base
 
@@ -96,7 +108,7 @@ WAI-ARIA APG keyboard and role behavior. Contrast, target size (2.5.8), focus no
 
 - Share tokens and per-component behavior specs (states, keys, roles), not code.
 - uikitml has no documented `var()` support, which is why RockyRoad hand-converts values. Generate
-  a token partial or TS constants at build time with a px to cm (/ 10) transform.
+  colors only: desktop and XR sizes were tuned separately, so sizes don't carry over.
 - uikit renders text in WebGL with no screen reader exposure. IWSDK docs point to 2D HTML menus
   outside XR when accessibility matters, which RockyRoad's desktop/XR split already supports.
 - Compose: Style Dictionary can emit a Kotlin token object from the same DTCG source (verify the
@@ -108,10 +120,39 @@ WAI-ARIA APG keyboard and role behavior. Contrast, target size (2.5.8), focus no
   `behavior` layer is dropped. Zag.js stays unneeded if long transitions use React islands (below).
 - **Incubate in RockyRoadImport, extract later.** Components and tokens start in
   `SongConverter/src/ui/`, shaped as the future package (own `index.ts`, no app imports, lint
-  enforced). Split to the shared repo, with history, when RockyRoad desktop work starts. Cross-repo
-  linking before a second consumer exists is overhead.
+  enforced). Split to `weblings/GrilleDS`, with history. Originally timed to RockyRoad desktop work, but
+  the consumers are treated as ready as of 2026-11-06, so the split goes ahead now.
 - **Wrap, don't re-export.** App code never imports `react-aria-components` directly. The wrapper
   API is the stable surface other projects depend on.
+
+## Name (2026-11-06)
+
+The shared system is **Grille**: package `@weblings/grille`, repo `weblings/GrilleDS`.
+
+- **Why:** a speaker or amp grille is the visible face that sound passes through, as a UI layer is
+  the surface in front of the engine. It is also French for "grid", and a Cardan grille is a stencil.
+  It avoids "web", "ui" and "react" so it still fits XR and native targets.
+- **Known costs:** people will type "grill", and the word carries barbecue and jewelry associations.
+- **Neighbors:** [imohanvadivel/grille](https://github.com/imohanvadivel/grille) is a small CSS grid
+  system, last pushed in 2022. Unscoped `grille` on npm is a spreadsheet CMS, so use the scope.
+- **Not checked:** no trademark search was done. Do one before any public or commercial branding.
+- **CSS names:** `--ui-*` vars, `.ui-*` classes and `@layer ui`. They deliberately avoid the name, so
+  a trademark problem wouldn't touch every variable.
+
+Top contenders, in case the name is revisited. Availability is as of this date:
+
+| Name | Why it was considered | Why it lost |
+|---|---|---|
+| Gobo | Stage light stencil that puts one pattern on any surface. Best cross-platform and Aurora fit | [gobo](https://github.com/nicholaspjm/gobo-dmx-live-code), a browser lighting app, sits close to Aurora |
+| Understudy | Theater role that learns the parts and steps in. Best learning and support fit | Can imply "second best" |
+| Stagedive | A leap trusting the crowd. Best excitement fit | Sounds a little reckless |
+| Cobblestone | Rocky road, "cobbled together", small pieces forming a road | Long, and also a Minecraft block |
+| Etude | A piece written to practice a skill | [etudes](https://github.com/andrewscwei/etudes) is an active React library, and two sheet music apps use the name |
+| Fathom | Depth and understanding. Best immersion fit | Used by other products, not checked in depth |
+| Troupe | Small company of traveling performers | Less tied to these projects than the others |
+
+Good names already taken by design systems or UI libraries: Roadie (Oztix), Encore (Spotify),
+Backline (Festicket), Alpenglow, Basalt, Motif, Fringe (Axo), Repertoire, Tutti and Overture.
 
 ## Constraints on the first adopter
 
@@ -123,11 +164,11 @@ RockyRoadImport doesn't need these itself, but builds them in so RockyRoad and A
 - **Logic in plain TS stores** (`subscribe`/`getSnapshot`, read via `useSyncExternalStore`), side
   effects included. Same shape RockyRoad's `App` needs to share state between its WebGL scene and
   React menus.
-- **Token rules:** semantic names only in consumer CSS, dimensions as px numbers (XR divides by 10
-  for cm), stylelint `color-no-hex` in consumers.
+- **Token rules:** semantic names only in consumer CSS, dimensions as px numbers, stylelint `color-no-hex` in consumers.
 - **Fonts ship in the package** (Inter files in its `files` list), so Aurora's offline vendoring
   copies them.
-- **Compiled output** (ESM, `.d.ts`, CSS, `'use client'` preserved) with a React `^19` peer range.
+- **Compiled output** (ESM, `.d.ts`, CSS) with a React `^19` peer range. Add `'use client'` when the
+  Website adopts it, since the build doesn't emit it yet.
   Declarations must type-check under the oldest consumer TypeScript (RockyRoadImport's 5.9).
 - **Component checks live with the package:** a playground page plus Testing Library and axe per
   component. Apps keep only page-level screenshots.
@@ -154,7 +195,8 @@ RockyRoadImport doesn't need these itself, but builds them in so RockyRoad and A
   `system-ui`. Bundling Inter in the package fixes this.
 - **Toolchain spread.** RockyRoad Vite `^7`, RockyRoadImport Vite `^8` + TS `~5.9`, Aurora
   `graph-editor` Vite `8.3.2` + TS `7.0.2` + React `19.3.0`. Compiled package output keeps these
-  independent.
+  independent. RockyRoad needs `@vitejs/plugin-react` 5.2.0, since 6.x requires Vite 8 and the IWSDK
+  plugins require Vite 7. That stays a RockyRoad dependency, not a Grille one.
 - **Cross-repo dev loop.** Linked packages can load a second React ("Invalid hook call"). Use React
   as a peer dependency plus `resolve.dedupe: ['react','react-dom']` for `file:` links.
 - **DTCG tooling.** Style Dictionary 5.5.0 added 2025.10 object-form dimensions. Pin the version and
@@ -162,12 +204,70 @@ RockyRoadImport doesn't need these itself, but builds them in so RockyRoad and A
 - **No CI guard for drift.** Add visual regression and axe checks per component in the package and
   per page in each app.
 
+## Split readiness
+
+The boundary lint passes, nothing in `src/ui` imports app code, and all 25 `src/ui` tests pass. A trial
+in a clean copy replaced `src/ui` with a packed package: `tsc`, stylelint and all 12 e2e and screenshot
+tests passed after the layer fix, and built CSS kept the same hash. Installing from a git tag was only
+tested against a local repo URL.
+
+Done in this repo before the split (2026-11-06):
+
+- The layer order is declared in `ui.css`. Importing `ui.css` before `base.css` broke 5 screenshot
+  tests in the trial while `tsc` and unit tests stayed green.
+- Tokens are renamed to `--ui-*`. `tokens.ts` names are unchanged.
+- `src/ui/fonts.css` and `src/ui/tokens.css` are the entry points, so apps no longer import font
+  packages or generated paths.
+- `mountIsland` has tests. Import has no caller, but RockyRoad's screen adapters depend on it.
+
+During the split (done 2026-11-06, Import pins `61e83a7`):
+
+- **New repo:** `package.json` with subpath exports, build, `prepare`, MIT license, CI.
+- **Move with `git filter-repo`, on a fresh clone:** `src/ui`, `scripts/build-tokens.mjs`,
+  `playground.html` and `src/playground.tsx`. The playground needs a local reset instead of the app's
+  `base.css`. Copy `.stylelintrc.json`, since Import still lints its own CSS.
+- **Split `check-ui-boundary.mjs`:** the inward check moves, and the "no direct React Aria" check stays
+  in each consumer. Import's is `scripts/check-react-aria-imports.mjs`.
+- **Import cleanup:** point the files using `./ui` at the package, delete `src/ui`, and remove the
+  `build:tokens`, `predev` and `lint:ui-boundary` scripts and the CI token step.
+- **Not moving yet:** `createStore` and `useStore`. `src/ui` doesn't import them. When RockyRoad needs
+  them, `createStore` goes in a React-free `./store` export so XR can share stores.
+- **This doc** stays in Import for now, since it cites [[rri-react-migration]].
+- **Installing:** `npm install <package>` skips Import's `patch-package` step, so run a plain
+  `npm install` afterward. A clean `npm ci` works on Linux without SSH, and npm skips the integrity
+  check for git dependencies.
+
+## Adoption findings for other repos
+
+From the RockyRoad trial. Each repo tracks its own work.
+
+- **Component gaps.** All additive, so Import needs no edits. Keep `className` blocked on Button, since
+  per-screen drift is part of why this exists. Parents handle layout.
+
+| Component | Needed |
+|---|---|
+| Field components | Shared `hideLabel` |
+| Button | `size`, `icon`, `fullWidth` |
+| Select | `{id, label}` options, `formatValue`, `fullWidth`, `onOpenChange` |
+| Slider | `onChangeEnd`, filled track |
+| TextField | `placeholder`, plus a separate `SearchField` for library search |
+| Missing | Switch, Modal, ToggleButtonGroup (reuses the tab pill skin), IconButton, Meter, ColorInput (native input first, to limit bundle size) |
+
+- **Select is modal.** The popover locks page scroll and makes the rest of the page inert, so switching
+  dropdowns takes two clicks. Keep it and expose `onOpenChange`, so the Play bar can hold its fade.
+  `isNonModal` also turns off closing on outside click, which Grille would then own.
+- **Commit-only selection.** The wrapper already ignores selection changes while closed, which matches
+  Aurora's rule. Keep a test on that guard.
+- **Bundle.** RockyRoad's desktop entry grew by about 136 kB gzip. The XR chunk stayed byte-identical.
+- **RockyRoad safety net.** It has no test runner or CI, so those come before any screen conversion.
+- **Versioning.** During 0.x, a minor may break and a patch may not. Consumers pin exact tags.
+
 ## Order
 
 1. RockyRoadImport migration per [[rri-react-migration]]: tests, stores, tokens, React islands,
    shell, extraction readiness.
-2. Split `src/ui` into the shared repo when RockyRoad desktop starts. Add the uikitml token target
-   (px / 10) and the Aurora alias output then.
+2. Split `src/ui` into `weblings/GrilleDS` (done). Add the uikitml color target and the Aurora alias
+   output when those consumers adopt it.
 3. RockyRoad desktop: replace `Dropdown.ts`, move tuner colors to tokens, React for menu screens,
    canvases kept as islands. XR consumes tokens only.
 4. Aurora `web/ui` last, through the `graph-editor` CMake path with per-screen islands. Verify the

@@ -1,7 +1,6 @@
-import '@fontsource/inter/latin-400.css';
-import '@fontsource/inter/latin-600.css';
-import '@fontsource/inter/latin-700.css';
-import './ui/tokens/generated/tokens.css';
+import '@weblings/grille/fonts.css';
+import '@weblings/grille/tokens.css';
+import '@weblings/grille/ui.css';
 import './styles/base.css';
 import './styles/components.css';
 import './styles/ribbon.css';

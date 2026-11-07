@@ -23,7 +23,7 @@ describe('copy lives in messages.ts', () => {
     const banned = [/Could not/, /Error parsing/, /Conversion error/, /Download failed/, /Failed to load/, /[a-z]\(s\)/, /Loading wasm/];
     const dirs = ['.', 'stores'].map((d) => join(__dirname, d));
     const files = dirs.flatMap((d) =>
-        readdirSync(d).filter((f) => /\.tsx?$/.test(f) && !/\.test\.|^messages\.ts$|^playground/.test(f)).map((f) => join(d, f)));
+        readdirSync(d).filter((f) => /\.tsx?$/.test(f) && !/\.test\.|^messages\.ts$/.test(f)).map((f) => join(d, f)));
     it.each(files)('%s', (file) => {
         const text = readFileSync(file, 'utf8');
         for (const re of banned) expect(text, `${file} matches ${re}`).not.toMatch(re);
