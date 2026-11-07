@@ -1,4 +1,4 @@
-import { Button, StatusMessage, FieldList, FieldNote, FileTrigger, TextField } from './ui';
+import { Button, StatusMessage, FieldList, FieldNote, FileTrigger, TextField } from '@weblings/grille';
 import type { GpStore } from './stores/gpStore';
 import { useStore } from './useStore';
 

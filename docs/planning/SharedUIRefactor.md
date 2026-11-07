@@ -1,6 +1,6 @@
 # Shared tokens and UI components across Aurora, RockyRoad, RockyRoadImport and the Website
 
-Status: in progress (React direction chosen 2026-10-30. Name chosen 2026-11-06: Grille. RockyRoadImport migration shipped, see [[rri-react-migration]]; split prep done in this repo, see Split readiness; repo split not started; RockyRoad/Aurora adoption not started)
+Status: in progress (React direction chosen 2026-10-30. Name chosen 2026-11-06: Grille. RockyRoadImport migration shipped, see [[rri-react-migration]]; split to weblings/GrilleDS done and RockyRoadImport consumes it by pinned commit, see Split readiness; RockyRoad/Aurora adoption not started)
 Id: shared-ui-refactor
 
 Findings from a survey (2026-10-29) of how the four projects share design tokens and web UI
@@ -62,7 +62,8 @@ Three layers so logic can be shared without forcing a theme:
   put its reset in `@layer reset`.
 - The package CSS declares `@layer reset, app, ui;`, so import order can't demote `ui`. Those layer
   names are public API, and `@layer app` rules can't override `ui`. Only unlayered rules can.
-- Distribution: a git repo with tags (`github:weblings/grille#v0.1.0`) is enough for one developer.
+- Distribution: a git repo pinned by commit (`github:weblings/GrilleDS#<commit>`) is enough for one
+  developer. Start tagging releases when a second consumer arrives.
   It needs a `prepare` script, since compiled output and generated tokens aren't committed, and a
   public repo so consumer CI needs no token. Aurora consumes it through the existing sync-script
   vendoring pattern while it stays no-build.
@@ -119,14 +120,14 @@ WAI-ARIA APG keyboard and role behavior. Contrast, target size (2.5.8), focus no
   `behavior` layer is dropped. Zag.js stays unneeded if long transitions use React islands (below).
 - **Incubate in RockyRoadImport, extract later.** Components and tokens start in
   `SongConverter/src/ui/`, shaped as the future package (own `index.ts`, no app imports, lint
-  enforced). Split to `weblings/grille`, with history. Originally timed to RockyRoad desktop work, but
+  enforced). Split to `weblings/GrilleDS`, with history. Originally timed to RockyRoad desktop work, but
   the consumers are treated as ready as of 2026-11-06, so the split goes ahead now.
 - **Wrap, don't re-export.** App code never imports `react-aria-components` directly. The wrapper
   API is the stable surface other projects depend on.
 
 ## Name (2026-11-06)
 
-The shared system is **Grille**: package `@weblings/grille`, repo `weblings/grille`.
+The shared system is **Grille**: package `@weblings/grille`, repo `weblings/GrilleDS`.
 
 - **Why:** a speaker or amp grille is the visible face that sound passes through, as a UI layer is
   the surface in front of the engine. It is also French for "grid", and a Cardan grille is a stencil.
@@ -219,19 +220,22 @@ Done in this repo before the split (2026-11-06):
   packages or generated paths.
 - `mountIsland` has tests. Import has no caller, but RockyRoad's screen adapters depend on it.
 
-During the split:
+During the split (done 2026-11-06, Import pins `61e83a7`):
 
-- **New repo:** `package.json` with subpath exports, build, `prepare`, MIT license, CI, tag `v0.1.0`.
+- **New repo:** `package.json` with subpath exports, build, `prepare`, MIT license, CI.
 - **Move with `git filter-repo`, on a fresh clone:** `src/ui`, `scripts/build-tokens.mjs`,
   `playground.html` and `src/playground.tsx`. The playground needs a local reset instead of the app's
   `base.css`. Copy `.stylelintrc.json`, since Import still lints its own CSS.
 - **Split `check-ui-boundary.mjs`:** the inward check moves, and the "no direct React Aria" check stays
-  in each consumer.
+  in each consumer. Import's is `scripts/check-react-aria-imports.mjs`.
 - **Import cleanup:** point the files using `./ui` at the package, delete `src/ui`, and remove the
   `build:tokens`, `predev` and `lint:ui-boundary` scripts and the CI token step.
 - **Not moving yet:** `createStore` and `useStore`. `src/ui` doesn't import them. When RockyRoad needs
   them, `createStore` goes in a React-free `./store` export so XR can share stores.
-- **This doc** stays in Import until the split is done, since it cites [[rri-react-migration]].
+- **This doc** stays in Import for now, since it cites [[rri-react-migration]].
+- **Installing:** `npm install <package>` skips Import's `patch-package` step, so run a plain
+  `npm install` afterward. A clean `npm ci` works on Linux without SSH, and npm skips the integrity
+  check for git dependencies.
 
 ## Adoption findings for other repos
 
@@ -262,8 +266,8 @@ From the RockyRoad trial. Each repo tracks its own work.
 
 1. RockyRoadImport migration per [[rri-react-migration]]: tests, stores, tokens, React islands,
    shell, extraction readiness.
-2. Finish Split readiness and split `src/ui` into `weblings/grille`. Add the uikitml color target and
-   the Aurora alias output then.
+2. Split `src/ui` into `weblings/GrilleDS` (done). Add the uikitml color target and the Aurora alias
+   output when those consumers adopt it.
 3. RockyRoad desktop: replace `Dropdown.ts`, move tuner colors to tokens, React for menu screens,
    canvases kept as islands. XR consumes tokens only.
 4. Aurora `web/ui` last, through the `graph-editor` CMake path with per-screen islands. Verify the

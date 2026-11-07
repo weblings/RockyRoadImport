@@ -1,4 +1,4 @@
-import { Button, StatusMessage, FieldList, FieldNote, FileTrigger, Select, TextField } from './ui';
+import { Button, StatusMessage, FieldList, FieldNote, FileTrigger, Select, TextField } from '@weblings/grille';
 import type { MusicXmlStore } from './stores/musicXmlStore';
 import { useStore } from './useStore';
 
